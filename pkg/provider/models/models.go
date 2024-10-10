@@ -1,4 +1,4 @@
-package providers
+package models
 
 import (
 	"github.com/krkn-chaos/krknctl/pkg/typing"

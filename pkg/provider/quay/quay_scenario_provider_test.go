@@ -1,22 +1,22 @@
-package providers
+package quay
 
 import (
-	"github.com/krkn-chaos/krknctl/internal/config"
+	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
-func getTestConfig() config.Config {
-	return config.Config{
+func getTestConfig() krknctlconfig.Config {
+	return krknctlconfig.Config{
 		QuayRegistry: "rh_ee_tsebasti/krknctl",
 		QuayApi:      "https://quay.io/api/v1/repository",
 		Version:      "0.0.1",
 	}
 }
 
-func getWrongConfig() config.Config {
-	return config.Config{
+func getWrongConfig() krknctlconfig.Config {
+	return krknctlconfig.Config{
 		QuayRegistry: "rh_ee_tsebasti/do_not_exist",
 		QuayApi:      "https://quay.io/api/v1/repository",
 		Version:      "0.0.1",
@@ -25,8 +25,8 @@ func getWrongConfig() config.Config {
 
 func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	config := getTestConfig()
-	provider := QuayScenarioProvider{
-		config: &config,
+	provider := ScenarioProvider{
+		Config: &config,
 	}
 
 	scenarios, err := provider.GetScenarios()
@@ -39,10 +39,22 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 
 	wrongConfig := getWrongConfig()
-	wrongProvider := QuayScenarioProvider{
-		config: &wrongConfig,
+	wrongProvider := ScenarioProvider{
+		Config: &wrongConfig,
 	}
 
 	_, err = wrongProvider.GetScenarios()
+	assert.NotNil(t, err)
+}
+
+func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
+	config := getTestConfig()
+	provider := ScenarioProvider{
+		Config: &config,
+	}
+
+	scenarios, err := provider.GetScenarioDetail("cpu-hog")
+	assert.Nil(t, scenarios)
+
 	assert.NotNil(t, err)
 }
