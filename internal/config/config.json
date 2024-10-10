@@ -1,0 +1,5 @@
+{
+  "version": "0.0.1",
+  "quayRegistry": "krkn-chaos/krkn-hub",
+  "quayApi": "https://quay.io/api/v1/repository"
+}
