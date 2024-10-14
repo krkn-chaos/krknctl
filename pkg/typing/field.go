@@ -11,9 +11,9 @@ import (
 	"regexp"
 )
 
-const MAX_FILE_SIZE int64 = 10_485_760
+const MaxFileSize int64 = 10_485_760
 
-type Field struct {
+type InputField struct {
 	Name             *string `json:"name"`
 	ShortDescription *string `json:"ShortDescription,omitempty"`
 	Description      *string `json:"description,omitempty"`
@@ -26,9 +26,9 @@ type Field struct {
 	MountPath        *string `json:"mountPath,omitempty"`
 }
 
-type alias Field
+type alias InputField
 
-func (f *Field) UnmarshalJSON(data []byte) error {
+func (f *InputField) UnmarshalJSON(data []byte) error {
 	aux := &struct {
 		*alias
 		Name     *string `json:"name"`
@@ -46,7 +46,7 @@ func (f *Field) UnmarshalJSON(data []byte) error {
 	}
 
 	// REQUIRED VALUES ARE DESERIALIZED MANUALLY
-	// Field Type parsing
+	// InputField Type parsing
 	if fieldType, ok := temp["type"]; ok {
 		f.Type = ToType(fieldType)
 		if f.Type == Unknown {
@@ -72,7 +72,7 @@ func (f *Field) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (f *Field) Validate(value *string) (*string, error) {
+func (f *InputField) Validate(value *string) (*string, error) {
 
 	if value == nil && f.Default == nil && f.Type == String {
 		return nil, errors.New("`" + f.Type.String() + " can be blank, but not null without a default")
@@ -126,22 +126,19 @@ func (f *Field) Validate(value *string) (*string, error) {
 			separator = f.Separator
 		}
 		if f.AllowedValues == nil {
-			return nil, errors.New("invalid schema: `allowedValues` is required for enum types")
+			return nil, errors.New("invalid schema: `allowedValues` is required for enum type")
 		}
 		if IsEnum(*selectedValue, *separator, *f.AllowedValues) == false {
 			return nil, errors.New("`value`: '" + *selectedValue + "' is not in: '" + *f.AllowedValues + "' separated by: '" + *separator + "'")
 		}
-	case File:
+	case FileBase64:
 		if IsFile(*selectedValue) {
-			if f.MountPath == nil {
-				return nil, errors.New("invalid schema: `mountPath` is required for file types")
-			}
 			fileInfo, err := os.Stat(*selectedValue)
 			if err != nil {
 				return nil, err
 			}
-			if fileInfo.Size() > MAX_FILE_SIZE {
-				return nil, fmt.Errorf("`%s` exceeds %d bytes", *selectedValue, MAX_FILE_SIZE)
+			if fileInfo.Size() > MaxFileSize {
+				return nil, fmt.Errorf("`%s` exceeds %d bytes", *selectedValue, MaxFileSize)
 			}
 			file, err := os.Open(*selectedValue)
 			if err != nil {
@@ -160,8 +157,17 @@ func (f *Field) Validate(value *string) (*string, error) {
 			}
 			encodedData := buffer.String()
 			return &encodedData, nil
+		} else {
+			return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 		}
-
+	case File:
+		if IsFile(*selectedValue) {
+			if f.MountPath == nil {
+				return nil, errors.New("invalid schema: `mountPath` is required for `file` type")
+			}
+		} else {
+			return nil, errors.New("file `" + *selectedValue + "is not a file or is not accessible")
+		}
 	default:
 		return nil, errors.New("impossible to validate object")
 	}

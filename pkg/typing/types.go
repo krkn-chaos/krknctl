@@ -16,6 +16,7 @@ const (
 	Enum
 	Unknown
 	File
+	FileBase64
 )
 
 func (t Type) String() string {
@@ -30,6 +31,8 @@ func (t Type) String() string {
 		return "enum"
 	case File:
 		return "file"
+	case FileBase64:
+		return "filebase64"
 	default:
 		return "unknown"
 	}
@@ -47,6 +50,8 @@ func ToType(s string) Type {
 		return Enum
 	case "file":
 		return File
+	case "filebase64":
+		return FileBase64
 	default:
 		return Unknown
 	}
@@ -74,6 +79,12 @@ func IsEnum(s string, separator string, allowedValues string) bool {
 
 func IsFile(f string) bool {
 	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	file, err := os.Open(f)
+	defer file.Close()
+	if err != nil {
 		return false
 	}
 	return true

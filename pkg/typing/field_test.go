@@ -2,14 +2,16 @@ package typing
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestNumberField(t *testing.T) {
 	// default value test
-	var field Field
+	var field InputField
 	var value *string
 	var err error
 	var param = ""
@@ -38,7 +40,7 @@ func TestNumberField(t *testing.T) {
 	assert.Equal(t, param, *value)
 
 	// reset
-	field = Field{}
+	field = InputField{}
 
 	// non default value
 	numberFieldValue := `
@@ -71,7 +73,7 @@ func TestNumberField(t *testing.T) {
 	assert.Error(t, err)
 
 	// reset
-	field = Field{}
+	field = InputField{}
 
 	// wrong default, nil default passed
 	numberFieldValueWrongDefault := `
@@ -93,7 +95,7 @@ func TestNumberField(t *testing.T) {
 }
 
 func TestStringField(t *testing.T) {
-	var field Field
+	var field InputField
 	var value *string
 	var err error
 	var param = ""
@@ -151,7 +153,7 @@ func TestStringField(t *testing.T) {
 }
 
 func TestBooleanField(t *testing.T) {
-	var field Field
+	var field InputField
 	var value *string
 	var err error
 	var param = ""
@@ -178,7 +180,7 @@ func TestBooleanField(t *testing.T) {
 	assert.Equal(t, param, *value)
 
 	// reset
-	field = Field{}
+	field = InputField{}
 
 	//wrong default
 	booleanFieldWrongDefault := `
@@ -198,7 +200,7 @@ func TestBooleanField(t *testing.T) {
 }
 
 func TestEnumField(t *testing.T) {
-	var field Field
+	var field InputField
 	var value *string
 	var err error
 	var param = ""
@@ -234,7 +236,7 @@ func TestEnumField(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// reset
-	field = Field{}
+	field = InputField{}
 
 	// not setting the separator defaults to `,`
 	enumFieldDefaultSeparator := `
@@ -253,7 +255,7 @@ func TestEnumField(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, param, *value)
 
-	field = Field{}
+	field = InputField{}
 
 	// setting wrong separator
 	enumFieldWrongSeparator := `
@@ -272,7 +274,7 @@ func TestEnumField(t *testing.T) {
 	value, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
-	field = Field{}
+	field = InputField{}
 
 	// setting wrong separator
 	enumFieldDefault := `
@@ -291,7 +293,7 @@ func TestEnumField(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "param_2", *value)
 
-	field = Field{}
+	field = InputField{}
 
 	// setting wrong separator
 	enumFieldNilValue := `
@@ -308,7 +310,7 @@ func TestEnumField(t *testing.T) {
 	value, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
-	field = Field{}
+	field = InputField{}
 
 	// setting wrong separator
 	enumFieldWrongDefautl := `
@@ -327,8 +329,8 @@ func TestEnumField(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestFieldFile(t *testing.T) {
-	var field Field
+func TestFieldFileBase64(t *testing.T) {
+	var field InputField
 	var value *string
 	var err error
 	//var param = ""
@@ -338,23 +340,22 @@ func TestFieldFile(t *testing.T) {
 	"shortDescription":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
-	"type":"file",
-	"mountPath":"/root/.kube/config"
+	"type":"filebase64"
 }
 `
 
-	fileName := "/tmp/okFile"
-	const fileSize = 1 * 1024 * 1024 // 10 MB
+	fileName := fmt.Sprintf("/tmp/okFile.%d", time.Now().Unix())
+	const fileSize = 1 * 1024 * 1024 // 1 MB
 	data := make([]byte, fileSize)
 	for i := 0; i < fileSize; i++ {
-		data[i] = 'A' // Riempie il buffer con il carattere 'A'
+		data[i] = 'A'
 	}
 
-	bigfileName := "/tmp/bigFile"
-	const bigFileSize = 11 * 1024 * 1024 // 10 MB
+	bigfileName := fmt.Sprintf("/tmp/bigFile.%d", time.Now().Unix())
+	const bigFileSize = 11 * 1024 * 1024 // 11 MB
 	bigData := make([]byte, bigFileSize)
 	for i := 0; i < bigFileSize; i++ {
-		bigData[i] = 'A' // Riempie il buffer con il carattere 'A'
+		bigData[i] = 'A'
 	}
 
 	err = os.WriteFile(fileName, data, 0644)
@@ -377,26 +378,79 @@ func TestFieldFile(t *testing.T) {
 	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
-	field = Field{}
+	// not existent file
+	fileNameDoNotExist := "/tmp/donotexist"
+	_, err = field.Validate(&fileNameDoNotExist)
+	assert.NotNil(t, err)
+
+	// not accessible file
+	fileNameNotAccessible := "/etc/shadow"
+	_, err = field.Validate(&fileNameNotAccessible)
+	assert.NotNil(t, err)
+
+	field = InputField{}
 
 	// file field default
-	fileFieldDefault := `
+	fileFieldDefault := fmt.Sprintf(`
+{
+	"name":"cores",
+	"shortDescription":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"filebase64",
+	"default":"%s"
+}
+`, fileName)
+	err = json.Unmarshal([]byte(fileFieldDefault), &field)
+	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, value)
+
+}
+
+func TestFieldFile(t *testing.T) {
+	var field InputField
+	var value *string
+	var err error
+	//var param = ""
+	fileField := `
 {
 	"name":"cores",
 	"shortDescription":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"file",
-	"mountPath":"/root/.kube/config",
-	"default":"/tmp/okFile"
+	"mountPath":"/test/mountpath"
 }
 `
-	err = json.Unmarshal([]byte(fileFieldDefault), &field)
-	value, err = field.Validate(nil)
+
+	fileName := fmt.Sprintf("/tmp/okFile.%d", time.Now().Unix())
+	const fileSize = 1 * 1024 * 1024 // 1 MB
+	data := make([]byte, fileSize)
+	for i := 0; i < fileSize; i++ {
+		data[i] = 'A'
+	}
+	err = os.WriteFile(fileName, data, 0644)
+	defer os.Remove(fileName)
+
+	err = json.Unmarshal([]byte(fileField), &field)
+
+	// ok file
+	value, err = field.Validate(&fileName)
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
 
-	field = Field{}
+	// not existent file
+	fileNameDoNotExist := "/tmp/donotexist"
+	_, err = field.Validate(&fileNameDoNotExist)
+	assert.NotNil(t, err)
+
+	// not accessible file
+	fileNameNotAccessible := "/etc/shadow"
+	_, err = field.Validate(&fileNameNotAccessible)
+	assert.NotNil(t, err)
+
+	field = InputField{}
 
 	fileFieldNoMountPath := `
 {

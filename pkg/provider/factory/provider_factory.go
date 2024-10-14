@@ -7,8 +7,9 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
 )
 
-type ScenarioProvider interface {
+type ScenarioDataProvider interface {
 	GetScenarios() (*[]models.ScenarioTag, error)
+	GetScenarioDetail(scenario string) (*models.ScenarioDetail, error)
 }
 
 type Mode int64
@@ -26,7 +27,7 @@ func NewProviderFactory(config *config.Config) *ProviderFactory {
 	return &ProviderFactory{Config: config}
 }
 
-func (p *ProviderFactory) NewInstance(mode Mode) ScenarioProvider {
+func (p *ProviderFactory) NewInstance(mode Mode) ScenarioDataProvider {
 	switch mode {
 	case Online:
 		return &quay.ScenarioProvider{Config: p.Config}

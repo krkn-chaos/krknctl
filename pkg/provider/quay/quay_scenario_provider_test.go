@@ -3,6 +3,7 @@ package quay
 import (
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 	"time"
 )
@@ -53,8 +54,25 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 		Config: &config,
 	}
 
-	scenarios, err := provider.GetScenarioDetail("cpu-hog")
-	assert.Nil(t, scenarios)
+	scenario, err := provider.GetScenarioDetail("cpu-hog")
 
+	assert.Nil(t, err)
+	assert.NotNil(t, scenario)
+	assert.Equal(t, len(scenario.Fields), 5)
+
+	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle")
 	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "krkn.title LABEL not found in tag: cpu-memory-notitle"))
+	assert.Nil(t, scenario)
+
+	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription")
+	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "krkn.description LABEL not found in tag: cpu-memory-nodescription"))
+	assert.Nil(t, scenario)
+
+	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput")
+	assert.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "krkn.inputfields LABEL not found in tag: cpu-memory-noinput"))
+	assert.Nil(t, scenario)
+
 }

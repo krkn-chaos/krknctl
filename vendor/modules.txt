@@ -4,6 +4,9 @@ github.com/briandowns/spinner
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
+# github.com/faiface/mainthread v0.0.0-20171120011319-8b78f0a41ae3
+## explicit
+github.com/faiface/mainthread
 # github.com/fatih/color v1.7.0
 ## explicit
 github.com/fatih/color
@@ -19,6 +22,9 @@ github.com/mattn/go-isatty
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
+# github.com/rodaine/table v1.3.0
+## explicit; go 1.14
+github.com/rodaine/table
 # github.com/spf13/cobra v1.8.1
 ## explicit; go 1.15
 github.com/spf13/cobra

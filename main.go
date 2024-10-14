@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/krkn-chaos/krknctl/cmd"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"log"
 )
 
@@ -12,6 +12,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Errore nel caricamento della configurazione: %v", err)
 	}
-	fmt.Print("config: " + config.AppName)
-	cmd.Execute()
+	providerFactory := factory.NewProviderFactory(&config)
+	cmd.Execute(providerFactory)
 }

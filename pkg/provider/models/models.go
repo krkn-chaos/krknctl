@@ -14,5 +14,7 @@ type ScenarioTag struct {
 
 type ScenarioDetail struct {
 	ScenarioTag
-	fields []typing.Field
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Fields      []typing.InputField
 }

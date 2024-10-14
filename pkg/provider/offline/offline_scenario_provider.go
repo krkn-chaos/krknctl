@@ -13,3 +13,7 @@ type ScenarioProvider struct {
 func (p *ScenarioProvider) GetScenarios() (*[]models.ScenarioTag, error) {
 	return nil, errors.New("not yet implemented")
 }
+
+func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioDetail, error) {
+	return nil, errors.New("not yet implemented")
+}

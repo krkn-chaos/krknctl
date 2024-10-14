@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"regexp"
 
 	"io"
 	"log"
@@ -84,15 +86,81 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioD
 		return nil, err
 	}
 
-	title := manifest.GetKrknctlLabel("krknctl.title")
-	description := manifest.GetKrknctlLabel("krknctl.description")
-	inputFields := manifest.GetKrknctlLabel("krknctl.inputFields")
+	scenarioDetail := models.ScenarioDetail{
+		ScenarioTag: *foundScenario,
+	}
 
-	fmt.Println(title)
-	fmt.Println(description)
-	fmt.Println(inputFields)
+	titleLabel := manifest.GetKrknctlLabel("krknctl.title")
+	descriptionLabel := manifest.GetKrknctlLabel("krknctl.description")
+	inputFieldsLabel := manifest.GetKrknctlLabel("krknctl.inputFields")
 
-	fmt.Println(string(bodyBytes))
-	return nil, nil
+	if titleLabel == nil {
+		return nil, fmt.Errorf("krkn.title LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+	}
+	if descriptionLabel == nil {
+		return nil, fmt.Errorf("krkn.description LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+	}
+	if inputFieldsLabel == nil {
+		return nil, fmt.Errorf("krkn.inputfields LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+	}
 
+	parsedTitle, err := p.parseTitle(*titleLabel)
+	if err != nil {
+		return nil, err
+	}
+	parsedDescription, err := p.parseDescription(*descriptionLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedInputFields, err := p.parseInputFields(*inputFieldsLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	scenarioDetail.Title = *parsedTitle
+	scenarioDetail.Description = *parsedDescription
+	scenarioDetail.Fields = parsedInputFields
+	return &scenarioDetail, nil
+}
+
+func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
+	re, err := regexp.Compile("^.*LABEL krknctl\\.title\\=\\\"(.*)\\\"")
+	if err != nil {
+		return nil, err
+	}
+	matches := re.FindStringSubmatch(s)
+	if matches == nil {
+		return nil, errors.New("title not found in image manifest")
+	}
+	return &matches[1], nil
+}
+
+func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
+	re, err := regexp.Compile("^.*LABEL krknctl\\.description\\=\\\"(.*)\\\"")
+	if err != nil {
+		return nil, err
+	}
+	matches := re.FindStringSubmatch(s)
+	if matches == nil {
+		return nil, errors.New("description not found in image manifest")
+	}
+	return &matches[1], nil
+}
+
+func (p *ScenarioProvider) parseInputFields(s string) ([]typing.InputField, error) {
+	re, err := regexp.Compile(".*LABEL krknctl\\.inputFields\\='(.*)'$")
+	if err != nil {
+		return nil, err
+	}
+	var fields []typing.InputField
+	matches := re.FindStringSubmatch(s)
+	if matches == nil {
+		return nil, errors.New("input fields not found in image manifest")
+	}
+	err = json.Unmarshal([]byte(matches[1]), &fields)
+	if err != nil {
+		return nil, err
+	}
+	return fields, nil
 }
