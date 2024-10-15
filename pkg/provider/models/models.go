@@ -18,3 +18,12 @@ type ScenarioDetail struct {
 	Description string `json:"description"`
 	Fields      []typing.InputField
 }
+
+func (s *ScenarioDetail) GetFieldByName(name string) *typing.InputField {
+	for _, v := range s.Fields {
+		if *v.Name == name {
+			return &v
+		}
+	}
+	return nil
+}

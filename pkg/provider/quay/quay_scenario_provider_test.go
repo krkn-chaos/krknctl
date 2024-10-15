@@ -75,4 +75,8 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "krkn.inputfields LABEL not found in tag: cpu-memory-noinput"))
 	assert.Nil(t, scenario)
 
+	scenario, err = provider.GetScenarioDetail("not-found")
+	assert.Nil(t, err)
+	assert.Nil(t, scenario)
+
 }

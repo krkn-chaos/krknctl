@@ -2,30 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/spf13/cobra"
 	"os"
-	"time"
 )
-
-func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[39], 100*time.Millisecond)
-	s.Suffix = suffix
-	return s
-}
-
-func NewRootCommand(factory *factory.ProviderFactory) *cobra.Command {
-	var rootCmd = &cobra.Command{
-		Use:   "krknctl",
-		Short: "krkn CLI",
-		Long:  `krkn Command Line Interface`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return cmd.Help()
-		},
-	}
-	return rootCmd
-}
 
 func Execute(factory *factory.ProviderFactory) {
 	var jsonFlag bool
@@ -42,6 +21,11 @@ func Execute(factory *factory.ProviderFactory) {
 
 	describeCmd := NewDescribeCommand(factory)
 	rootCmd.AddCommand(describeCmd)
+
+	runCmd := NewRunCommand(factory)
+	runCmd.DisableFlagParsing = true
+	rootCmd.AddCommand(runCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
