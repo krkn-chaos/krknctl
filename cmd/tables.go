@@ -24,7 +24,7 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 	tbl := table.New("Name", "Type", "Description", "Required")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, inputField := range inputFields {
-		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Default == nil)
+		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required)
 	}
 	return tbl
 }

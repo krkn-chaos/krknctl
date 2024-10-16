@@ -2,31 +2,37 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
 	"log"
 	"strings"
 )
 
-func NewRunCommand(factory *factory.ProviderFactory) *cobra.Command {
+func NewRunCommand(factory *factory.ProviderFactory, config config.Config) *cobra.Command {
 	collectedFlags := make(map[string]*string)
 	var runCmd = &cobra.Command{
 		Use:                "run",
 		Short:              "runs a scenario",
 		Long:               `runs a scenario`,
 		DisableFlagParsing: false,
+		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			offline, err := cmd.Flags().GetBool("offline")
 			//offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
 			if err != nil {
 				return []string{}, cobra.ShellCompDirectiveError
 			}
+			// WIP: datasource offline TBD
+			dataSource := BuildDataSource(config, offline, nil)
 			provider := GetProvider(offline, factory)
-			scenarios, err := FetchScenarios(provider)
+
+			scenarios, err := FetchScenarios(provider, dataSource)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
 			}
+
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 
@@ -35,8 +41,10 @@ func NewRunCommand(factory *factory.ProviderFactory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// WIP: datasource offline TBD
+			dataSource := BuildDataSource(config, offline, nil)
 			provider := GetProvider(offline, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0])
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
 			if err != nil {
 				return err
 			}
@@ -55,18 +63,22 @@ func NewRunCommand(factory *factory.ProviderFactory) *cobra.Command {
 				}
 
 			}
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+
 			spinner := NewSpinnerWithSuffix("validating input...")
 			offline, err := cmd.Flags().GetBool("offline")
 			if err != nil {
 				return err
 			}
+			// WIP: datasource offline TBD
+			dataSource := BuildDataSource(config, offline, nil)
 			spinner.Start()
 
 			provider := GetProvider(offline, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0])
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
 			if err != nil {
 				return err
 			}
@@ -89,15 +101,16 @@ func NewRunCommand(factory *factory.ProviderFactory) *cobra.Command {
 						return err
 					}
 					if value != nil {
-						fmt.Println(fmt.Sprintf("%s: valid", *value))
+						fmt.Println(fmt.Sprintf("%s : %s -> valid", *field.Name, *value))
 					}
 
 					if value == nil && field.Required == false {
-						fmt.Println(fmt.Sprintf("%s: nil but not required", *field.Name))
+						fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
 					}
 				}
 
 			}
+
 			return nil
 		},
 	}

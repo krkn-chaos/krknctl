@@ -13,5 +13,5 @@ func main() {
 		log.Fatalf("Errore nel caricamento della configurazione: %v", err)
 	}
 	providerFactory := factory.NewProviderFactory(&config)
-	cmd.Execute(providerFactory)
+	cmd.Execute(providerFactory, config)
 }

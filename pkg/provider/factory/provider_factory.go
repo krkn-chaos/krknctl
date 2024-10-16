@@ -8,8 +8,8 @@ import (
 )
 
 type ScenarioDataProvider interface {
-	GetScenarios() (*[]models.ScenarioTag, error)
-	GetScenarioDetail(scenario string) (*models.ScenarioDetail, error)
+	GetScenarios(dataSource string) (*[]models.ScenarioTag, error)
+	GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error)
 }
 
 type Mode int64
@@ -30,9 +30,9 @@ func NewProviderFactory(config *config.Config) *ProviderFactory {
 func (p *ProviderFactory) NewInstance(mode Mode) ScenarioDataProvider {
 	switch mode {
 	case Online:
-		return &quay.ScenarioProvider{Config: p.Config}
+		return &quay.ScenarioProvider{}
 	case Offline:
-		return &offline.ScenarioProvider{Config: p.Config}
+		return &offline.ScenarioProvider{}
 	default:
 		return nil
 	}

@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"os"
 )
 
-func Execute(factory *factory.ProviderFactory) {
+func Execute(factory *factory.ProviderFactory, config config.Config) {
 	var jsonFlag bool
 	var offlineFlag bool
 	var offlineRepoConfig string
@@ -16,13 +17,13 @@ func Execute(factory *factory.ProviderFactory) {
 	rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
 	rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
 
-	listCmd := NewListCommand(factory)
+	listCmd := NewListCommand(factory, config)
 	rootCmd.AddCommand(listCmd)
 
-	describeCmd := NewDescribeCommand(factory)
+	describeCmd := NewDescribeCommand(factory, config)
 	rootCmd.AddCommand(describeCmd)
 
-	runCmd := NewRunCommand(factory)
+	runCmd := NewRunCommand(factory, config)
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"regexp"
@@ -16,11 +15,13 @@ import (
 )
 
 type ScenarioProvider struct {
-	Config *config.Config
 }
 
-func (p *ScenarioProvider) GetScenarios() (*[]models.ScenarioTag, error) {
-	baseURL, _ := url.Parse(p.Config.QuayApi + "/" + p.Config.QuayRegistry + "/tag")
+func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTag, error) {
+	baseURL, err := url.Parse(dataSource + "/tag")
+	if err != nil {
+		return nil, err
+	}
 	params := url.Values{}
 	params.Add("onlyActiveTags", "true")
 	params.Add("limit", "100")
@@ -55,8 +56,8 @@ func (p *ScenarioProvider) GetScenarios() (*[]models.ScenarioTag, error) {
 	return &scenarioTags, nil
 }
 
-func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioDetail, error) {
-	scenarios, err := p.GetScenarios()
+func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error) {
+	scenarios, err := p.GetScenarios(dataSource)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +71,14 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioD
 		return nil, nil
 	}
 
-	baseURL, _ := url.Parse(p.Config.QuayApi + "/" + p.Config.QuayRegistry + "/manifest/" + foundScenario.Digest)
-	resp, _ := http.Get(baseURL.String())
+	baseURL, err := url.Parse(dataSource + "/manifest/" + foundScenario.Digest)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Get(baseURL.String())
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to retrieve scenario details, " + baseURL.String() + " returned: " + resp.Status)

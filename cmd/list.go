@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	provider_factory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
 	"log"
 )
 
-func NewListCommand(factory *provider_factory.ProviderFactory) *cobra.Command {
+func NewListCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
 	var listCmd = &cobra.Command{
 		Use:   "list",
 		Short: "List scenarios",
@@ -19,10 +20,12 @@ func NewListCommand(factory *provider_factory.ProviderFactory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			// WIP: datasource offline TBD
+			dataSource := BuildDataSource(config, offline, nil)
 			provider := GetProvider(offline, factory)
 			s := NewSpinnerWithSuffix("fetching scenarios...")
 			s.Start()
-			scenarios, err := provider.GetScenarios()
+			scenarios, err := provider.GetScenarios(dataSource)
 			if err != nil {
 				s.Stop()
 				log.Fatalf("failed to fetch scenarios: %v", err)

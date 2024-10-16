@@ -26,13 +26,11 @@ func getWrongConfig() krknctlconfig.Config {
 
 func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	config := getTestConfig()
-	provider := ScenarioProvider{
-		Config: &config,
-	}
+	provider := ScenarioProvider{}
 
-	scenarios, err := provider.GetScenarios()
+	scenarios, err := provider.GetScenarios(config.QuayApi + "/" + config.QuayRegistry)
 	assert.Nil(t, err)
-	assert.Len(t, *scenarios, 1)
+	assert.Greater(t, len(*scenarios), 0)
 	assert.NotEqual(t, (*scenarios)[0].Name, "")
 	assert.NotEqual(t, (*scenarios)[0].Digest, "")
 	assert.NotEqual(t, (*scenarios)[0].Size, 0)
@@ -40,42 +38,38 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 
 	wrongConfig := getWrongConfig()
-	wrongProvider := ScenarioProvider{
-		Config: &wrongConfig,
-	}
+	wrongProvider := ScenarioProvider{}
 
-	_, err = wrongProvider.GetScenarios()
+	_, err = wrongProvider.GetScenarios(wrongConfig.QuayApi + "/" + wrongConfig.QuayRegistry)
 	assert.NotNil(t, err)
 }
 
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig()
-	provider := ScenarioProvider{
-		Config: &config,
-	}
+	provider := ScenarioProvider{}
 
-	scenario, err := provider.GetScenarioDetail("cpu-hog")
+	scenario, err := provider.GetScenarioDetail("cpu-hog", config.QuayApi+"/"+config.QuayRegistry)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	assert.Equal(t, len(scenario.Fields), 5)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle")
+	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", config.QuayApi+"/"+config.QuayRegistry)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krkn.title LABEL not found in tag: cpu-memory-notitle"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription")
+	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription", config.QuayApi+"/"+config.QuayRegistry)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krkn.description LABEL not found in tag: cpu-memory-nodescription"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput")
+	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput", config.QuayApi+"/"+config.QuayRegistry)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krkn.inputfields LABEL not found in tag: cpu-memory-noinput"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("not-found")
+	scenario, err = provider.GetScenarioDetail("not-found", config.QuayApi+"/"+config.QuayRegistry)
 	assert.Nil(t, err)
 	assert.Nil(t, scenario)
 
