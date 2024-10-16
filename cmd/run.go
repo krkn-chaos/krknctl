@@ -88,7 +88,13 @@ func NewRunCommand(factory *factory.ProviderFactory) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					fmt.Println(fmt.Sprintf("%s: valid", *value))
+					if value != nil {
+						fmt.Println(fmt.Sprintf("%s: valid", *value))
+					}
+
+					if value == nil && field.Required == false {
+						fmt.Println(fmt.Sprintf("%s: nil but not required", *field.Name))
+					}
 				}
 
 			}

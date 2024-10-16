@@ -9,13 +9,14 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 const MaxFileSize int64 = 10_485_760
 
 type InputField struct {
 	Name             *string `json:"name"`
-	ShortDescription *string `json:"ShortDescription,omitempty"`
+	ShortDescription *string `json:"shortDescription,omitempty"`
 	Description      *string `json:"description,omitempty"`
 	Variable         *string `json:"variable"`
 	Type             Type    `json:"type"`
@@ -23,7 +24,10 @@ type InputField struct {
 	Validator        *string `json:"validator,omitempty"`
 	Separator        *string `json:"separator,omitempty"`
 	AllowedValues    *string `json:"allowedValues,omitempty"`
+	Required         bool    `json:"required,omitempty"`
 	MountPath        *string `json:"mountPath,omitempty"`
+	Requires         *string `json:"requires,omitempty"`
+	MutuallyExcludes *string `json:"mutuallyExcludes,omitempty"`
 }
 
 type alias InputField
@@ -34,6 +38,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		Name     *string `json:"name"`
 		Type     *string `json:"type"`
 		Variable *string `json:"variable"`
+		Required *string `json:"required"`
 	}{alias: (*alias)(f)}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
@@ -69,107 +74,123 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 	} else {
 		return errors.New("`name` key not found")
 	}
+
+	if fieldProperty, ok := temp["required"]; ok {
+		required, err := strconv.ParseBool(fieldProperty)
+		if err != nil {
+			return err
+		}
+		f.Required = required
+	} else {
+		f.Required = false
+	}
 	return nil
 }
 
 func (f *InputField) Validate(value *string) (*string, error) {
-
-	if value == nil && f.Default == nil && f.Type == String {
-		return nil, errors.New("`" + f.Type.String() + " can be blank, but not null without a default")
+	// if string value is nil, the default value is nil and the field is required the field is not valid
+	if value == nil && f.Default == nil && f.Required == true && f.Type == String {
+		return nil, errors.New("`" + f.Type.String() + " can be blank, but not null without a default if required")
 	}
-
-	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Type != String {
+	// if any other type value is nil or empty, the default value is nil or empty and the field is required the field is not valid
+	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Required == true && f.Type != String {
 		return nil, errors.New("field `value` doesn't have a `default` and cannot be nil or empty for type `" + f.Type.String() + "`")
 	}
 
-	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Type != String {
-		return nil, errors.New("`" + f.Type.String() + " can't be null without a (non-blank) default")
-	}
-
 	var selectedValue *string
-	if value == nil || (*value == "" && f.Type != String) {
+	// if the default value is not nil
+	if f.Default != nil &&
+		// if the default value is not nil, the value is nil or emtpy and the type is NOT string,
+		(((value == nil || *value == "") && f.Type != String) ||
+			// or the value is nil and the type is string
+			(value == nil && f.Type == String)) {
 		selectedValue = f.Default
 		// recursive call to validate default value
 		// to avoid schema development errors
+
+		// the default value is validated recursively
 		if _, err := f.Validate(selectedValue); err != nil {
 			return nil, errors.New("schema validation error on default value: " + err.Error())
 		}
 	} else {
 		selectedValue = value
+
 	}
 
-	switch f.Type {
-	case String:
-		if f.Validator != nil {
-			match, err := regexp.MatchString(*f.Validator, *selectedValue)
-			if err != nil {
-				return nil, err
+	if selectedValue != nil {
+		switch f.Type {
+		case String:
+			if f.Validator != nil {
+				match, err := regexp.MatchString(*f.Validator, *selectedValue)
+				if err != nil {
+					return nil, err
+				}
+				if match == false {
+					return nil, errors.New("`value`: '" + *selectedValue + "' does not match `validator`: '" + *f.Validator + "'")
+				}
 			}
-			if match == false {
-				return nil, errors.New("`value`: '" + *selectedValue + "' does not match `validator`: '" + *f.Validator + "'")
+		case Number:
+			if IsNumber(*selectedValue) == false {
+				return nil, errors.New("`value`: '" + *selectedValue + "' is not a number")
 			}
-		}
-	case Number:
-		if IsNumber(*selectedValue) == false {
-			return nil, errors.New("`value`: '" + *selectedValue + "' is not a number")
-		}
-	case Boolean:
-		if IsBoolean(*selectedValue) == false {
-			return nil, errors.New("`value`: '" + *selectedValue + "' is not a boolean")
-		}
-	case Enum:
-		defaultSeparator := ","
-		var separator *string
-		if f.Separator == nil {
-			separator = &defaultSeparator
-		} else {
-			separator = f.Separator
-		}
-		if f.AllowedValues == nil {
-			return nil, errors.New("invalid schema: `allowedValues` is required for enum type")
-		}
-		if IsEnum(*selectedValue, *separator, *f.AllowedValues) == false {
-			return nil, errors.New("`value`: '" + *selectedValue + "' is not in: '" + *f.AllowedValues + "' separated by: '" + *separator + "'")
-		}
-	case FileBase64:
-		if IsFile(*selectedValue) {
-			fileInfo, err := os.Stat(*selectedValue)
-			if err != nil {
-				return nil, err
+		case Boolean:
+			if IsBoolean(*selectedValue) == false {
+				return nil, errors.New("`value`: '" + *selectedValue + "' is not a boolean")
 			}
-			if fileInfo.Size() > MaxFileSize {
-				return nil, fmt.Errorf("`%s` exceeds %d bytes", *selectedValue, MaxFileSize)
+		case Enum:
+			defaultSeparator := ","
+			var separator *string
+			if f.Separator == nil {
+				separator = &defaultSeparator
+			} else {
+				separator = f.Separator
 			}
-			file, err := os.Open(*selectedValue)
-			if err != nil {
-				return nil, err
+			if f.AllowedValues == nil {
+				return nil, errors.New("invalid schema: `allowedValues` is required for enum type")
 			}
-			defer file.Close()
-			var buffer bytes.Buffer
-			encoder := base64.NewEncoder(base64.StdEncoding, &buffer)
-			defer encoder.Close()
-			_, err = io.Copy(encoder, file)
-			if err != nil {
-				return nil, err
+			if IsEnum(*selectedValue, *separator, *f.AllowedValues) == false {
+				return nil, errors.New("`value`: '" + *selectedValue + "' is not in: '" + *f.AllowedValues + "' separated by: '" + *separator + "'")
 			}
-			if err := encoder.Close(); err != nil {
-				return nil, err
+		case FileBase64:
+			if IsFile(*selectedValue) {
+				fileInfo, err := os.Stat(*selectedValue)
+				if err != nil {
+					return nil, err
+				}
+				if fileInfo.Size() > MaxFileSize {
+					return nil, fmt.Errorf("`%s` exceeds %d bytes", *selectedValue, MaxFileSize)
+				}
+				file, err := os.Open(*selectedValue)
+				if err != nil {
+					return nil, err
+				}
+				defer file.Close()
+				var buffer bytes.Buffer
+				encoder := base64.NewEncoder(base64.StdEncoding, &buffer)
+				defer encoder.Close()
+				_, err = io.Copy(encoder, file)
+				if err != nil {
+					return nil, err
+				}
+				if err := encoder.Close(); err != nil {
+					return nil, err
+				}
+				encodedData := buffer.String()
+				return &encodedData, nil
+			} else {
+				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 			}
-			encodedData := buffer.String()
-			return &encodedData, nil
-		} else {
-			return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
+		case File:
+			if IsFile(*selectedValue) {
+				if f.MountPath == nil {
+					return nil, errors.New("invalid schema: `mountPath` is required for `file` type")
+				}
+			} else {
+				return nil, errors.New("file `" + *selectedValue + "is not a file or is not accessible")
+			}
+		default:
+			return nil, errors.New("impossible to validate object")
 		}
-	case File:
-		if IsFile(*selectedValue) {
-			if f.MountPath == nil {
-				return nil, errors.New("invalid schema: `mountPath` is required for `file` type")
-			}
-		} else {
-			return nil, errors.New("file `" + *selectedValue + "is not a file or is not accessible")
-		}
-	default:
-		return nil, errors.New("impossible to validate object")
 	}
 	return selectedValue, nil
 }

@@ -59,9 +59,10 @@ func TestNumberField(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "100", *value)
 
-	// non default with nil value
+	// non default with nil value (required false)
 	value, err = field.Validate(nil)
-	assert.Error(t, err)
+	assert.Nil(t, err)
+	assert.Nil(t, value)
 
 	// wrong format
 	param = "test"
@@ -88,8 +89,27 @@ func TestNumberField(t *testing.T) {
 `
 	err = json.Unmarshal([]byte(numberFieldValueWrongDefault), &field)
 	assert.Nil(t, err)
-	param = "100"
 	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+
+	field = InputField{}
+
+	numberRequiredNoDefault := `
+{
+	"name":"cores",
+	"shortDescription":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"number",
+	"required": "true"
+}
+`
+	err = json.Unmarshal([]byte(numberRequiredNoDefault), &field)
+	assert.Nil(t, err)
+	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+	param = ""
+	value, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 }
@@ -150,6 +170,23 @@ func TestStringField(t *testing.T) {
 	value, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
+	field = InputField{}
+
+	stringRequiredNoDefault := `
+{
+	"name":"cores",
+	"shortDescription":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"string",
+	"required": "true"
+}
+`
+	err = json.Unmarshal([]byte(stringRequiredNoDefault), &field)
+	assert.Nil(t, err)
+	_, err = field.Validate(nil)
+	assert.NotNil(t, err)
+
 }
 
 func TestBooleanField(t *testing.T) {
@@ -190,11 +227,31 @@ func TestBooleanField(t *testing.T) {
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"boolean",
-	"default":"imwrong"
+	"default":"imwrong",
+	"required": "true"
 }
 `
 	err = json.Unmarshal([]byte(booleanFieldWrongDefault), &field)
 	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+
+	field = InputField{}
+
+	booleanFieldRequiredNoDefault := `
+{
+	"name":"cores",
+	"shortDescription":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"boolean",
+	"required": "true"
+}
+`
+	err = json.Unmarshal([]byte(booleanFieldRequiredNoDefault), &field)
+	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+	param = ""
+	value, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 }
@@ -285,7 +342,8 @@ func TestEnumField(t *testing.T) {
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
 	"allowedValues":"param_1,param_2,param_3",
-	"default":"param_2"
+	"default":"param_2",
+	"required": "true"
 }
 `
 	err = json.Unmarshal([]byte(enumFieldDefault), &field)
@@ -308,12 +366,13 @@ func TestEnumField(t *testing.T) {
 `
 	err = json.Unmarshal([]byte(enumFieldNilValue), &field)
 	value, err = field.Validate(nil)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
+	assert.Nil(t, value)
 
 	field = InputField{}
 
 	// setting wrong separator
-	enumFieldWrongDefautl := `
+	enumFieldWrongDefault := `
 {
 	"name":"cores",
 	"shortDescription":"Number of cores",
@@ -324,8 +383,28 @@ func TestEnumField(t *testing.T) {
 	"default":"param_4"
 }
 `
-	err = json.Unmarshal([]byte(enumFieldWrongDefautl), &field)
+	err = json.Unmarshal([]byte(enumFieldWrongDefault), &field)
 	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+
+	field = InputField{}
+
+	enumFieldRequiredNoDefault := `
+{
+	"name":"cores",
+	"shortDescription":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"enum",
+	"allowedValues":"param_1,param_2,param_3",
+	"required":"true"
+}
+`
+	err = json.Unmarshal([]byte(enumFieldRequiredNoDefault), &field)
+	value, err = field.Validate(nil)
+	assert.NotNil(t, err)
+	param = ""
+	value, err = field.Validate(&param)
 	assert.NotNil(t, err)
 }
 
@@ -375,8 +454,9 @@ func TestFieldFileBase64(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// no default
-	_, err = field.Validate(nil)
-	assert.NotNil(t, err)
+	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	assert.Nil(t, value)
 
 	// not existent file
 	fileNameDoNotExist := "/tmp/donotexist"
