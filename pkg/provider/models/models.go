@@ -14,9 +14,10 @@ type ScenarioTag struct {
 
 type ScenarioDetail struct {
 	ScenarioTag
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Fields      []typing.InputField
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	KubeconfigPath string `json:"kubeconfig_path"`
+	Fields         []typing.InputField
 }
 
 func (s *ScenarioDetail) GetFieldByName(name string) *typing.InputField {

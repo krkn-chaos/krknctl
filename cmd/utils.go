@@ -57,7 +57,7 @@ func BuildDataSource(config config.Config, offline bool, offlineSource *string) 
 			dataSource = ""
 		}
 	} else {
-		dataSource = config.QuayApi + "/" + config.QuayRegistry
+		dataSource = config.GetQuayRegistryUri()
 	}
 	return dataSource
 }

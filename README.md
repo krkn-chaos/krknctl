@@ -83,6 +83,10 @@ input is validated against this schema:
 ## Container Runtime Integration
 
 ### Podman
+
+>![NOTE] To compile the project `dnf install btrfs-progs-devel`
+> to enable podman socket `sudo setfacl --modify user:<user>:rw /run/podman/podman.sock`
+> to use podman cli with the socket `export CONTAINER_HOST=unix://run/podman/podman.sock`
 _Work In Progress_
 
 ### Docker

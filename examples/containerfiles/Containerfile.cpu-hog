@@ -1,0 +1,21 @@
+# Dockerfile for kraken
+
+FROM quay.io/krkn-chaos/krkn:latest
+
+ENV KUBECONFIG /home/krkn/.kube/config
+
+# Copy configurations
+COPY metrics_config.yaml.template /home/krkn/kraken/config/kube_burner.yaml.template
+COPY config.yaml.template /home/krkn/kraken/config/config.yaml.template
+COPY node-cpu-hog/env.sh /home/krkn/env.sh
+COPY env.sh /home/krkn/main_env.sh
+COPY node-cpu-hog/run.sh /home/krkn/run.sh
+COPY node-cpu-hog/input.yaml.template /home/krkn/kraken/scenarios/kube/cpu-hog/input.yaml.template
+COPY common_run.sh /home/krkn/common_run.sh
+
+LABEL krknctl.title="This scenario hogs the cpu on the specified node on a Kubernetes/OpenShift cluster for a specified duration. For more information refer the following documentation."
+LABEL krknctl.description="This scenario is based on the arcaflow arcaflow-plugin-stressng plugin. The purpose of this scenario is to create cpu pressure on a particular node of the Kubernetes/OpenShift cluster for a time span. To enable this plugin add the pointer to the scenario input file scenarios/arcaflow/cpu-hog/input.yaml as described in the Usage section. This scenario takes a list of objects named input_list"
+LABEL krknctl.kubeconfigPath="/home/krkn/.kube/config"
+LABEL krknctl.inputFields='[    {	"name":"chaos-duration",       	"shortDescription":"Chaos Duration",        "description":"Set chaos duration (in sec) as desired",        "variable":"TOTAL_CHAOS_DURATION",        "type":"number",        "default":"60"    },    {        "name":"cores",	"shortDescription":"Number of cores",        "description":"Number of cores (workers) of node CPU to be consumed",        "variable":"NODE_CPU_CORE",        "type":"number",        "default":"2"    },    {	"name":"cpu-percentage",        "shortDescription":"Cpu percentage",        "description":"Percentage of total cpu to be consumed",        "variable":"TOTAL_CHAOS_DURATION",        "type":"number",	"required":"true"    },    {        "name":"namespace",	"shortDescription":"Namespace",        "description":"Namespace where the scenario container will be deployed",        "variable":"NAMESPACE",        "type":"string",        "default":"default"    },    {	"name":"node-selectors",            "shortDescription":"Node Selectors",        "description":"Node selectors where the scenario containers will be scheduled in the format \"<selector>=<value>\". NOTE: This value can be specified as a list of node selectors separated by \";\". Will be instantiated a container per each node selector with the same scenario options. This option is meant to run one or more stress scenarios simultaneously on different nodes, kubernetes will schedule the pods on the target node accordingly with the selector specified. Specifying the same selector multiple times will instantiate as many scenario container as the number of times the selector is specified on the same node",        "variable":"NODE_SELECTOR",        "type":"string",        "validator": ".*\\=.*",	"required": "false"    }]'
+
+ENTRYPOINT /home/krkn/run.sh

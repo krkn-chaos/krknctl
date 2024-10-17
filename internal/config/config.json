@@ -1,5 +1,8 @@
 {
   "version": "0.0.1",
-  "quayRegistry": "rh_ee_tsebasti/krknctl",
-  "quayApi": "https://quay.io/api/v1/repository"
+  "quay_protocol": "https",
+  "quay_host": "quay.io",
+  "quay_org": "rh_ee_tsebasti",
+  "quay_registry": "krknctl",
+  "quay_repositoryApi": "api/v1/repository"
 }

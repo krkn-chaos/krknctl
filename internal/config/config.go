@@ -6,9 +6,12 @@ import (
 )
 
 type Config struct {
-	Version      string `json:"version"`
-	QuayRegistry string `json:"quayRegistry"`
-	QuayApi      string `json:"quayApi"`
+	Version           string `json:"version"`
+	QuayProtocol      string `json:"quay_protocol"`
+	QuayHost          string `json:"quay_host"`
+	QuayOrg           string `json:"quay_org"`
+	QuayRegistry      string `json:"quay_registry"`
+	QuayRepositoryApi string `json:"quay_repositoryApi"`
 }
 
 //go:embed config.json
@@ -21,4 +24,16 @@ func LoadConfig() (Config, error) {
 		return config, err
 	}
 	return config, nil
+}
+
+func (c *Config) GetQuayImageUri() string {
+	return c.QuayHost + "/" + c.QuayOrg + "/" + c.QuayRegistry
+}
+
+func (c *Config) GetQuayRegistryUri() string {
+	return c.QuayProtocol + "://" + c.QuayHost + "/" + c.QuayOrg + "/" + c.QuayRegistry
+}
+
+func (c *Config) GetQuayRepositoryApiUri() string {
+	return c.QuayProtocol + "://" + c.QuayHost + "/" + c.QuayRepositoryApi + "/" + c.QuayOrg + "/" + c.QuayRegistry
 }

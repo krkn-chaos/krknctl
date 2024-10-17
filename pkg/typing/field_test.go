@@ -19,7 +19,7 @@ func TestNumberField(t *testing.T) {
 	numberFieldDefault := `
 	   {
 		"name":"cores",
-	   	"shortDescription":"Number of cores",
+	   	"short_description":"Number of cores",
 	   	"description":"Number of cores (workers) of node CPU to be consumed",
 	   	"variable":"NODE_CPU_CORE",
 	   	"type":"number",
@@ -46,7 +46,7 @@ func TestNumberField(t *testing.T) {
 	numberFieldValue := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"number"
@@ -80,7 +80,7 @@ func TestNumberField(t *testing.T) {
 	numberFieldValueWrongDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"number",
@@ -97,7 +97,7 @@ func TestNumberField(t *testing.T) {
 	numberRequiredNoDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"number",
@@ -122,7 +122,7 @@ func TestStringField(t *testing.T) {
 	stringFieldDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"string",
@@ -145,7 +145,7 @@ func TestStringField(t *testing.T) {
 	stringFieldValidator := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"string",
@@ -175,7 +175,7 @@ func TestStringField(t *testing.T) {
 	stringRequiredNoDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"string",
@@ -197,7 +197,7 @@ func TestBooleanField(t *testing.T) {
 	booleanFieldDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"boolean",
@@ -223,7 +223,7 @@ func TestBooleanField(t *testing.T) {
 	booleanFieldWrongDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"boolean",
@@ -240,7 +240,7 @@ func TestBooleanField(t *testing.T) {
 	booleanFieldRequiredNoDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"boolean",
@@ -264,11 +264,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldSeparator := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1;param_2;param_3",
+	"allowed_values":"param_1;param_2;param_3",
 	"separator":";"
 }
 `
@@ -299,11 +299,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldDefaultSeparator := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3",
 }
 `
 	err = json.Unmarshal([]byte(enumFieldDefaultSeparator), &field)
@@ -318,11 +318,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldWrongSeparator := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3",
 	"separator":";"
 }
 `
@@ -337,11 +337,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3",
 	"default":"param_2",
 	"required": "true"
 }
@@ -357,11 +357,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldNilValue := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3"
+	"allowed_values":"param_1,param_2,param_3"
 }
 `
 	err = json.Unmarshal([]byte(enumFieldNilValue), &field)
@@ -375,11 +375,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldWrongDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3",
 	"default":"param_4"
 }
 `
@@ -392,11 +392,11 @@ func TestEnumField(t *testing.T) {
 	enumFieldRequiredNoDefault := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowedValues":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3",
 	"required":"true"
 }
 `
@@ -416,10 +416,10 @@ func TestFieldFileBase64(t *testing.T) {
 	fileField := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
-	"type":"filebase64"
+	"type":"file_base64"
 }
 `
 
@@ -474,10 +474,10 @@ func TestFieldFileBase64(t *testing.T) {
 	fileFieldDefault := fmt.Sprintf(`
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
-	"type":"filebase64",
+	"type":"file_base64",
 	"default":"%s"
 }
 `, fileName)
@@ -496,11 +496,11 @@ func TestFieldFile(t *testing.T) {
 	fileField := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"file",
-	"mountPath":"/test/mountpath"
+	"mount_path":"/test/mountpath"
 }
 `
 
@@ -535,7 +535,7 @@ func TestFieldFile(t *testing.T) {
 	fileFieldNoMountPath := `
 {
 	"name":"cores",
-	"shortDescription":"Number of cores",
+	"short_description":"Number of cores",
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"file"

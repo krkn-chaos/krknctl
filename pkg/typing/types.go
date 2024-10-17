@@ -32,7 +32,7 @@ func (t Type) String() string {
 	case File:
 		return "file"
 	case FileBase64:
-		return "filebase64"
+		return "file_base64"
 	default:
 		return "unknown"
 	}
@@ -50,7 +50,7 @@ func ToType(s string) Type {
 		return Enum
 	case "file":
 		return File
-	case "filebase64":
+	case "file_base64":
 		return FileBase64
 	default:
 		return Unknown

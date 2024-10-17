@@ -16,18 +16,18 @@ const MaxFileSize int64 = 10_485_760
 
 type InputField struct {
 	Name             *string `json:"name"`
-	ShortDescription *string `json:"shortDescription,omitempty"`
+	ShortDescription *string `json:"short_description,omitempty"`
 	Description      *string `json:"description,omitempty"`
 	Variable         *string `json:"variable"`
 	Type             Type    `json:"type"`
 	Default          *string `json:"default,omitempty"`
 	Validator        *string `json:"validator,omitempty"`
 	Separator        *string `json:"separator,omitempty"`
-	AllowedValues    *string `json:"allowedValues,omitempty"`
+	AllowedValues    *string `json:"allowed_values,omitempty"`
 	Required         bool    `json:"required,omitempty"`
-	MountPath        *string `json:"mountPath,omitempty"`
+	MountPath        *string `json:"mount_path,omitempty"`
 	Requires         *string `json:"requires,omitempty"`
-	MutuallyExcludes *string `json:"mutuallyExcludes,omitempty"`
+	MutuallyExcludes *string `json:"mutually_excludes,omitempty"`
 }
 
 type alias InputField
@@ -146,7 +146,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 				separator = f.Separator
 			}
 			if f.AllowedValues == nil {
-				return nil, errors.New("invalid schema: `allowedValues` is required for enum type")
+				return nil, errors.New("invalid schema: `allowed_values` is required for enum type")
 			}
 			if IsEnum(*selectedValue, *separator, *f.AllowedValues) == false {
 				return nil, errors.New("`value`: '" + *selectedValue + "' is not in: '" + *f.AllowedValues + "' separated by: '" + *separator + "'")
