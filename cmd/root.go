@@ -3,27 +3,29 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"os"
 )
 
-func Execute(factory *factory.ProviderFactory, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) {
 	var jsonFlag bool
 	var offlineFlag bool
 	var offlineRepoConfig string
-	rootCmd := NewRootCommand(factory)
+	rootCmd := NewRootCommand(providerFactory)
 	rootCmd.PersistentFlags().BoolVarP(&jsonFlag, "json", "j", false, "Output in JSON")
 	rootCmd.PersistentFlags().BoolVarP(&offlineFlag, "offline", "o", false, "Offline mode")
 	rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
 	rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
 
-	listCmd := NewListCommand(factory, config)
+	listCmd := NewListCommand(providerFactory, config)
 	rootCmd.AddCommand(listCmd)
 
-	describeCmd := NewDescribeCommand(factory, config)
+	describeCmd := NewDescribeCommand(providerFactory, config)
 	rootCmd.AddCommand(describeCmd)
 
-	runCmd := NewRunCommand(factory, config)
+	runCmd := NewRunCommand(providerFactory, containerManager, config)
+	runCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 

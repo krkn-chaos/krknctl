@@ -35,5 +35,6 @@ func (c *Config) GetQuayRegistryUri() string {
 }
 
 func (c *Config) GetQuayRepositoryApiUri() string {
+
 	return c.QuayProtocol + "://" + c.QuayHost + "/" + c.QuayRepositoryApi + "/" + c.QuayOrg + "/" + c.QuayRegistry
 }

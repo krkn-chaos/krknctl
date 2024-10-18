@@ -3,13 +3,14 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
 	"log"
 	"strings"
 )
 
-func NewRunCommand(factory *factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewRunCommand(factory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
 	collectedFlags := make(map[string]*string)
 	var runCmd = &cobra.Command{
 		Use:                "run",
@@ -84,6 +85,12 @@ func NewRunCommand(factory *factory.ProviderFactory, config config.Config) *cobr
 			}
 			spinner.Stop()
 			// default
+			kubeconfig, err := cmd.LocalFlags().GetString("kubeconfig")
+			if err != nil {
+				return err
+			}
+
+			environment := make(map[string]string)
 			for k, _ := range collectedFlags {
 				field := scenarioDetail.GetFieldByName(k)
 				var foundArg *string = nil
@@ -101,16 +108,28 @@ func NewRunCommand(factory *factory.ProviderFactory, config config.Config) *cobr
 						return err
 					}
 					if value != nil {
-						fmt.Println(fmt.Sprintf("%s : %s -> valid", *field.Name, *value))
+						environment[*field.Variable] = *value
 					}
 
-					if value == nil && field.Required == false {
-						fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
-					}
+					/*					if value == nil && field.Required == false {
+										fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
+									}*/
+
 				}
 
 			}
+			tbl := NewEnvironmentTable(environment)
+			fmt.Print("\n")
+			tbl.Print()
+			fmt.Print("\n")
+			kubeconfigPath, err := container_manager.PrepareKubeconfig(&kubeconfig)
+			if err != nil {
+				return err
+			}
+			//WIP
+			//(*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name,)
 
+			fmt.Println(kubeconfigPath)
 			return nil
 		},
 	}

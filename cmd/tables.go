@@ -28,3 +28,13 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 	}
 	return tbl
 }
+
+func NewEnvironmentTable(env map[string]string) table.Table {
+	tbl := table.New("Environment Value", "Value")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	for k, v := range env {
+		tbl.AddRow(k, v)
+	}
+	return tbl
+
+}

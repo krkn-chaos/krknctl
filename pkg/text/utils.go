@@ -1,6 +1,9 @@
 package text
 
-import "strings"
+import (
+	"math/rand"
+	"strings"
+)
 
 func justifyLine(words []string, width int) string {
 	if len(words) == 1 {
@@ -49,4 +52,13 @@ func Justify(text string, width int) []string {
 	}
 
 	return result
+}
+
+func RandString(n int) string {
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

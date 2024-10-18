@@ -47,7 +47,7 @@ The type schema is a simple typing system designed to validate user input. Here 
     {
         "name":"namespace", 
         "shortDescription":"Namespace",
-        "description":"Namespace where the scenario container will be deployed",
+        "description":"Namespace where the scenario container_manager will be deployed",
         "variable":"NAMESPACE",
         "type":"string",
         "default":"default"
@@ -87,6 +87,9 @@ input is validated against this schema:
 >![NOTE] To compile the project `dnf install btrfs-progs-devel`
 > to enable podman socket `sudo setfacl --modify user:<user>:rw /run/podman/podman.sock`
 > to use podman cli with the socket `export CONTAINER_HOST=unix://run/podman/podman.sock`
+
+Containers are running, working on the wiring, stay tuned!
+
 _Work In Progress_
 
 ### Docker

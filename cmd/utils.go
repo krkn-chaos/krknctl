@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
 	"time"
@@ -26,17 +27,17 @@ func NewRootCommand(factory *factory.ProviderFactory) *cobra.Command {
 	return rootCmd
 }
 
-func GetProvider(offline bool, providerFactory *factory.ProviderFactory) factory.ScenarioDataProvider {
-	var provider factory.ScenarioDataProvider
+func GetProvider(offline bool, providerFactory *factory.ProviderFactory) provider.ScenarioDataProvider {
+	var dataProvider provider.ScenarioDataProvider
 	if offline {
-		provider = providerFactory.NewInstance(factory.Offline)
+		dataProvider = providerFactory.NewInstance(provider.Offline)
 	} else {
-		provider = providerFactory.NewInstance(factory.Online)
+		dataProvider = providerFactory.NewInstance(provider.Online)
 	}
-	return provider
+	return dataProvider
 }
 
-func FetchScenarios(provider factory.ScenarioDataProvider, dataSource string) (*[]string, error) {
+func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (*[]string, error) {
 	scenarios, err := provider.GetScenarios(dataSource)
 	if err != nil {
 		return nil, err
@@ -57,7 +58,7 @@ func BuildDataSource(config config.Config, offline bool, offlineSource *string) 
 			dataSource = ""
 		}
 	} else {
-		dataSource = config.GetQuayRegistryUri()
+		dataSource = config.GetQuayRepositoryApiUri()
 	}
 	return dataSource
 }
