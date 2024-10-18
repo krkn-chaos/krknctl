@@ -94,7 +94,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 	}
 	// if any other type value is nil or empty, the default value is nil or empty and the field is required the field is not valid
 	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Required == true && f.Type != String {
-		return nil, errors.New("field `value` doesn't have a `default` and cannot be nil or empty for type `" + f.Type.String() + "`")
+		return nil, fmt.Errorf("field `%s` doesn't have a `default` and cannot be nil or empty for type `%s`", *f.Name, f.Type)
 	}
 
 	var selectedValue *string

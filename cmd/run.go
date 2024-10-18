@@ -127,9 +127,19 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				return err
 			}
 			//WIP
-			//(*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name,)
-
-			fmt.Println(kubeconfigPath)
+			containerId, err := (*containerManager).RunAndStream(config.GetQuayImageUri()+":"+scenarioDetail.Name,
+				scenarioDetail.Name,
+				(*containerManager).GetContainerRuntimeUri(),
+				environment,
+				false,
+				map[string]string{},
+				*kubeconfigPath,
+				scenarioDetail.KubeconfigPath,
+			)
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("container started: %s", *containerId))
 			return nil
 		},
 	}

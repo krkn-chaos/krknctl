@@ -1,5 +1,7 @@
 package container_manager
 
+import "context"
+
 type Environment int64
 
 const (
@@ -8,7 +10,8 @@ const (
 )
 
 type ContainerManager interface {
-	Run(image string,
+	Run(
+		image string,
 		scenarioName string,
 		containerRuntimeUri string,
 		env map[string]string,
@@ -17,5 +20,18 @@ type ContainerManager interface {
 		localKubeconfigPath string,
 		kubeconfigMountPath string,
 
+	) (*string, *context.Context, error)
+
+	RunAndStream(
+		image string,
+		scenarioName string,
+		containerRuntimeUri string,
+		env map[string]string,
+		cache bool,
+		volumeMounts map[string]string,
+		localKubeconfigPath string,
+		kubeconfigMountPath string,
 	) (*string, error)
+
+	GetContainerRuntimeUri() string
 }
