@@ -12,6 +12,8 @@ type Config struct {
 	QuayOrg           string `json:"quay_org"`
 	QuayRegistry      string `json:"quay_registry"`
 	QuayRepositoryApi string `json:"quay_repositoryApi"`
+	ContainerPrefix   string `json:"container_prefix"`
+	KubeconfigPrefix  string `json:"kubeconfig_prefix"`
 }
 
 //go:embed config.json

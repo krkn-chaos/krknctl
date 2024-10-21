@@ -3,10 +3,12 @@ package container_manager
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 )
 
@@ -71,6 +73,33 @@ func PrepareKubeconfig(kubeconfigPath *string) (*string, error) {
 		return nil, err
 	}
 	return &path, nil
+}
+
+func CleanKubeconfigFiles(config config.Config) (*int, error) {
+	regex, err := regexp.Compile(fmt.Sprintf("%s-.*\\.[0-9]+", config.KubeconfigPrefix))
+	if err != nil {
+		return nil, err
+	}
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := os.ReadDir(currentDir)
+	if err != nil {
+		return nil, err
+	}
+	deletedFiles := 0
+	for _, file := range files {
+		if regex.MatchString(file.Name()) {
+			err := os.Remove(filepath.Join(currentDir, file.Name()))
+			if err != nil {
+				return nil, err
+			}
+			deletedFiles++
+		}
+	}
+	return &deletedFiles, nil
 }
 
 func DetectContainerManager() Environment {

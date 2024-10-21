@@ -29,6 +29,9 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
+	cleanCmd := NewCleanCommand(containerManager, config)
+	rootCmd.AddCommand(cleanCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

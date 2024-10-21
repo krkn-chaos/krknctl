@@ -8,13 +8,18 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"log"
 	"os"
+	"os/user"
+	"regexp"
 	"time"
 )
 
-type ContainerManager struct{}
+type ContainerManager struct {
+	Config config.Config
+}
 
 func (c *ContainerManager) Run(
 	image string,
@@ -42,7 +47,7 @@ func (c *ContainerManager) Run(
 	}
 	s := specgen.NewSpecGenerator(image, false)
 
-	s.Name = fmt.Sprintf("krkn-%s-%d", scenarioName, time.Now().Unix())
+	s.Name = fmt.Sprintf("%s-%s-%d", c.Config.ContainerPrefix, scenarioName, time.Now().Unix())
 	s.Env = env
 
 	kubeconfigMount := specs.Mount{
@@ -85,7 +90,7 @@ func (c *ContainerManager) RunAndStream(
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true)
 
-	err = containers.Attach(*conn, *containerId, os.Stdout, os.Stderr, nil, nil, options)
+	err = containers.Attach(*conn, *containerId, nil, os.Stdout, os.Stderr, nil, options)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +103,48 @@ func (c *ContainerManager) RunAndStream(
 
 }
 
+func (c *ContainerManager) CleanContainers() (*int, error) {
+	_true := true
+	nameRegex, err := regexp.Compile(fmt.Sprintf("^%s.*-[0-9]+$", c.Config.ContainerPrefix))
+	if err != nil {
+		return nil, err
+	}
+	conn, err := bindings.NewConnection(context.Background(), c.GetContainerRuntimeUri())
+	if err != nil {
+		return nil, err
+	}
+
+	foundContainers, err := containers.List(conn, &containers.ListOptions{
+		All: &_true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	deletedContainers := 0
+
+	for _, c := range foundContainers {
+		for _, n := range c.Names {
+			if nameRegex.MatchString(n) {
+				_, err := containers.Remove(conn, n, &containers.RemoveOptions{
+					Force: &_true,
+				})
+				if err != nil {
+					return nil, err
+				}
+				deletedContainers++
+			}
+		}
+	}
+
+	return &deletedContainers, nil
+}
+
 func (c *ContainerManager) GetContainerRuntimeUri() string {
-	//TODO: return the uri by operatingsystem
-	return "unix://run/user/4211263/podman/podman.sock"
+
+	currentUser, _ := user.Current()
+	if currentUser.Uid == "0" {
+		return "/run/podman/podman.sock"
+	}
+	return fmt.Sprintf("unix://run/user/%s/podman/podman.sock", currentUser.Uid)
+
 }

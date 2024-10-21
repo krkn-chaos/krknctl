@@ -15,7 +15,7 @@ func main() {
 		log.Fatalf("Errore nel caricamento della configurazione: %v", err)
 	}
 	containerManagerFactory := containermanagerfactory.NewContainerManagerFactory()
-	containerManager := containerManagerFactory.NewInstance(container_manager.DetectContainerManager())
+	containerManager := containerManagerFactory.NewInstance(container_manager.DetectContainerManager(), &config)
 	providerFactory := providerfactory.NewProviderFactory(&config)
 
 	cmd.Execute(providerFactory, &containerManager, config)

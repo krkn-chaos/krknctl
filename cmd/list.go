@@ -11,8 +11,8 @@ import (
 func NewListCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
 	var listCmd = &cobra.Command{
 		Use:   "list",
-		Short: "List scenarios",
-		Long:  `List available krkn-hub scenarios`,
+		Short: "list scenarios",
+		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			offline, err := cmd.Flags().GetBool("offline")

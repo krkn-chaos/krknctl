@@ -4,5 +4,7 @@
   "quay_host": "quay.io",
   "quay_org": "rh_ee_tsebasti",
   "quay_registry": "krknctl",
-  "quay_repositoryApi": "api/v1/repository"
+  "quay_repositoryApi": "api/v1/repository",
+  "container_prefix": "krknctl-containers",
+  "kubeconfig_prefix":"krknctl-kubeconfig"
 }

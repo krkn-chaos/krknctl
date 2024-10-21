@@ -33,5 +33,7 @@ type ContainerManager interface {
 		kubeconfigMountPath string,
 	) (*string, error)
 
+	CleanContainers() (*int, error)
+
 	GetContainerRuntimeUri() string
 }

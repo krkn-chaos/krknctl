@@ -103,6 +103,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 					}
 				}
 				if field != nil {
+					// if null returns the default
 					value, err := field.Validate(foundArg)
 					if err != nil {
 						return err
@@ -118,8 +119,8 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				}
 
 			}
+
 			tbl := NewEnvironmentTable(environment)
-			fmt.Print("\n")
 			tbl.Print()
 			fmt.Print("\n")
 			kubeconfigPath, err := container_manager.PrepareKubeconfig(&kubeconfig)
