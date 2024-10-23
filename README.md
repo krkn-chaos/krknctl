@@ -13,6 +13,11 @@ _Work In Progress_
 
 ## Command Autocompletion
 
+### Mac autocompletion
+
+autoload -Uz compinit
+compinit
+
 Command autocompletion is powered by the [Cobra Command](https://github.com/spf13/cobra) Library. Metadata is retrieved as described above, and the autocompletion feature is installed via the `completion` command. It is compatible with most popular *nix shells:
 
 ![command autocomplete](media/autocomplete.gif)
@@ -94,3 +99,16 @@ _Work In Progress_
 
 ### Docker
 _Work In Progress_
+
+
+### Build on mac 
+brew install gpgme
+
+
+### Cross compiling
+export GOOS="darwin/linux"
+export GOARCH="amd64/arm64"
+
+go build -tags containers_image_openpgp -gcflags=all="-l -B -wb=false" -ldflags="-w -s" -o bin-linux-amd64/ ./...
+
+go build -tags containers_image_openpgp -ldflags="-w -s" -o bin-darwin-arm/ ./...

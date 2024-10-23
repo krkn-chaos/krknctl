@@ -15,11 +15,12 @@ func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
 	return s
 }
 
-func NewRootCommand(factory *factory.ProviderFactory) *cobra.Command {
+func NewRootCommand(factory *factory.ProviderFactory, krknctl_config config.Config) *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:   "krknctl",
-		Short: "krkn CLI",
-		Long:  `krkn Command Line Interface`,
+		Use:     "krknctl",
+		Short:   "krkn CLI",
+		Long:    `krkn Command Line Interface`,
+		Version: krknctl_config.Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},

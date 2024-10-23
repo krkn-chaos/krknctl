@@ -2,17 +2,17 @@
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
 name: Go
-
 on:
-  push:
-    branches: [ "main" ]
+  release:
+    types: [published]
   pull_request:
-    branches: [ "main" ]
 
 jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
 
@@ -21,8 +21,73 @@ jobs:
       with:
         go-version: '1.23.1'
 
-    - name: Build
-      run: go build -o bin/krknctl -v ./...
+    - name: Install Dependencies
+      if: github.event_name == 'release' && github.event.action == 'published'
+      run: |
+        sudo apt-get update && sudo apt-get install libbtrfs-dev    
+
+    - name: Advance Version
+      if: github.event_name == 'release' && github.event.action == 'published'
+      run: |
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' internal/config/config.json) > internal/config/config.json 
+
+    - name: Build Linux AMD64
+      if: github.event_name == 'release' && github.event.action == 'published'
+      env:
+        GOOS: "linux"
+        GOARCH: "amd64"
+        CGO_ENABLED: 0
+        BINARY: "linux-amd64"
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz $FILENAME -C $BINARY krknctl
+        gh release upload ${{github.event.release.tag_name}} $FILENAME
+
+    - name: Build Linux ARM64
+      if: github.event_name == 'release' && github.event.action == 'published'
+      env:
+        GOOS: "linux"
+        GOARCH: "arm64"
+        CGO_ENABLED: 0
+        BINARY: "linux-arm64"
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz $FILENAME -C $BINARY krknctl
+        gh release upload ${{github.event.release.tag_name}} $FILENAME
+
+    - name: Build Darwin ARM64
+      if: github.event_name == 'release' && github.event.action == 'published'
+      env:
+        GOOS: "darwin"
+        GOARCH: "arm64"
+        CGO_ENABLED: 0
+        BINARY: "darwin-apple-silicon"
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz $FILENAME -C $BINARY krknctl
+        gh release upload ${{github.event.release.tag_name}} $FILENAME
+
+    - name: Build Darwin AMD64
+      if: github.event_name == 'release' && github.event.action == 'published'
+      env:
+        GOOS: "darwin"
+        GOARCH: "amd64"
+        CGO_ENABLED: 0
+        BINARY: "darwin-intel"
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz $FILENAME -C $BINARY krknctl
+        gh release upload ${{github.event.release.tag_name}} $FILENAME
 
     - name: Test
-      run: go test -v ./...
+      if: github.event_name == 'pull_request'
+      run: |
+        go test -v ./...

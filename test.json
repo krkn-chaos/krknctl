@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "mimmo.beta",
   "quay_protocol": "https",
   "quay_host": "quay.io",
   "quay_org": "rh_ee_tsebasti",

@@ -35,5 +35,5 @@ type ContainerManager interface {
 
 	CleanContainers() (*int, error)
 
-	GetContainerRuntimeUri() string
+	GetContainerRuntimeSocket() (*string, error)
 }

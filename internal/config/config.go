@@ -6,14 +6,17 @@ import (
 )
 
 type Config struct {
-	Version           string `json:"version"`
-	QuayProtocol      string `json:"quay_protocol"`
-	QuayHost          string `json:"quay_host"`
-	QuayOrg           string `json:"quay_org"`
-	QuayRegistry      string `json:"quay_registry"`
-	QuayRepositoryApi string `json:"quay_repositoryApi"`
-	ContainerPrefix   string `json:"container_prefix"`
-	KubeconfigPrefix  string `json:"kubeconfig_prefix"`
+	Version              string `json:"version"`
+	QuayProtocol         string `json:"quay_protocol"`
+	QuayHost             string `json:"quay_host"`
+	QuayOrg              string `json:"quay_org"`
+	QuayRegistry         string `json:"quay_registry"`
+	QuayRepositoryApi    string `json:"quay_repositoryApi"`
+	ContainerPrefix      string `json:"container_prefix"`
+	KubeconfigPrefix     string `json:"kubeconfig_prefix"`
+	DarwinSocketTemplate string `json:"darwin_socket_template"`
+	LinuxSocketTemplate  string `json:"linux_socket_template"`
+	LinuxSocketRoot      string `json:"linux_socket_root"`
 }
 
 //go:embed config.json

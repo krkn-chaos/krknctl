@@ -19,14 +19,17 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			offline, err := cmd.Flags().GetBool("offline")
-			//offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-			if err != nil {
-				return []string{}, cobra.ShellCompDirectiveError
-			}
-			// WIP: datasource offline TBD
-			dataSource := BuildDataSource(config, offline, nil)
-			provider := GetProvider(offline, factory)
+			// TODO: datasource offline TBD
+			/*
+					offline, err := cmd.Flags().GetBool("offline")
+					offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
+					if err != nil {
+								return []string{}, cobra.ShellCompDirectiveError
+				    }
+			*/
+
+			dataSource := BuildDataSource(config, false, nil)
+			provider := GetProvider(false, factory)
 
 			scenarios, err := FetchScenarios(provider, dataSource)
 			if err != nil {
@@ -38,13 +41,16 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			offline, err := cmd.Flags().GetBool("offline")
-			if err != nil {
-				return err
-			}
-			// WIP: datasource offline TBD
-			dataSource := BuildDataSource(config, offline, nil)
-			provider := GetProvider(offline, factory)
+			// TODO: datasource offline TBD
+			/*
+				offline, err := cmd.Flags().GetBool("offline")
+				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
+				if err != nil {
+					return err
+				}
+			*/
+			dataSource := BuildDataSource(config, false, nil)
+			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
 			if err != nil {
 				return err
@@ -68,29 +74,46 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			// TODO: datasource offline TBD
+			/*
+				offline, err := cmd.Flags().GetBool("offline")
+				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
+				if err != nil {
+					return err
+				}
+			*/
 			spinner := NewSpinnerWithSuffix("validating input...")
-			offline, err := cmd.Flags().GetBool("offline")
-			if err != nil {
-				return err
-			}
-			// WIP: datasource offline TBD
-			dataSource := BuildDataSource(config, offline, nil)
+			dataSource := BuildDataSource(config, false, nil)
 			spinner.Start()
 
-			provider := GetProvider(offline, factory)
+			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
 			if err != nil {
 				return err
 			}
 			spinner.Stop()
-			// default
-			kubeconfig, err := cmd.LocalFlags().GetString("kubeconfig")
+
 			if err != nil {
 				return err
 			}
 
 			environment := make(map[string]string)
+
+			var foundKubeconfig *string = nil
+			for i, a := range args {
+				if strings.HasPrefix(a, "--") {
+					if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
+						return fmt.Errorf("%s has no value", args[i])
+					}
+					// since automatic flag parsing is disabled to allow dynamic flags
+					// flags need to be parsed manually here eg. kubeconfig
+					if a == "--kubeconfig" {
+						foundKubeconfig = &args[i+1]
+					}
+				}
+			}
+
+			//dynamic flags parsing
 			for k, _ := range collectedFlags {
 				field := scenarioDetail.GetFieldByName(k)
 				var foundArg *string = nil
@@ -103,7 +126,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 					}
 				}
 				if field != nil {
-					// if null returns the default
+
 					value, err := field.Validate(foundArg)
 					if err != nil {
 						return err
@@ -112,9 +135,10 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 						environment[*field.Variable] = *value
 					}
 
-					/*					if value == nil && field.Required == false {
-										fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
-									}*/
+					/*
+						if value == nil && field.Required == false {
+						fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
+					*/
 
 				}
 
@@ -123,14 +147,19 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			tbl := NewEnvironmentTable(environment)
 			tbl.Print()
 			fmt.Print("\n")
-			kubeconfigPath, err := container_manager.PrepareKubeconfig(&kubeconfig)
+			kubeconfigPath, err := container_manager.PrepareKubeconfig(foundKubeconfig, config)
 			if err != nil {
 				return err
 			}
 			//WIP
+			socket, err := (*containerManager).GetContainerRuntimeSocket()
+			if err != nil {
+				return err
+			}
+
 			containerId, err := (*containerManager).RunAndStream(config.GetQuayImageUri()+":"+scenarioDetail.Name,
 				scenarioDetail.Name,
-				(*containerManager).GetContainerRuntimeUri(),
+				*socket,
 				environment,
 				false,
 				map[string]string{},

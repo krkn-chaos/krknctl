@@ -9,14 +9,18 @@ import (
 )
 
 func Execute(providerFactory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) {
-	var jsonFlag bool
-	var offlineFlag bool
-	var offlineRepoConfig string
-	rootCmd := NewRootCommand(providerFactory)
-	rootCmd.PersistentFlags().BoolVarP(&jsonFlag, "json", "j", false, "Output in JSON")
-	rootCmd.PersistentFlags().BoolVarP(&offlineFlag, "offline", "o", false, "Offline mode")
-	rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
-	rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
+
+	rootCmd := NewRootCommand(providerFactory, config)
+	// TODO: json output + offline repos
+	/*
+		var jsonFlag bool
+		var offlineFlag bool
+		var offlineRepoConfig string
+		rootCmd.PersistentFlags().BoolVarP(&jsonFlag, "json", "j", false, "Output in JSON")
+		rootCmd.PersistentFlags().BoolVarP(&offlineFlag, "offline", "o", false, "Offline mode")
+		rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
+		rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
+	*/
 
 	listCmd := NewListCommand(providerFactory, config)
 	rootCmd.AddCommand(listCmd)

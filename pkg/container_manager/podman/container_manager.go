@@ -2,6 +2,7 @@ package podman
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/user"
 	"regexp"
+	"runtime"
 	"time"
 )
 
@@ -109,7 +111,11 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := bindings.NewConnection(context.Background(), c.GetContainerRuntimeUri())
+	socket, err := c.GetContainerRuntimeSocket()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := bindings.NewConnection(context.Background(), *socket)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +145,21 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 	return &deletedContainers, nil
 }
 
-func (c *ContainerManager) GetContainerRuntimeUri() string {
-
-	currentUser, _ := user.Current()
-	if currentUser.Uid == "0" {
-		return "/run/podman/podman.sock"
+func (c *ContainerManager) GetContainerRuntimeSocket() (*string, error) {
+	if runtime.GOOS == "linux" {
+		currentUser, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+		if currentUser.Uid == "0" {
+			return &c.Config.LinuxSocketRoot, nil
+		}
+		socket := fmt.Sprintf(c.Config.LinuxSocketTemplate, currentUser.Uid)
+		return &socket, nil
+	} else if runtime.GOOS == "darwin" {
+		home, _ := os.UserHomeDir()
+		socket := fmt.Sprintf(c.Config.DarwinSocketTemplate, home)
+		return &socket, nil
 	}
-	return fmt.Sprintf("unix://run/user/%s/podman/podman.sock", currentUser.Uid)
-
+	return nil, errors.New("could not determine container container runtime socket")
 }
