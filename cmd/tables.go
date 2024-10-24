@@ -21,10 +21,14 @@ func NewScenarioTable(scenarios *[]models.ScenarioTag) table.Table {
 }
 
 func NewArgumentTable(inputFields []typing.InputField) table.Table {
-	tbl := table.New("Name", "Type", "Description", "Required")
+	tbl := table.New("Name", "Type", "Description", "Required", "Default")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, inputField := range inputFields {
-		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required)
+		default_value := ""
+		if inputField.Default != nil {
+			default_value = *inputField.Default
+		}
+		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, default_value)
 	}
 	return tbl
 }

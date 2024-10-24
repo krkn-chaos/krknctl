@@ -59,7 +59,7 @@ type Manifest struct {
 func (m *Manifest) GetKrknctlLabel(label string) *string {
 	for _, v := range m.Layers {
 		for _, c := range v.Command {
-			if strings.Contains(c, fmt.Sprintf("#(nop) LABEL %s", label)) {
+			if strings.Contains(c, fmt.Sprintf("LABEL %s", label)) {
 				return &c
 			}
 		}

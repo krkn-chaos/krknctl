@@ -3,7 +3,7 @@
   "quay_protocol": "https",
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
-  "quay_registry": "krkn",
+  "quay_registry": "krkn-hub",
   "quay_repositoryApi": "api/v1/repository",
   "container_prefix": "krknctl-containers",
   "kubeconfig_prefix": ".krknctl-kubeconfig",

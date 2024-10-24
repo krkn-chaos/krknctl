@@ -70,8 +70,8 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 
 func PrintScenarioDetail(scenarioDetail *models.ScenarioDetail) {
 	fmt.Print("\n")
-	_, _ = color.New(color.FgGreen, color.Underline).Println(scenarioDetail.Name)
-	justifiedText := text.Justify(scenarioDetail.Description, 50)
+	_, _ = color.New(color.FgGreen, color.Underline).Println(scenarioDetail.Title)
+	justifiedText := text.Justify(scenarioDetail.Description, 65)
 	for _, line := range justifiedText {
 		fmt.Println(line)
 	}

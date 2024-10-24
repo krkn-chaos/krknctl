@@ -62,22 +62,22 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", config.GetQuayRepositoryApiUri())
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "krkn.title LABEL not found in tag: cpu-memory-notitle"))
+	assert.True(t, strings.Contains(err.Error(), "krknctl.title LABEL not found in tag: cpu-memory-notitle"))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription", config.GetQuayRepositoryApiUri())
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "krkn.description LABEL not found in tag: cpu-memory-nodescription"))
+	assert.True(t, strings.Contains(err.Error(), "krknctl.description LABEL not found in tag: cpu-memory-nodescription"))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput", config.GetQuayRepositoryApiUri())
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "krkn.input_fields LABEL not found in tag: cpu-memory-noinput"))
+	assert.True(t, strings.Contains(err.Error(), "krknctl.input_fields LABEL not found in tag: cpu-memory-noinput"))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-nokubeconfig", config.GetQuayRepositoryApiUri())
 	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "krkn.kubeconfig_path LABEL not found in tag: cpu-memory-nokubeconfig"))
+	assert.True(t, strings.Contains(err.Error(), "krknctl.kubeconfig_path LABEL not found in tag: cpu-memory-nokubeconfig"))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("not-found", config.GetQuayRepositoryApiUri())

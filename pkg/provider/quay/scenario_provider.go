@@ -103,16 +103,16 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 	kubeconfigPathLabel := manifest.GetKrknctlLabel("krknctl.kubeconfig_path")
 
 	if titleLabel == nil {
-		return nil, fmt.Errorf("krkn.title LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("krknctl.title LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
 	}
 	if descriptionLabel == nil {
-		return nil, fmt.Errorf("krkn.description LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("krknctl.description LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
 	}
 	if inputFieldsLabel == nil {
-		return nil, fmt.Errorf("krkn.input_fields LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("krknctl.input_fields LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
 	}
 	if kubeconfigPathLabel == nil {
-		return nil, fmt.Errorf("krkn.kubeconfig_path LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("krknctl.kubeconfig_path LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
 	}
 
 	parsedTitle, err := p.parseTitle(*titleLabel)
@@ -142,11 +142,11 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 }
 
 func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
-	re, err := regexp.Compile("^.*LABEL krknctl\\.title\\=\\\"(.*)\\\"")
+	reDoubleQuotes, err := regexp.Compile("LABEL krknctl\\.title=\"?(.*)\"?")
 	if err != nil {
 		return nil, err
 	}
-	matches := re.FindStringSubmatch(s)
+	matches := reDoubleQuotes.FindStringSubmatch(s)
 	if matches == nil {
 		return nil, errors.New("title not found in image manifest")
 	}
@@ -154,7 +154,7 @@ func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
 }
 
 func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
-	re, err := regexp.Compile("^.*LABEL krknctl\\.description\\=\\\"(.*)\\\"")
+	re, err := regexp.Compile("LABEL krknctl\\.description=\"?(.*)\"?")
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
 }
 
 func (p *ScenarioProvider) parseKubeconfigPath(s string) (*string, error) {
-	re, err := regexp.Compile("^.*LABEL krknctl\\.kubeconfig_path\\=\\\"(.*)\\\"")
+	re, err := regexp.Compile("LABEL krknctl\\.kubeconfig_path=\"?(.*)\"?")
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (p *ScenarioProvider) parseKubeconfigPath(s string) (*string, error) {
 }
 
 func (p *ScenarioProvider) parseInputFields(s string) ([]typing.InputField, error) {
-	re, err := regexp.Compile(".*LABEL krknctl\\.input_fields\\='(.*)'$")
+	re, err := regexp.Compile("LABEL krknctl\\.input_fields='?(.*)'?")
 	if err != nil {
 		return nil, err
 	}

@@ -48,7 +48,11 @@ func Justify(text string, width int) []string {
 
 	if len(line) > 0 {
 		lastLine := strings.Join(line, " ")
-		result = append(result, lastLine+strings.Repeat(" ", width-len(lastLine)))
+		calculatedwidth := width - len(lastLine)
+		if calculatedwidth < 0 {
+			calculatedwidth = 0
+		}
+		result = append(result, lastLine+strings.Repeat(" ", calculatedwidth))
 	}
 
 	return result
