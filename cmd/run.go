@@ -152,7 +152,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				return err
 			}
 			//WIP
-			socket, err := (*containerManager).GetContainerRuntimeSocket()
+			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
 			if err != nil {
 				return err
 			}

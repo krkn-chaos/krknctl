@@ -13,8 +13,8 @@ func getTestConfig() krknctlconfig.Config {
 		Version:           "0.0.1",
 		QuayProtocol:      "https",
 		QuayHost:          "quay.io",
-		QuayOrg:           "rh_ee_tsebasti",
-		QuayRegistry:      "krknctl",
+		QuayOrg:           "krkn-chaos",
+		QuayRegistry:      "krknctl-test",
 		QuayRepositoryApi: "api/v1/repository",
 	}
 }
@@ -24,7 +24,7 @@ func getWrongConfig() krknctlconfig.Config {
 		Version:           "0.0.1",
 		QuayProtocol:      "https",
 		QuayHost:          "quay.io",
-		QuayOrg:           "rh_ee_tsebasti",
+		QuayOrg:           "krkn-chaos",
 		QuayRegistry:      "do_not_exist",
 		QuayRepositoryApi: "api/v1/repository",
 	}

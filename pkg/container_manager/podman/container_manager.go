@@ -13,7 +13,6 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"log"
 	"os"
-	"os/user"
 	"regexp"
 	"runtime"
 	"time"
@@ -111,7 +110,7 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 	if err != nil {
 		return nil, err
 	}
-	socket, err := c.GetContainerRuntimeSocket()
+	socket, err := c.GetContainerRuntimeSocket(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -145,16 +144,16 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 	return &deletedContainers, nil
 }
 
-func (c *ContainerManager) GetContainerRuntimeSocket() (*string, error) {
+func (c *ContainerManager) GetContainerRuntimeSocket(userId *int) (*string, error) {
 	if runtime.GOOS == "linux" {
-		currentUser, err := user.Current()
-		if err != nil {
-			return nil, err
+		uid := os.Getuid()
+		if userId != nil {
+			uid = *userId
 		}
-		if currentUser.Uid == "0" {
+		if uid == 0 {
 			return &c.Config.LinuxSocketRoot, nil
 		}
-		socket := fmt.Sprintf(c.Config.LinuxSocketTemplate, currentUser.Uid)
+		socket := fmt.Sprintf(c.Config.LinuxSocketTemplate, uid)
 		return &socket, nil
 	} else if runtime.GOOS == "darwin" {
 		home, _ := os.UserHomeDir()

@@ -1,7 +1,12 @@
+![build](https://github.com/krkn-chaos/krknctl/actions/workflows/build.yaml/badge.svg)
+![test](https://github.com/krkn-chaos/krknctl/actions/workflows/test.yaml/badge.svg)
+![coverage](https://krkn-chaos.github.io/krkn-lib-docs/coverage_badge_krknctl.svg)
+
+
 # krknctl
 Krkn Terminal UI & CLI
 
-## Dev Blog
+## Dev Blogx
 As this project is actively evolving, consider this README as more of a _Development Blog_ to showcase current features under development.
 
 ## Scenario Metadata

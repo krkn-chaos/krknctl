@@ -1,14 +1,12 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Go
+name: Build Krknctl
 on:
   release:
     types: [published]
-  pull_request:
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     permissions:
@@ -16,23 +14,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Go
+    - name: set up go
       uses: actions/setup-go@v4
       with:
         go-version: '1.23.1'
 
-    - name: Install Dependencies
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: install dependencies
       run: |
         sudo apt-get update && sudo apt-get install libbtrfs-dev    
 
-    - name: Advance Version
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' internal/config/config.json) > internal/config/config.json 
 
-    - name: Build Linux AMD64
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: build linux amd64
       env:
         GOOS: "linux"
         GOARCH: "amd64"
@@ -45,8 +40,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Linux ARM64
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: build linux arm64
       env:
         GOOS: "linux"
         GOARCH: "arm64"
@@ -59,8 +53,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Darwin ARM64
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: build darwin arm64
       env:
         GOOS: "darwin"
         GOARCH: "arm64"
@@ -73,8 +66,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Darwin AMD64
-      if: github.event_name == 'release' && github.event.action == 'published'
+    - name: build darwin amd64
       env:
         GOOS: "darwin"
         GOARCH: "amd64"
@@ -87,7 +79,4 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Test
-      if: github.event_name == 'pull_request'
-      run: |
-        go test -v ./...
+

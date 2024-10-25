@@ -178,7 +178,7 @@ func (p *ScenarioProvider) parseKubeconfigPath(s string) (*string, error) {
 }
 
 func (p *ScenarioProvider) parseInputFields(s string) ([]typing.InputField, error) {
-	re, err := regexp.Compile("LABEL krknctl\\.input_fields='?(.*)'?")
+	re, err := regexp.Compile("LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?")
 	if err != nil {
 		return nil, err
 	}

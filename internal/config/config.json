@@ -8,6 +8,6 @@
   "container_prefix": "krknctl-containers",
   "kubeconfig_prefix": ".krknctl-kubeconfig",
   "darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
-  "linux_socket_template": "unix://run/user/%s/podman/podman.sock",
+  "linux_socket_template": "unix://run/user/%d/podman/podman.sock",
   "linux_socket_root": "unix://run/podman/podman.sock"
 }
