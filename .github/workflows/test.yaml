@@ -54,7 +54,7 @@ jobs:
           COLOR: yellow
         run: |
           [[ $TOTAL_COVERAGE > 40 ]] && COLOR=green
-          curl -s  "https://img.shields.io/badge/coverage-$TOTAL_COVERAGE%25-$COLOR" > ./krkn-lib-docs/coverage_badge_krknctl.svg
+          curl -s  "https://img.shields.io/badge/coverage-${TOTAL_COVERAGE//\%/}%25-$COLOR" > ./krkn-lib-docs/coverage_badge_krknctl.svg
           cd krkn-lib-docs
           git add .
           git config user.name "krkn-chaos"
