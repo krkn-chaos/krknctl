@@ -1,3 +1,8 @@
+![build](https://github.com/krkn-chaos/krknctl/actions/workflows/build.yml/badge.svg)
+![test](https://github.com/krkn-chaos/krknctl/actions/workflows/test.yml/badge.svg)
+![coverage](https://krkn-chaos.github.io/krkn-lib-docs/coverage_badge_krknctl.svg)
+
+
 # krknctl
 Krkn Terminal UI & CLI
 

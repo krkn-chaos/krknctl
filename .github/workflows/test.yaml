@@ -6,11 +6,11 @@ jobs:
     name: krknctl tests
     runs-on: ubuntu-24.04
     steps:
-      - name: Create multi-node KinD cluster
+      - name: create multi-node kind cluster
         uses: redhat-chaos/actions/kind@main
-      - name: Code Checkout
+      - name: code checkout
         uses: actions/checkout@v4
-      - name: Set up Go
+      - name: set up go
         uses: actions/setup-go@v4
         with:
           go-version: '1.23.1'
