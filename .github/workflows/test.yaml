@@ -1,0 +1,34 @@
+name: krknctl tests
+on:
+  pull_request:
+jobs:
+  test:
+    name: krknctl tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create multi-node KinD cluster
+        uses: redhat-chaos/actions/kind@main
+      - name: Code Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23.1'
+      - name: Install Podman
+        run: |
+          sudo apt-get update && sudo apt-get install podman libbtrfs-dev
+      - name: Setup Podman
+        run: |
+          echo "XDG_RUNTIME_DIR=/run/user/$UID" >> $GITHUB_ENV
+          echo "PODMAN_SOCKET=$XDG_RUNTIME_DIR/podman/podman.sock" >> $GITHUB_ENV
+          loginctl enable-linger $(whoami)
+          podman system service --time=0 $PODMAN_SOCKET &
+      - name: Set up gotestfmt
+        run: |
+          go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
+      - name: Run Test suite
+        run: |
+         export USERID=$(id -u)
+         go test -tags containers_image_openpgp -race -json -v -coverprofile=coverage.txt ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+          
+
