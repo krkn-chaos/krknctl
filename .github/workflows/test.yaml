@@ -30,9 +30,15 @@ jobs:
       - name: Run Test suite
         run: |
          export USERID=$(id -u)
-         go test -tags containers_image_openpgp -race -json -v -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+         go test -tags containers_image_openpgp -race -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
          cat /tmp/gotest.log | go-ctrf-json-reporter -output ctrf-report.json
-      - name: Generate coverage report
+      - name: Generate test report
         run: npx github-actions-ctrf ctrf-report.json
+      - name: generate coverage report
+        run: |
+          COVERAGE=$(go tool cover -func coverage.out | grep total | awk '{print $3}')
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# TEST COVERAGE: $COVERAGE" >> $GITHUB_STEP_SUMMARY
           
 
