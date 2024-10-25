@@ -14,20 +14,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Go
+    - name: set up go
       uses: actions/setup-go@v4
       with:
         go-version: '1.23.1'
 
-    - name: Install Dependencies
+    - name: install dependencies
       run: |
         sudo apt-get update && sudo apt-get install libbtrfs-dev    
 
-    - name: Advance Version
+    - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' internal/config/config.json) > internal/config/config.json 
 
-    - name: Build Linux AMD64
+    - name: build linux amd64
       env:
         GOOS: "linux"
         GOARCH: "amd64"
@@ -40,7 +40,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Linux ARM64
+    - name: build linux arm64
       env:
         GOOS: "linux"
         GOARCH: "arm64"
@@ -53,7 +53,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Darwin ARM64
+    - name: build darwin arm64
       env:
         GOOS: "darwin"
         GOARCH: "arm64"
@@ -66,7 +66,7 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
-    - name: Build Darwin AMD64
+    - name: build darwin amd64
       env:
         GOOS: "darwin"
         GOARCH: "amd64"
