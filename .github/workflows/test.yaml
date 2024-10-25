@@ -29,6 +29,11 @@ jobs:
       - name: Run Test suite
         run: |
          export USERID=$(id -u)
-         go test -tags containers_image_openpgp -race -json -v -coverprofile=coverage.txt ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+         go test -tags containers_image_openpgp -race -json -v -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage.out -o coverage.html
+          cat coverage.out
+          cat coverage.html >> $GITHUB_STEP_SUMMARY
           
 
