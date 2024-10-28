@@ -1,9 +1,9 @@
-name: krknctl tests
+name: krknctl test
 on:
   pull_request:
 jobs:
   test:
-    name: krknctl tests
+    name: krknctl test
     runs-on: ubuntu-24.04
     steps:
       - name: create multi-node kind cluster
