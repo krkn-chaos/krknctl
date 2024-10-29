@@ -1,4 +1,4 @@
-package podman
+package docker
 
 import (
 	"fmt"
@@ -23,12 +23,13 @@ func getTestConfig() krknctlconfig.Config {
 		ContainerPrefix:            "krknctl-containers",
 		KubeconfigPrefix:           "krknctl-kubeconfig",
 		PodmanDarwinSocketTemplate: "unix://%s/.local/share/containers/podman/machine/podman.sock",
-		PodmanLinuxSocketTemplate:  "unix://run/user/%d/podman/podman.sock",
-		PodmanSocketRoot:           "unix://run/podman/podman.sock",
+		PodmanLinuxSocketTemplate:  "unix:///run/user/%d/podman/podman.sock",
+		PodmanSocketRoot:           "unix:///run/podman/podman.sock",
+		DockerSocketRoot:           "unix:///var/run/docker.sock",
 	}
 }
 
-func TestConnect(t *testing.T) {
+func TestContainerManager_Run(t *testing.T) {
 	env := map[string]string{
 		"CHAOS_DURATION": "2",
 		"CORES":          "1",
@@ -73,5 +74,4 @@ func TestConnect(t *testing.T) {
 	}
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
-
 }

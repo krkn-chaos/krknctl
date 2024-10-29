@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/briandowns/spinner"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
@@ -40,7 +41,16 @@ func (c *ContainerManager) Run(
 	//if the image exists but the digest has changed pulls the image again
 	imageExists, err := images.Exists(conn, image, nil)
 	if cache == false || imageExists == false {
-		_, err = images.Pull(conn, image, nil)
+		s := spinner.New(spinner.CharSets[39], 100*time.Millisecond)
+		s.Suffix = fmt.Sprintf("pulling image %s....", image)
+		s.Start()
+		options := images.PullOptions{}
+		options.WithQuiet(true)
+		_, err = images.Pull(conn, image, &options)
+		if err != nil {
+			return nil, nil, err
+		}
+		s.Stop()
 	}
 
 	if err != nil {
@@ -151,13 +161,13 @@ func (c *ContainerManager) GetContainerRuntimeSocket(userId *int) (*string, erro
 			uid = *userId
 		}
 		if uid == 0 {
-			return &c.Config.LinuxSocketRoot, nil
+			return &c.Config.PodmanSocketRoot, nil
 		}
-		socket := fmt.Sprintf(c.Config.LinuxSocketTemplate, uid)
+		socket := fmt.Sprintf(c.Config.PodmanLinuxSocketTemplate, uid)
 		return &socket, nil
 	} else if runtime.GOOS == "darwin" {
 		home, _ := os.UserHomeDir()
-		socket := fmt.Sprintf(c.Config.DarwinSocketTemplate, home)
+		socket := fmt.Sprintf(c.Config.PodmanDarwinSocketTemplate, home)
 		return &socket, nil
 	}
 	return nil, errors.New("could not determine container container runtime socket")

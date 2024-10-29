@@ -121,5 +121,5 @@ func ExpandHomeFolder(folder string) (*string, error) {
 }
 
 func DetectContainerManager() Environment {
-	return Podman
+	return Docker
 }
