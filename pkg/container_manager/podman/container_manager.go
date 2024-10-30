@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"log"
 	"os"
 	"regexp"
 	"runtime"
@@ -98,20 +97,34 @@ func (c *ContainerManager) RunAndStream(
 	if err != nil {
 		return nil, err
 	}
-
-	options := new(containers.AttachOptions).WithLogs(true).WithStream(true)
-
-	err = containers.Attach(*conn, *containerId, nil, os.Stdout, os.Stderr, nil, options)
+	err = c.attach(containerId, conn)
 	if err != nil {
 		return nil, err
 	}
-
-	if err != nil {
-		log.Fatalf("Errore durante il waiting dell'attach: %v", err)
-	}
-
 	return containerId, nil
 
+}
+
+func (c *ContainerManager) attach(containerId *string, conn *context.Context) error {
+	options := new(containers.AttachOptions).WithLogs(true).WithStream(true)
+
+	err := containers.Attach(*conn, *containerId, nil, os.Stdout, os.Stderr, nil, options)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ContainerManager) Attach(containerId *string, conn *context.Context) error {
+
+	//INTERCEPT SIGNAL
+
+	err := c.attach(containerId, conn)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *ContainerManager) CleanContainers() (*int, error) {

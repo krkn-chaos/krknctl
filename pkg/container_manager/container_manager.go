@@ -35,5 +35,7 @@ type ContainerManager interface {
 
 	CleanContainers() (*int, error)
 
+	Attach(containerId *string, ctx *context.Context) error
+
 	GetContainerRuntimeSocket(userId *int) (*string, error)
 }

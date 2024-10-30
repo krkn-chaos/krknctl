@@ -1,6 +1,7 @@
 package container_manager
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
@@ -12,6 +13,11 @@ import (
 	"strings"
 	"time"
 )
+
+type SigTermChannel struct {
+	Message string
+	Error   error
+}
 
 func encodeToBase64(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
@@ -122,4 +128,14 @@ func ExpandHomeFolder(folder string) (*string, error) {
 
 func DetectContainerManager() Environment {
 	return Docker
+}
+
+func ContainerClientSigTermInterceptor(signalChan chan os.Signal, resultChan chan SigTermChannel, interceptFunc func(containerId *string, context *context.Context) error, ctx *context.Context, containerId *string) {
+	<-signalChan
+	err := interceptFunc(containerId, ctx)
+	if err != nil {
+		resultChan <- SigTermChannel{Message: "", Error: err}
+	}
+	killMessage := fmt.Sprintf("SIGTERM captured killed container %s", *containerId)
+	resultChan <- SigTermChannel{Message: killMessage, Error: err}
 }

@@ -157,7 +157,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				return err
 			}
 
-			containerId, err := (*containerManager).RunAndStream(config.GetQuayImageUri()+":"+scenarioDetail.Name,
+			_, err = (*containerManager).RunAndStream(config.GetQuayImageUri()+":"+scenarioDetail.Name,
 				scenarioDetail.Name,
 				*socket,
 				environment,
@@ -169,7 +169,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("container started: %s", *containerId))
+
 			return nil
 		},
 	}

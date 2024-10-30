@@ -13,10 +13,12 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"io"
-	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -100,16 +102,39 @@ func (c *ContainerManager) RunAndStream(
 	localKubeconfigPath string,
 	kubeconfigMountPath string,
 ) (*string, error) {
-
+	_, _ = color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
+	// to make the above message readable
+	time.Sleep(2)
 	containerId, ctx, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts, localKubeconfigPath, kubeconfigMountPath)
 	if err != nil {
 		return nil, err
 	}
-	cli, err := dockerClientFromContext(*ctx)
+
+	signalChan := make(chan os.Signal)
+
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	kill, err := c.attach(containerId, ctx, signalChan)
+
 	if err != nil {
 		return nil, err
 	}
 
+	if kill {
+		err = c.Kill(containerId, ctx)
+		if err != nil {
+			return nil, err
+		}
+		_, _ = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerId))
+	}
+	return containerId, nil
+}
+
+func (c *ContainerManager) attach(containerId *string, ctx *context.Context, signalChannel chan os.Signal) (bool, error) {
+	cli, err := dockerClientFromContext(*ctx)
+	if err != nil {
+		return false, err
+	}
 	options := dockercontainer.LogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
@@ -118,30 +143,72 @@ func (c *ContainerManager) RunAndStream(
 
 	reader, err := cli.ContainerLogs(context.Background(), *containerId, options)
 	if err != nil {
-		log.Fatalf("Errore ottenendo i log: %v", err)
+		return false, err
 	}
 	defer reader.Close()
+	errorChan := make(chan error)
+	finishChan := make(chan error)
 
-	// Crea un writer per stampare i log in tempo reale
+	// copies demultiplexed reader to Stdout and Stderr
 	go func() {
-
 		_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, reader)
 		if err != nil {
-			log.Fatalf("Errore copiando i log: %v", err)
+			errorChan <- err
 		}
 	}()
 
-	statusCh, errCh := cli.ContainerWait(*ctx, *containerId, dockercontainer.WaitConditionNotRunning)
-
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return nil, err
+	// waits for:
+	// - an error coming from stdcopy.Stdcopy
+	// - the container to finish run
+	// and signals to the outer select
+	go func() {
+		respCh, errCH := cli.ContainerWait(*ctx, *containerId, dockercontainer.WaitConditionNotRunning)
+		select {
+		case err := <-errCH:
+			errorChan <- err
+		case <-respCh:
+			finishChan <- nil
 		}
-	case <-statusCh:
-		return containerId, nil
+	}()
+
+	// waits for:
+	// - the previous function to either return an error or return a finish
+	// - a SIGTERM in that case returns true so the container is killed (for RunAndStream)
+	select {
+	case err := <-errorChan:
+		return false, err
+	case <-signalChannel:
+		return true, nil
+	case err := <-finishChan:
+		if err != nil {
+			return true, err
+		}
+		return false, nil
 	}
-	return nil, errors.New("scenario exited for an unknown error")
+
+}
+
+func (c *ContainerManager) Attach(containerId *string, ctx *context.Context) error {
+	//missing signal interceptor
+	/*	err := c.attach(containerId, ctx)
+		if err != nil {
+			return err
+		}
+		return nil*/
+	return nil
+}
+
+func (c *ContainerManager) Kill(containerId *string, ctx *context.Context) error {
+	cli, err := dockerClientFromContext(*ctx)
+	if err != nil {
+		return err
+	}
+
+	err = cli.ContainerKill(*ctx, *containerId, "KILL")
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *ContainerManager) CleanContainers() (*int, error) {
