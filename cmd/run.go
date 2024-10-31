@@ -198,7 +198,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				if err != nil {
 					return err
 				}
-				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, containerId))
+				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, *containerId))
 				if err != nil {
 					return err
 				}
