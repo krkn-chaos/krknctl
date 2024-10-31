@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
 	"log"
 	"strings"
+	"time"
 )
 
 func NewRunCommand(factory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
@@ -85,6 +87,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			spinner := NewSpinnerWithSuffix("validating input...")
 			dataSource := BuildDataSource(config, false, nil)
 			spinner.Start()
+			runDetached := false
 
 			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
@@ -102,13 +105,17 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			var foundKubeconfig *string = nil
 			for i, a := range args {
 				if strings.HasPrefix(a, "--") {
-					if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-						return fmt.Errorf("%s has no value", args[i])
-					}
+
 					// since automatic flag parsing is disabled to allow dynamic flags
 					// flags need to be parsed manually here eg. kubeconfig
 					if a == "--kubeconfig" {
+						if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
+							return fmt.Errorf("%s has no value", args[i])
+						}
 						foundKubeconfig = &args[i+1]
+					}
+					if a == "--detached" {
+						runDetached = true
 					}
 				}
 			}
@@ -156,20 +163,40 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			if err != nil {
 				return err
 			}
-
-			_, err = (*containerManager).RunAndStream(config.GetQuayImageUri()+":"+scenarioDetail.Name,
-				scenarioDetail.Name,
-				*socket,
-				environment,
-				false,
-				map[string]string{},
-				*kubeconfigPath,
-				scenarioDetail.KubeconfigPath,
-			)
-			if err != nil {
-				return err
+			startTime := time.Now()
+			if runDetached == false {
+				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name,
+					scenarioDetail.Name,
+					*socket,
+					environment,
+					false,
+					map[string]string{},
+					*kubeconfigPath,
+					scenarioDetail.KubeconfigPath,
+				)
+				if err != nil {
+					return err
+				}
+			} else {
+				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name,
+					scenarioDetail.Name,
+					*socket,
+					environment,
+					false,
+					map[string]string{},
+					*kubeconfigPath,
+					scenarioDetail.KubeconfigPath,
+				)
+				if err != nil {
+					return err
+				}
+				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, containerId))
+				if err != nil {
+					return err
+				}
 			}
-
+			scenarioDuration := time.Since(startTime)
+			fmt.Println(fmt.Sprintf("%s took %s", scenarioDetail.Name, scenarioDuration.String()))
 			return nil
 		},
 	}

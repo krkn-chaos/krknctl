@@ -10,5 +10,6 @@
   "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
   "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
   "podman_socket_root_linux": "unix://run/podman/podman.sock",
-  "docker_socket_root": "unix:///var/run/docker.sock"
+  "docker_socket_root": "unix:///var/run/docker.sock",
+  "default_container_platform": "Podman"
 }

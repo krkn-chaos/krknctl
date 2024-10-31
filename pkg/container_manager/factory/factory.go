@@ -14,7 +14,7 @@ func NewContainerManagerFactory() *ContainerManagerFactory {
 	return &ContainerManagerFactory{}
 }
 
-func (f *ContainerManagerFactory) NewInstance(containerEnvironment container_manager.Environment, config *config.Config) container_manager.ContainerManager {
+func (f *ContainerManagerFactory) NewInstance(containerEnvironment container_manager.ContainerRuntime, config *config.Config) container_manager.ContainerManager {
 	switch containerEnvironment {
 	case container_manager.Podman:
 		return &podman.ContainerManager{

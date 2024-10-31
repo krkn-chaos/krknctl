@@ -2,7 +2,6 @@ package podman
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/briandowns/spinner"
 	"github.com/containers/podman/v5/pkg/bindings"
@@ -10,11 +9,14 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"os"
+	"os/signal"
 	"regexp"
-	"runtime"
+	"syscall"
 	"time"
 )
 
@@ -82,7 +84,7 @@ func (c *ContainerManager) Run(
 	return &createResponse.ID, &conn, nil
 }
 
-func (c *ContainerManager) RunAndStream(
+func (c *ContainerManager) RunAttached(
 	image string,
 	scenarioName string,
 	containerRuntimeUri string,
@@ -92,37 +94,77 @@ func (c *ContainerManager) RunAndStream(
 	localKubeconfigPath string,
 	kubeconfigMountPath string,
 ) (*string, error) {
-
+	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
+	if err != nil {
+		return nil, err
+	}
+	// to make the above message readable
+	time.Sleep(2)
 	containerId, conn, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts, localKubeconfigPath, kubeconfigMountPath)
 	if err != nil {
 		return nil, err
 	}
-	err = c.attach(containerId, conn)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	kill, err := c.attach(containerId, conn, sigCh)
+
 	if err != nil {
 		return nil, err
+	}
+	if kill {
+		err := c.Kill(containerId, conn)
+		if err != nil {
+			return nil, err
+		}
+		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerId))
+		if err != nil {
+			return nil, err
+		}
 	}
 	return containerId, nil
 
 }
 
-func (c *ContainerManager) attach(containerId *string, conn *context.Context) error {
-	options := new(containers.AttachOptions).WithLogs(true).WithStream(true)
+func (c *ContainerManager) attach(containerId *string, conn *context.Context, signalChannel chan os.Signal) (bool, error) {
 
-	err := containers.Attach(*conn, *containerId, nil, os.Stdout, os.Stderr, nil, options)
-	if err != nil {
-		return err
+	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
+
+	errorChannel := make(chan error, 1)
+	finishChannel := make(chan bool, 1)
+	go func() {
+		err := containers.Attach(*conn, *containerId, nil, os.Stdout, os.Stderr, nil, options)
+		if err != nil {
+			errorChannel <- err
+		}
+		finishChannel <- true
+	}()
+
+	select {
+	case <-finishChannel:
+		return false, nil
+	case <-signalChannel:
+		return true, nil
+	case err := <-errorChannel:
+		return false, err
 	}
-
-	return nil
 }
 
 func (c *ContainerManager) Attach(containerId *string, conn *context.Context) error {
-
-	//INTERCEPT SIGNAL
-
-	err := c.attach(containerId, conn)
+	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to stop streaming scenario output (scenario won't be interrupted)")
 	if err != nil {
 		return err
+	}
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	interrupted, err := c.attach(containerId, conn, sigCh)
+	if err != nil {
+		return err
+	}
+	if interrupted {
+		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", *containerId))
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -167,21 +209,14 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 	return &deletedContainers, nil
 }
 
-func (c *ContainerManager) GetContainerRuntimeSocket(userId *int) (*string, error) {
-	if runtime.GOOS == "linux" {
-		uid := os.Getuid()
-		if userId != nil {
-			uid = *userId
-		}
-		if uid == 0 {
-			return &c.Config.PodmanSocketRoot, nil
-		}
-		socket := fmt.Sprintf(c.Config.PodmanLinuxSocketTemplate, uid)
-		return &socket, nil
-	} else if runtime.GOOS == "darwin" {
-		home, _ := os.UserHomeDir()
-		socket := fmt.Sprintf(c.Config.PodmanDarwinSocketTemplate, home)
-		return &socket, nil
+func (c *ContainerManager) Kill(containerId *string, ctx *context.Context) error {
+	err := containers.Kill(*ctx, *containerId, nil)
+	if err != nil {
+		return err
 	}
-	return nil, errors.New("could not determine container container runtime socket")
+	return nil
+}
+
+func (c *ContainerManager) GetContainerRuntimeSocket(userId *int) (*string, error) {
+	return container_manager.GetSocketByContainerEnvironment(container_manager.Podman, c.Config, userId)
 }

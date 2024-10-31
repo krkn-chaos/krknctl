@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"io"
 	"os"
 	"os/signal"
@@ -43,7 +44,7 @@ func (c *ContainerManager) Run(
 	if err != nil {
 		return nil, nil, err
 	}
-	exists, err := imageExists(ctx, cli, image, "")
+	exists, err := ImageExists(ctx, cli, image, "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,7 +93,7 @@ func (c *ContainerManager) Run(
 	return &resp.ID, &ctxWithClient, nil
 }
 
-func (c *ContainerManager) RunAndStream(
+func (c *ContainerManager) RunAttached(
 	image string,
 	scenarioName string,
 	containerRuntimeUri string,
@@ -102,7 +103,10 @@ func (c *ContainerManager) RunAndStream(
 	localKubeconfigPath string,
 	kubeconfigMountPath string,
 ) (*string, error) {
-	_, _ = color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
+	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
+	if err != nil {
+		return nil, err
+	}
 	// to make the above message readable
 	time.Sleep(2)
 	containerId, ctx, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts, localKubeconfigPath, kubeconfigMountPath)
@@ -125,7 +129,10 @@ func (c *ContainerManager) RunAndStream(
 		if err != nil {
 			return nil, err
 		}
-		_, _ = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerId))
+		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerId))
+		if err != nil {
+			return nil, err
+		}
 	}
 	return containerId, nil
 }
@@ -173,7 +180,7 @@ func (c *ContainerManager) attach(containerId *string, ctx *context.Context, sig
 
 	// waits for:
 	// - the previous function to either return an error or return a finish
-	// - a SIGTERM in that case returns true so the container is killed (for RunAndStream)
+	// - a SIGTERM in that case returns true so the container is killed (for RunAttached)
 	select {
 	case err := <-errorChan:
 		return false, err
@@ -189,12 +196,22 @@ func (c *ContainerManager) attach(containerId *string, ctx *context.Context, sig
 }
 
 func (c *ContainerManager) Attach(containerId *string, ctx *context.Context) error {
-	//missing signal interceptor
-	/*	err := c.attach(containerId, ctx)
+	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to stop streaming scenario output (scenario won't be interrupted)")
+	if err != nil {
+		return err
+	}
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	interrupted, err := c.attach(containerId, ctx, sigCh)
+	if err != nil {
+		return err
+	}
+	if interrupted {
+		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", *containerId))
 		if err != nil {
 			return err
 		}
-		return nil*/
+	}
 	return nil
 }
 
@@ -216,7 +233,7 @@ func (c *ContainerManager) CleanContainers() (*int, error) {
 }
 
 func (c *ContainerManager) GetContainerRuntimeSocket(userId *int) (*string, error) {
-	return &c.Config.DockerSocketRoot, nil
+	return container_manager.GetSocketByContainerEnvironment(container_manager.Docker, c.Config, userId)
 }
 
 func (c *ContainerManager) checkImageAndPull(cli *client.Client, ctx context.Context, container_image string, digest string, cache bool) (*bool, error) {
@@ -253,13 +270,13 @@ func dockerClientFromContext(ctx context.Context) (*client.Client, error) {
 	return cli, nil
 }
 
-func imageExists(ctx context.Context, cli *client.Client, imageName, expectedDigest string) (bool, error) {
+func ImageExists(ctx context.Context, cli *client.Client, imageName, expectedDigest string) (bool, error) {
 
-	images, err := cli.ImageList(ctx, images.ListOptions{})
+	imgs, err := cli.ImageList(ctx, images.ListOptions{})
 	if err != nil {
 		return false, err
 	}
-	for _, img := range images {
+	for _, img := range imgs {
 		if img.RepoTags != nil && len(img.RepoTags) > 0 && img.RepoTags[0] == imageName {
 			return true, nil
 		}

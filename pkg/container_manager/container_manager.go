@@ -1,13 +1,43 @@
 package container_manager
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
-type Environment int64
+type ContainerRuntime int64
+
+func (e ContainerRuntime) String() string {
+	switch e {
+	case Podman:
+		return "Podman"
+	case Docker:
+		return "Docker"
+	case Both:
+		return "Both"
+
+	}
+	return "Unknown"
+}
 
 const (
-	Podman Environment = iota
+	Podman ContainerRuntime = iota
 	Docker
+	Both
 )
+
+func EnvironmentFromString(s string) ContainerRuntime {
+	switch s {
+	case "Podman":
+		return Podman
+	case "Docker":
+		return Docker
+	case "Both":
+		return Both
+	default:
+		panic(fmt.Sprintf("unknown container environment: %q", s))
+	}
+}
 
 type ContainerManager interface {
 	Run(
@@ -22,7 +52,7 @@ type ContainerManager interface {
 
 	) (*string, *context.Context, error)
 
-	RunAndStream(
+	RunAttached(
 		image string,
 		scenarioName string,
 		containerRuntimeUri string,
@@ -36,6 +66,8 @@ type ContainerManager interface {
 	CleanContainers() (*int, error)
 
 	Attach(containerId *string, ctx *context.Context) error
+
+	Kill(containerId *string, ctx *context.Context) error
 
 	GetContainerRuntimeSocket(userId *int) (*string, error)
 }

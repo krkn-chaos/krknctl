@@ -3,13 +3,18 @@ package container_manager
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"github.com/containers/podman/v5/pkg/bindings"
+	images "github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -126,16 +131,68 @@ func ExpandHomeFolder(folder string) (*string, error) {
 	return &folder, nil
 }
 
-func DetectContainerManager() Environment {
-	return Docker
+func GetSocketByContainerEnvironment(environment ContainerRuntime, config config.Config, userId *int) (*string, error) {
+	switch environment {
+	case Docker:
+		return &config.DockerSocketRoot, nil
+	case Podman:
+		if runtime.GOOS == "linux" {
+			uid := os.Getuid()
+			if userId != nil {
+				uid = *userId
+			}
+			if uid == 0 {
+				return &config.PodmanSocketRoot, nil
+			}
+			socket := fmt.Sprintf(config.PodmanLinuxSocketTemplate, uid)
+			return &socket, nil
+		} else if runtime.GOOS == "darwin" {
+			home, _ := os.UserHomeDir()
+			socket := fmt.Sprintf(config.PodmanDarwinSocketTemplate, home)
+			return &socket, nil
+		}
+		return nil, errors.New(fmt.Sprintf("could not determine container container runtime socket for podman"))
+	case Both:
+		return nil, errors.New(fmt.Sprintf("%s invalid container environment", environment.String()))
+	}
+	return nil, errors.New("invalid environment value")
 }
 
-func ContainerClientSigTermInterceptor(signalChan chan os.Signal, resultChan chan SigTermChannel, interceptFunc func(containerId *string, context *context.Context) error, ctx *context.Context, containerId *string) {
-	<-signalChan
-	err := interceptFunc(containerId, ctx)
-	if err != nil {
-		resultChan <- SigTermChannel{Message: "", Error: err}
+func DetectContainerRuntime(config config.Config) (ContainerRuntime, error) {
+	socketDocker, err := GetSocketByContainerEnvironment(Docker, config, nil)
+	socketPodman, err := GetSocketByContainerEnvironment(Podman, config, nil)
+	defaultEnv := EnvironmentFromString(config.DefaultContainerPlatform)
+	if defaultEnv == Both {
+		panic(fmt.Sprintf("wrong default platform ´%s´ check your config.json", defaultEnv.String()))
 	}
-	killMessage := fmt.Sprintf("SIGTERM captured killed container %s", *containerId)
-	resultChan <- SigTermChannel{Message: killMessage, Error: err}
+	dockerRuntime := false
+	podmanRuntime := false
+
+	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.WithHost(*socketDocker))
+	if err != nil {
+		dockerRuntime = false
+	}
+	_, err = cli.ImageList(context.Background(), images.ListOptions{})
+	if err == nil {
+		dockerRuntime = true
+	}
+
+	_, err = bindings.NewConnection(context.Background(), *socketPodman)
+	if err == nil {
+		podmanRuntime = true
+	}
+
+	if podmanRuntime && dockerRuntime {
+		return defaultEnv, nil
+	}
+
+	if podmanRuntime && dockerRuntime == false {
+		return Podman, nil
+	}
+	if dockerRuntime && podmanRuntime == false {
+		return Docker, nil
+	}
+
+	return defaultEnv, errors.New("no supported container runtime found")
+
 }

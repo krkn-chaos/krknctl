@@ -64,7 +64,7 @@ func TestConnect(t *testing.T) {
 	assert.NotNil(t, socket)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAndStream(conf.GetQuayImageUri()+":"+scenario.Name,
+	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name,
 		scenario.Name,
 		*socket,
 		env, false, map[string]string{}, *kubeconfig, scenario.KubeconfigPath)
