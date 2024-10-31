@@ -1,21 +1,32 @@
 package main
 
 import (
+	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/cmd"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	containermanagerfactory "github.com/krkn-chaos/krknctl/pkg/container_manager/factory"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"log"
+	"os"
 )
 
 func main() {
 	config, err := krknctlconfig.LoadConfig()
 	if err != nil {
-		log.Fatalf("Errore nel caricamento della configurazione: %v", err)
+		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to load configuration"))
+		os.Exit(1)
 	}
 	containerManagerFactory := containermanagerfactory.NewContainerManagerFactory()
-	containerManager := containerManagerFactory.NewInstance(container_manager.DetectContainerManager(), &config)
+	detectedRuntime, err := container_manager.DetectContainerRuntime(config)
+	if err != nil {
+		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to determine container runtime enviroment please install podman or docker and retry"))
+		os.Exit(1)
+	}
+	green := color.New(color.FgGreen).SprintFunc()
+	boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
+	fmt.Printf("%s %s\n\n", green("detected runtime:"), boldGreen(detectedRuntime.String()))
+	containerManager := containerManagerFactory.NewInstance(detectedRuntime, &config)
 	providerFactory := providerfactory.NewProviderFactory(&config)
 
 	cmd.Execute(providerFactory, &containerManager, config)
