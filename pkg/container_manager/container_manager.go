@@ -40,28 +40,9 @@ func EnvironmentFromString(s string) ContainerRuntime {
 }
 
 type ContainerManager interface {
-	Run(
-		image string,
-		scenarioName string,
-		containerRuntimeUri string,
-		env map[string]string,
-		cache bool,
-		volumeMounts map[string]string,
-		localKubeconfigPath string,
-		kubeconfigMountPath string,
+	Run(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error)
 
-	) (*string, *context.Context, error)
-
-	RunAttached(
-		image string,
-		scenarioName string,
-		containerRuntimeUri string,
-		env map[string]string,
-		cache bool,
-		volumeMounts map[string]string,
-		localKubeconfigPath string,
-		kubeconfigMountPath string,
-	) (*string, error)
+	RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, error)
 
 	CleanContainers() (*int, error)
 

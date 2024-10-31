@@ -11,5 +11,7 @@
   "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
   "podman_socket_root_linux": "unix://run/podman/podman.sock",
   "docker_socket_root": "unix:///var/run/docker.sock",
-  "default_container_platform": "Podman"
+  "default_container_platform": "Podman",
+  "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
+  "alerts_profile_path":"/home/krkn/kraken/config/alerts"
 }

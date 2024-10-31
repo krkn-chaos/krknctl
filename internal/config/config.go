@@ -19,6 +19,8 @@ type Config struct {
 	PodmanSocketRoot           string `json:"podman_socket_root_linux"`
 	DockerSocketRoot           string `json:"docker_socket_root"`
 	DefaultContainerPlatform   string `json:"default_container_platform"`
+	MetricsProfilePath         string `json:"metrics_profile_path"`
+	AlertsProfilePath          string `json:"alerts_profile_path"`
 }
 
 //go:embed config.json

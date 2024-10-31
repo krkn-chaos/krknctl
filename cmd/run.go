@@ -101,25 +101,52 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			}
 
 			environment := make(map[string]string)
-
+			volumes := make(map[string]string)
 			var foundKubeconfig *string = nil
+			var alertsProfile *string = nil
+			var metricsProfile *string = nil
 			for i, a := range args {
 				if strings.HasPrefix(a, "--") {
 
 					// since automatic flag parsing is disabled to allow dynamic flags
 					// flags need to be parsed manually here eg. kubeconfig
 					if a == "--kubeconfig" {
-						if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-							return fmt.Errorf("%s has no value", args[i])
+						if err := checkStringArgValue(args, i); err != nil {
+							return err
 						}
 						foundKubeconfig = &args[i+1]
 					}
+					if a == "--alerts-profile" {
+						if err := checkStringArgValue(args, i); err != nil {
+							return err
+						}
+						alertsProfile = &args[i+1]
+					}
+					if a == "--metrics-profile" {
+						if err := checkStringArgValue(args, i); err != nil {
+							return err
+						}
+						metricsProfile = &args[i+1]
+					}
+
 					if a == "--detached" {
 						runDetached = true
 					}
 				}
 			}
 
+			kubeconfigPath, err := container_manager.PrepareKubeconfig(foundKubeconfig, config)
+			if err != nil {
+				return err
+			}
+			volumes[*kubeconfigPath] = scenarioDetail.KubeconfigPath
+			if metricsProfile != nil {
+				volumes[*metricsProfile] = config.MetricsProfilePath
+			}
+
+			if alertsProfile != nil {
+				volumes[*alertsProfile] = config.AlertsProfilePath
+			}
 			//dynamic flags parsing
 			for k, _ := range collectedFlags {
 				field := scenarioDetail.GetFieldByName(k)
@@ -154,10 +181,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			tbl := NewEnvironmentTable(environment)
 			tbl.Print()
 			fmt.Print("\n")
-			kubeconfigPath, err := container_manager.PrepareKubeconfig(foundKubeconfig, config)
-			if err != nil {
-				return err
-			}
+
 			//WIP
 			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
 			if err != nil {
@@ -165,28 +189,12 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			}
 			startTime := time.Now()
 			if runDetached == false {
-				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name,
-					scenarioDetail.Name,
-					*socket,
-					environment,
-					false,
-					map[string]string{},
-					*kubeconfigPath,
-					scenarioDetail.KubeconfigPath,
-				)
+				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes)
 				if err != nil {
 					return err
 				}
 			} else {
-				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name,
-					scenarioDetail.Name,
-					*socket,
-					environment,
-					false,
-					map[string]string{},
-					*kubeconfigPath,
-					scenarioDetail.KubeconfigPath,
-				)
+				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes)
 				if err != nil {
 					return err
 				}
@@ -196,9 +204,16 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				}
 			}
 			scenarioDuration := time.Since(startTime)
-			fmt.Println(fmt.Sprintf("%s took %s", scenarioDetail.Name, scenarioDuration.String()))
+			fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
 			return nil
 		},
 	}
 	return runCmd
+}
+
+func checkStringArgValue(args []string, index int) error {
+	if len(args) < index+2 || strings.HasPrefix(args[index+1], "--") {
+		return fmt.Errorf("%s has no value", args[index])
+	}
+	return nil
 }

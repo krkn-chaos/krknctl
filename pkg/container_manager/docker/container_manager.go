@@ -27,17 +27,7 @@ type ContainerManager struct {
 	Config config.Config
 }
 
-func (c *ContainerManager) Run(
-	image string,
-	scenarioName string,
-	containerRuntimeUri string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	localKubeconfigPath string,
-	kubeconfigMountPath string,
-
-) (*string, *context.Context, error) {
+func (c *ContainerManager) Run(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error) {
 	ctx := context.Background()
 
 	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.WithHost(containerRuntimeUri))
@@ -61,16 +51,11 @@ func (c *ContainerManager) Run(
 	}
 
 	var volumes []mount.Mount
-	volumes = append(volumes, mount.Mount{
-		Type:   mount.TypeBind,
-		Source: localKubeconfigPath,
-		Target: kubeconfigMountPath,
-	})
 	for k, v := range volumeMounts {
 		volumes = append(volumes, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: v,
-			Target: k,
+			Source: k,
+			Target: v,
 		})
 	}
 	resp, err := cli.ContainerCreate(ctx, &dockercontainer.Config{
@@ -93,23 +78,14 @@ func (c *ContainerManager) Run(
 	return &resp.ID, &ctxWithClient, nil
 }
 
-func (c *ContainerManager) RunAttached(
-	image string,
-	scenarioName string,
-	containerRuntimeUri string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	localKubeconfigPath string,
-	kubeconfigMountPath string,
-) (*string, error) {
+func (c *ContainerManager) RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, error) {
 	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
 	if err != nil {
 		return nil, err
 	}
 	// to make the above message readable
 	time.Sleep(2)
-	containerId, ctx, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts, localKubeconfigPath, kubeconfigMountPath)
+	containerId, ctx, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts)
 	if err != nil {
 		return nil, err
 	}

@@ -24,17 +24,7 @@ type ContainerManager struct {
 	Config config.Config
 }
 
-func (c *ContainerManager) Run(
-	image string,
-	scenarioName string,
-	containerRuntimeUri string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	localKubeconfigPath string,
-	kubeconfigMountPath string,
-
-) (*string, *context.Context, error) {
+func (c *ContainerManager) Run(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error) {
 	conn, err := bindings.NewConnection(context.Background(), containerRuntimeUri)
 	if err != nil {
 		return nil, nil, err
@@ -61,16 +51,18 @@ func (c *ContainerManager) Run(
 
 	s.Name = fmt.Sprintf("%s-%s-%d", c.Config.ContainerPrefix, scenarioName, time.Now().Unix())
 	s.Env = env
-
-	kubeconfigMount := specs.Mount{
-		Destination: kubeconfigMountPath,
-		Type:        string(mount.TypeBind),
-		Source:      localKubeconfigPath,
-		Options:     []string{"Z"},
-		UIDMappings: nil,
-		GIDMappings: nil,
+	for k, v := range volumeMounts {
+		containerMount := specs.Mount{
+			Destination: v,
+			Type:        string(mount.TypeBind),
+			Source:      k,
+			Options:     []string{"Z"},
+			UIDMappings: nil,
+			GIDMappings: nil,
+		}
+		s.Mounts = append(s.Mounts, containerMount)
 	}
-	s.Mounts = append(s.Mounts, kubeconfigMount)
+
 	s.NetNS = specgen.Namespace{
 		NSMode: "host",
 	}
@@ -84,23 +76,14 @@ func (c *ContainerManager) Run(
 	return &createResponse.ID, &conn, nil
 }
 
-func (c *ContainerManager) RunAttached(
-	image string,
-	scenarioName string,
-	containerRuntimeUri string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	localKubeconfigPath string,
-	kubeconfigMountPath string,
-) (*string, error) {
+func (c *ContainerManager) RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, error) {
 	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
 	if err != nil {
 		return nil, err
 	}
 	// to make the above message readable
 	time.Sleep(2)
-	containerId, conn, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts, localKubeconfigPath, kubeconfigMountPath)
+	containerId, conn, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts)
 	if err != nil {
 		return nil, err
 	}

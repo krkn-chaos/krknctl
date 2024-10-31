@@ -30,6 +30,8 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 
 	runCmd := NewRunCommand(providerFactory, containerManager, config)
 	runCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
+	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
+	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
