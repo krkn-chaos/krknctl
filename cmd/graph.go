@@ -124,7 +124,7 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 				return err
 			}
 			go func() {
-				(*containerManager).RunGraph(nodes, executionPlan, *socket, volumes, environment, false, commChannel)
+				(*containerManager).RunGraph(nodes, executionPlan, *socket, environment, volumes, false, commChannel)
 			}()
 
 			for {

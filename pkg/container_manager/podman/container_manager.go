@@ -83,7 +83,6 @@ func (c *ContainerManager) Run(image string, scenarioName string, containerRunti
 }
 
 func (c *ContainerManager) RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer) (*string, error) {
-	time.Sleep(2)
 	containerId, conn, err := c.Run(image, scenarioName, containerRuntimeUri, env, cache, volumeMounts)
 	if err != nil {
 		return nil, err
