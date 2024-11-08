@@ -39,6 +39,18 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 	cleanCmd := NewCleanCommand(containerManager, config)
 	rootCmd.AddCommand(cleanCmd)
 
+	// graph subcommands
+	graphCmd := NewGraphCommand(providerFactory, config)
+	graphRunCmd := NewGraphRunCommand(providerFactory, containerManager, config)
+	graphRunCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
+	graphRunCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
+	graphRunCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
+
+	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
+	graphCmd.AddCommand(graphRunCmd)
+	graphCmd.AddCommand(graphScaffoldCmd)
+	rootCmd.AddCommand(graphCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

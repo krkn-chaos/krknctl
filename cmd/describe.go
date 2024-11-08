@@ -12,7 +12,7 @@ import (
 )
 
 func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) *cobra.Command {
-	var describeCmd = &cobra.Command{
+	var command = &cobra.Command{
 		Use:   "describe",
 		Short: "describes a scenario",
 		Long:  `describes a scenario`,
@@ -65,7 +65,7 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			return nil
 		},
 	}
-	return describeCmd
+	return command
 }
 
 func PrintScenarioDetail(scenarioDetail *models.ScenarioDetail) {

@@ -7,10 +7,12 @@ require (
 	github.com/containers/podman/v5 v5.2.4
 	github.com/docker/docker v27.1.1+incompatible
 	github.com/fatih/color v1.15.0
+	github.com/kendru/darwin/go/depgraph v0.0.0-20230809052043-4d1c7e9d1767
 	github.com/opencontainers/runtime-spec v1.2.0
 	github.com/rodaine/table v1.3.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
+	github.com/tjarratt/babble v0.0.0-20210505082055-cbca2a4833c1
 	k8s.io/client-go v0.26.2
 )
 
@@ -102,6 +104,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/opencontainers/runc v1.1.14 // indirect

@@ -21,6 +21,7 @@ type Config struct {
 	DefaultContainerPlatform   string `json:"default_container_platform"`
 	MetricsProfilePath         string `json:"metrics_profile_path"`
 	AlertsProfilePath          string `json:"alerts_profile_path"`
+	KubeconfigPath             string `json:"kubeconfig_path"`
 }
 
 //go:embed config.json

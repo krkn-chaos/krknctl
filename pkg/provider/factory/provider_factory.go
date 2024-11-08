@@ -18,7 +18,7 @@ func NewProviderFactory(config *config.Config) *ProviderFactory {
 func (p *ProviderFactory) NewInstance(mode provider.Mode) provider.ScenarioDataProvider {
 	switch mode {
 	case provider.Online:
-		return &quay.ScenarioProvider{}
+		return &quay.ScenarioProvider{Config: p.Config}
 	case provider.Offline:
 		return &offline.ScenarioProvider{}
 	}

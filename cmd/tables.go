@@ -5,6 +5,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"strings"
 )
 import "github.com/rodaine/table"
 
@@ -41,4 +42,13 @@ func NewEnvironmentTable(env map[string]string) table.Table {
 	}
 	return tbl
 
+}
+
+func NewGraphTable(graph [][]string) table.Table {
+	tbl := table.New("Step", "Scenario ID")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	for i, v := range graph {
+		tbl.AddRow(i, strings.Join(v, ", "))
+	}
+	return tbl
 }

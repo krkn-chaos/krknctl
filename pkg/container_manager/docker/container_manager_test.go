@@ -43,7 +43,7 @@ func TestContainerManager_Run(t *testing.T) {
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{}
+	quayProvider := quay.ScenarioProvider{Config: &conf}
 	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", conf.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
@@ -65,7 +65,7 @@ func TestContainerManager_Run(t *testing.T) {
 	assert.NotNil(t, socket)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{})
+	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}

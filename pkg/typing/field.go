@@ -184,6 +184,8 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
 					return nil, errors.New("invalid schema: `mountPath` is required for `file` type")
+				} else {
+					*selectedValue = fmt.Sprintf(*f.MountPath)
 				}
 			} else {
 				return nil, errors.New("file `" + *selectedValue + "is not a file or is not accessible")

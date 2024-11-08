@@ -32,7 +32,7 @@ func getWrongConfig() krknctlconfig.Config {
 
 func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	config := getTestConfig()
-	provider := ScenarioProvider{}
+	provider := ScenarioProvider{Config: &config}
 
 	scenarios, err := provider.GetScenarios(config.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
@@ -44,7 +44,7 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 
 	wrongConfig := getWrongConfig()
-	wrongProvider := ScenarioProvider{}
+	wrongProvider := ScenarioProvider{Config: &wrongConfig}
 
 	_, err = wrongProvider.GetScenarios(wrongConfig.GetQuayRepositoryApiUri())
 	assert.NotNil(t, err)
@@ -52,7 +52,7 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig()
-	provider := ScenarioProvider{}
+	provider := ScenarioProvider{Config: &config}
 
 	scenario, err := provider.GetScenarioDetail("cpu-hog", config.GetQuayRepositoryApiUri())
 
@@ -83,5 +83,29 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	scenario, err = provider.GetScenarioDetail("not-found", config.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.Nil(t, scenario)
+
+}
+
+func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
+	config, _ := krknctlconfig.LoadConfig()
+
+	provider := ScenarioProvider{Config: &config}
+
+	scenarios, err := provider.GetScenarios(config.GetQuayRepositoryApiUri())
+	assert.Nil(t, err)
+	assert.NotNil(t, scenarios)
+	var scenarioNames []string
+
+	for _, scenario := range *scenarios {
+		scenarioNames = append(scenarioNames, scenario.Name)
+	}
+
+	json, err := provider.ScaffoldScenarios(scenarioNames, config.GetQuayRepositoryApiUri())
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+
+	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, config.GetQuayRepositoryApiUri())
+	assert.Nil(t, json)
+	assert.NotNil(t, err)
 
 }

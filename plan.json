@@ -1,0 +1,38 @@
+{
+  "_comment": {
+    "_comment": "****DELETE THIS NODE**** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). Define dependencies between scenarios using the `depends_on` field, ensuring there are no cycles (including transitive ones) or self-references.Nodes not referenced will not be executed, Nodes without dependencies will run first, while nodes that share the same parent will execute in parallel. [CURRENT ROOT SCENARIO IS `node-cpu-hog-lachrymogenic`]"
+  },
+  "node-cpu-hog-arctogaeal": {
+    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
+    "name": "node-cpu-hog",
+    "env": {
+      "NAMESPACE": "default",
+      "NODE_CPU_CORE": "2",
+      "NODE_CPU_PERCENTAGE": "50",
+      "TOTAL_CHAOS_DURATION": "5"
+    },
+    "depends_on": "node-cpu-hog-lachrymogenic"
+  },
+  "node-cpu-hog-lachrymogenic": {
+    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
+    "name": "node-cpu-hog",
+    "env": {
+      "NAMESPACE": "default",
+      "NODE_CPU_CORE": "2",
+      "NODE_CPU_PERCENTAGE": "50",
+      "TOTAL_CHAOS_DURATION": "5"
+    }
+  },
+  "node-cpu-hog-tutelo": {
+    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
+    "name": "node-cpu-hog",
+    "env": {
+      "NAMESPACE": "default",
+      "NODE_CPU_CORE": "2",
+      "NODE_CPU_PERCENTAGE": "50",
+      "TOTAL_CHAOS_DURATION": "5"
+    },
+    "depends_on": "node-cpu-hog-lachrymogenic"
+  }
+}
+

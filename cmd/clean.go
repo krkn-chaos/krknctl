@@ -8,7 +8,7 @@ import (
 )
 
 func NewCleanCommand(containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
-	var cleanCmd = &cobra.Command{
+	var command = &cobra.Command{
 		Use:   "clean",
 		Short: "cleans already run scenario files and containers",
 		Long:  `cleans already run scenario files and containers`,
@@ -27,5 +27,5 @@ func NewCleanCommand(containerManager *container_manager.ContainerManager, confi
 		},
 	}
 
-	return cleanCmd
+	return command
 }
