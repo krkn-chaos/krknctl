@@ -6,15 +6,17 @@ import (
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"log"
+	"os"
 	"strings"
 	"time"
 )
 
 func NewRunCommand(factory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
 	collectedFlags := make(map[string]*string)
-	var runCmd = &cobra.Command{
+	var command = &cobra.Command{
 		Use:                "run",
 		Short:              "runs a scenario",
 		Long:               `runs a scenario`,
@@ -84,6 +86,8 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 					return err
 				}
 			*/
+			container_manager.PrintDetectedContainerRuntime(containerManager)
+
 			spinner := NewSpinnerWithSuffix("validating input...")
 			dataSource := BuildDataSource(config, false, nil)
 			spinner.Start()
@@ -139,7 +143,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			if err != nil {
 				return err
 			}
-			volumes[*kubeconfigPath] = scenarioDetail.KubeconfigPath
+			volumes[*kubeconfigPath] = config.KubeconfigPath
 			if metricsProfile != nil {
 				volumes[*metricsProfile] = config.MetricsProfilePath
 			}
@@ -150,6 +154,9 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			//dynamic flags parsing
 			for k, _ := range collectedFlags {
 				field := scenarioDetail.GetFieldByName(k)
+				if field == nil {
+					return fmt.Errorf("field %s not found", k)
+				}
 				var foundArg *string = nil
 				for i, a := range args {
 					if a == fmt.Sprintf("--%s", k) {
@@ -165,8 +172,11 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 					if err != nil {
 						return err
 					}
-					if value != nil {
+					if value != nil && field.Type != typing.File {
 						environment[*field.Variable] = *value
+					} else if value != nil && field.Type == typing.File {
+						fileSrcDst := strings.Split(*value, ":")
+						volumes[fileSrcDst[0]] = fileSrcDst[1]
 					}
 
 					/*
@@ -189,11 +199,15 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			}
 			startTime := time.Now()
 			if runDetached == false {
-				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes)
+				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes, os.Stdout, os.Stderr)
 				if err != nil {
 					return err
 				}
 			} else {
+				_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
+				if err != nil {
+					return err
+				}
 				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes)
 				if err != nil {
 					return err
@@ -208,7 +222,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			return nil
 		},
 	}
-	return runCmd
+	return command
 }
 
 func checkStringArgValue(args []string, index int) error {

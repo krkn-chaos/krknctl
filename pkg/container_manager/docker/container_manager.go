@@ -2,16 +2,13 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/briandowns/spinner"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimage "github.com/docker/docker/api/types/image"
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
@@ -24,7 +21,8 @@ import (
 )
 
 type ContainerManager struct {
-	Config config.Config
+	Config           config.Config
+	ContainerRuntime container_manager.ContainerRuntime
 }
 
 func (c *ContainerManager) Run(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error) {
@@ -78,7 +76,7 @@ func (c *ContainerManager) Run(image string, scenarioName string, containerRunti
 	return &resp.ID, &ctxWithClient, nil
 }
 
-func (c *ContainerManager) RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, error) {
+func (c *ContainerManager) RunAttached(image string, scenarioName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer) (*string, error) {
 	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
 	if err != nil {
 		return nil, err
@@ -94,7 +92,7 @@ func (c *ContainerManager) RunAttached(image string, scenarioName string, contai
 
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	kill, err := c.attach(containerId, ctx, signalChan)
+	kill, err := c.attach(containerId, ctx, signalChan, stdout, stderr)
 
 	if err != nil {
 		return nil, err
@@ -113,7 +111,12 @@ func (c *ContainerManager) RunAttached(image string, scenarioName string, contai
 	return containerId, nil
 }
 
-func (c *ContainerManager) attach(containerId *string, ctx *context.Context, signalChannel chan os.Signal) (bool, error) {
+func (c *ContainerManager) RunSerialPlan() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *ContainerManager) attach(containerId *string, ctx *context.Context, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer) (bool, error) {
 	cli, err := dockerClientFromContext(*ctx)
 	if err != nil {
 		return false, err
@@ -134,7 +137,7 @@ func (c *ContainerManager) attach(containerId *string, ctx *context.Context, sig
 
 	// copies demultiplexed reader to Stdout and Stderr
 	go func() {
-		_, err := stdcopy.StdCopy(os.Stdout, os.Stderr, reader)
+		_, err := stdcopy.StdCopy(stdout, stderr, reader)
 		if err != nil {
 			errorChan <- err
 		}
@@ -171,14 +174,14 @@ func (c *ContainerManager) attach(containerId *string, ctx *context.Context, sig
 
 }
 
-func (c *ContainerManager) Attach(containerId *string, ctx *context.Context) error {
+func (c *ContainerManager) Attach(containerId *string, ctx *context.Context, stdout io.Writer, stderr io.Writer) error {
 	_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to stop streaming scenario output (scenario won't be interrupted)")
 	if err != nil {
 		return err
 	}
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	interrupted, err := c.attach(containerId, ctx, sigCh)
+	interrupted, err := c.attach(containerId, ctx, sigCh, stdout, stderr)
 	if err != nil {
 		return err
 	}
@@ -230,6 +233,11 @@ func (c *ContainerManager) checkImageAndPull(cli *client.Client, ctx context.Con
 
 }
 
+func (c *ContainerManager) RunGraph(scenarios container_manager.ScenarioSet, resolvedGraph container_manager.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *container_manager.CommChannel) {
+	//TODO implement me
+	panic("implement me")
+}
+
 type contextKey string
 
 const clientKey contextKey = "dockerClient"
@@ -267,31 +275,34 @@ func pullImage(ctx context.Context, cli *client.Client, imageName string) error 
 	}
 	defer reader.Close()
 
-	var totalSize int
-	s := spinner.New(spinner.CharSets[39], 100*time.Millisecond)
-	s.Suffix = "pulling image...."
-	s.Start()
+	/*
+		********* update to send updates to a channel ********
+		var totalSize int
 
-	decoder := json.NewDecoder(reader)
-	for {
+		decoder := json.NewDecoder(reader)
 
-		var message jsonmessage.JSONMessage
-		if err := decoder.Decode(&message); err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
+			for {
 
-		if message.Progress != nil && message.Progress.Total > 0 {
-			if totalSize == 0 {
-				totalSize = int(message.Progress.Total)
-			}
-			if message.Progress.Current > 0 {
-				s.Suffix = fmt.Sprintf("Downloading image %s: %d/%d MB ", imageName, int(message.Progress.Current/1024/1024), totalSize/1024/1024)
-			}
-		}
-	}
-	s.Stop()
+				var message jsonmessage.JSONMessage
+				if err := decoder.Decode(&message); err == io.EOF {
+					break
+				} else if err != nil {
+					return err
+				}
+
+				if message.Progress != nil && message.Progress.Total > 0 {
+					if totalSize == 0 {
+						totalSize = int(message.Progress.Total)
+					}
+					if message.Progress.Current > 0 {
+						s.Suffix = fmt.Sprintf("Downloading image %s: %d/%d MB ", imageName, int(message.Progress.Current/1024/1024), totalSize/1024/1024)
+					}
+				}
+			}*/
 
 	return nil
+}
+
+func (c *ContainerManager) GetContainerRuntime() container_manager.ContainerRuntime {
+	return c.ContainerRuntime
 }

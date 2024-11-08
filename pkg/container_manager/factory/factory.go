@@ -18,11 +18,13 @@ func (f *ContainerManagerFactory) NewInstance(containerEnvironment container_man
 	switch containerEnvironment {
 	case container_manager.Podman:
 		return &podman.ContainerManager{
-			Config: *config,
+			Config:           *config,
+			ContainerRuntime: containerEnvironment,
 		}
 	case container_manager.Docker:
 		return &docker.ContainerManager{
-			Config: *config,
+			Config:           *config,
+			ContainerRuntime: containerEnvironment,
 		}
 	}
 	return nil

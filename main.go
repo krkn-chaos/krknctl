@@ -23,9 +23,7 @@ func main() {
 		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to determine container runtime enviroment please install podman or docker and retry"))
 		os.Exit(1)
 	}
-	green := color.New(color.FgGreen).SprintFunc()
-	boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
-	fmt.Printf("%s %s\n\n", green("detected runtime:"), boldGreen(detectedRuntime.String()))
+
 	containerManager := containerManagerFactory.NewInstance(detectedRuntime, &config)
 	providerFactory := providerfactory.NewProviderFactory(&config)
 

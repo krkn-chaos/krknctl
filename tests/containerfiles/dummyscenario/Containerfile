@@ -1,0 +1,10 @@
+FROM registry.access.redhat.com/ubi9-minimal:9.4-1227.1726694542
+RUN groupadd -g 1001 krkn && useradd -m -u 1001 -g krkn krkn
+COPY run.sh /home/krkn
+
+LABEL krknctl.kubeconfig_path="/home/krkn/.kube/config"
+LABEL krknctl.title="Dummy Scenario"
+LABEL krknctl.description="Runs a dummy scenario for testing purpose"
+LABEL krknctl.input_fields='[  {    "name":"chaos-duration",    "short_description":"Chaos Duration",    "description":"Set chaos duration (in sec) as desired",    "variable":"END",    "type":"number",    "default":"60"  }]'
+USER krkn
+ENTRYPOINT ["bash", "/home/krkn/run.sh"]

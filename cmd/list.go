@@ -9,7 +9,7 @@ import (
 )
 
 func NewListCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
-	var listCmd = &cobra.Command{
+	var command = &cobra.Command{
 		Use:   "list",
 		Short: "list scenarios",
 		Long:  `list available krkn-hub scenarios`,
@@ -39,5 +39,5 @@ func NewListCommand(factory *provider_factory.ProviderFactory, config config.Con
 			return nil
 		},
 	}
-	return listCmd
+	return command
 }

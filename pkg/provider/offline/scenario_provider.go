@@ -15,3 +15,8 @@ func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTa
 func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error) {
 	return nil, errors.New("not yet implemented")
 }
+
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource string) (*string, error) {
+	//TODO implement me
+	panic("implement me")
+}

@@ -13,5 +13,6 @@
   "docker_socket_root": "unix:///var/run/docker.sock",
   "default_container_platform": "Podman",
   "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
-  "alerts_profile_path":"/home/krkn/kraken/config/alerts"
+  "alerts_profile_path":"/home/krkn/kraken/config/alerts",
+  "kubeconfig_path": "/home/krkn/.kube/config"
 }

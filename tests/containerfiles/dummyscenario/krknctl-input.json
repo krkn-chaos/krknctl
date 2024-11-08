@@ -1,0 +1,10 @@
+[
+  {
+    "name":"chaos-duration",
+    "short_description":"Chaos Duration",
+    "description":"Set chaos duration (in sec) as desired",
+    "variable":"END",
+    "type":"number",
+    "default":"60"
+  }
+]
