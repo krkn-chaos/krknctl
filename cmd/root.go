@@ -5,6 +5,7 @@ import (
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/spf13/cobra"
 	"os"
 )
 
@@ -21,6 +22,32 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 		rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
 		rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
 	*/
+
+	var completionCmd = &cobra.Command{
+		Use:       "completion [bash|zsh]",
+		Short:     "Genera script di completamento per bash o zsh",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"bash", "zsh"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				err := rootCmd.GenBashCompletion(os.Stdout)
+				if err != nil {
+					return err
+				}
+			case "zsh":
+				err := rootCmd.GenZshCompletion(os.Stdout)
+				if err != nil {
+					return err
+				}
+			default:
+				fmt.Println("shell not supported:", args[0])
+			}
+			return nil
+		},
+	}
+
+	rootCmd.AddCommand(completionCmd)
 
 	listCmd := NewListCommand()
 	listScenariosCmd := NewListScenariosCommand(providerFactory, config)
