@@ -2,12 +2,15 @@
 ![test](https://github.com/krkn-chaos/krknctl/actions/workflows/test.yaml/badge.svg)
 ![coverage](https://krkn-chaos.github.io/krkn-lib-docs/coverage_badge_krknctl.svg)
 
-
+![krknctl_logo.jpg](media/krknctl_logo.png)
 # krknctl
-Krkn Terminal CLI
+## [krkn](https://github.com/krkn-chaos/krkn) chaos engineering tool CLI
+
+<br/>
+<br/>
 
 > [!CAUTION]  
-> The tool is currently in alpha stage, use it at your own risk.
+> __The tool is currently in alpha stage, use it at your own risk.__
 
 <br/>
 
@@ -132,12 +135,12 @@ Will run the selected scenarios with the specified options
 
 __Common flags:__
 
-| Flag                                                 | Description                                                  |
-|------------------------------------------------------|--------------------------------------------------------------|
-| --kubeconfig                                         | kubeconfig path (if empty will default to ~/.kube/config)    |
-| --detached                                           | will run the scenario in detached mode (background) will be possible to reattach the tool to the container logs with the attach command |
-| --alerts-profile                                     | will mount in the container a custom alert profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos) |
-| --metrics-profile                                    | will mount in the container scenario a custom metrics profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos) |
+| Flag              | Description                                                  |
+|-------------------|--------------------------------------------------------------|
+| --kubeconfig      | kubeconfig path (if empty will default to ~/.kube/config)    |
+| --detached        | will run the scenario in detached mode (background) will <br/>be possible to reattach the tool to the container logs with the attach command |
+| --alerts-profile  | will mount in the container a custom alert profile <br/>(check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos) |
+| --metrics-profile | will mount in the container scenario a custom metrics<br/> profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos) |
 
 <br/>
 
@@ -177,11 +180,11 @@ the container runtime to execute the krkn scenarios accordingly.
 
 #### Supported flags:
 
-| Flag                                                 | Description                                                  |
-|------------------------------------------------------|--------------------------------------------------------------|
-| --kubeconfig                                         | kubeconfig path (if empty will default to ~/.kube/config)    |
-| --alerts-profile                                     | will mount in the container a custom alert profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
-| --metrics-profile                                    | will mount in the container scenario a custom metrics profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
+| Flag              | Description                                                  |
+|-------------------|--------------------------------------------------------------|
+| --kubeconfig      | kubeconfig path (if empty will default to ~/.kube/config)    |
+| --alerts-profile  | will mount in the container a custom alert profile <br/>(check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
+| --metrics-profile | will mount in the container scenario a custom metrics <br/>profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
 
 
 #### Supported graph configurations:
