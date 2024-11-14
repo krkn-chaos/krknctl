@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/tjarratt/babble"
 	"io"
@@ -61,8 +61,8 @@ func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTa
 	return &scenarioTags, nil
 }
 
-func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) container_manager.ScenarioNode {
-	node := container_manager.ScenarioNode{}
+func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.ScenarioNode {
+	node := models2.ScenarioNode{}
 	node.Comment = fmt.Sprintf("**READ CAREFULLY** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). "+
 		"Define dependencies between scenarios using the `depends_on` field, ensuring there are no cycles (including transitive ones) "+
 		"or self-references.Nodes not referenced will not be executed, Nodes without dependencies will run first, "+
@@ -90,16 +90,19 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 	for _, scenario := range scenarios {
 		indexes = append(indexes, fmt.Sprintf("%s-%s", scenario, strings.ToLower(babbler.Babble())))
 	}
-	var scenarioNodes = make(map[string]container_manager.ScenarioNode)
+	var scenarioNodes = make(map[string]models2.ScenarioNode)
 
 	scenarioNodes["_comment"] = p.getInstructionScenario(indexes[0])
 	for i, scenarioDetail := range scenarioDetails {
 		indexes = append(indexes, strings.ToLower(babbler.Babble()))
 
-		scenarioNode := container_manager.ScenarioNode{}
+		scenarioNode := models2.ScenarioNode{}
 		if i > 0 {
 			scenarioNode.Parent = &indexes[i-1]
+		} else {
+			scenarioNode.Comment = "I'm the root Node!"
 		}
+
 		scenarioNode.Image = p.Config.GetQuayImageUri() + ":" + scenarioDetail.Name
 		scenarioNode.Name = scenarioDetail.Name
 		scenarioNode.Env = make(map[string]string)
@@ -180,18 +183,18 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 		ScenarioTag: *foundScenario,
 	}
 
-	titleLabel := manifest.GetKrknctlLabel("krknctl.title")
-	descriptionLabel := manifest.GetKrknctlLabel("krknctl.description")
-	inputFieldsLabel := manifest.GetKrknctlLabel("krknctl.input_fields")
+	titleLabel := manifest.GetKrknctlLabel(p.Config.LabelTitle)
+	descriptionLabel := manifest.GetKrknctlLabel(p.Config.LabelDescription)
+	inputFieldsLabel := manifest.GetKrknctlLabel(p.Config.LabelInputFields)
 
 	if titleLabel == nil {
-		return nil, fmt.Errorf("krknctl.title LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelTitle, foundScenario.Name, foundScenario.Digest)
 	}
 	if descriptionLabel == nil {
-		return nil, fmt.Errorf("krknctl.description LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelDescription, foundScenario.Name, foundScenario.Digest)
 	}
 	if inputFieldsLabel == nil {
-		return nil, fmt.Errorf("krknctl.input_fields LABEL not found in tag: %s digest: %s", foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelInputFields, foundScenario.Name, foundScenario.Digest)
 	}
 
 	parsedTitle, err := p.parseTitle(*titleLabel)
@@ -215,7 +218,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 }
 
 func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
-	reDoubleQuotes, err := regexp.Compile("LABEL krknctl\\.title=\"?(.*)\"?")
+	reDoubleQuotes, err := regexp.Compile(p.Config.LabelTitleRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +230,7 @@ func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
 }
 
 func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
-	re, err := regexp.Compile("LABEL krknctl\\.description=\"?(.*)\"?")
+	re, err := regexp.Compile(p.Config.LabelDescriptionRegex)
 	if err != nil {
 		return nil, err
 	}
@@ -238,20 +241,8 @@ func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
 	return &matches[1], nil
 }
 
-func (p *ScenarioProvider) parseKubeconfigPath(s string) (*string, error) {
-	re, err := regexp.Compile("LABEL krknctl\\.kubeconfig_path=\"?(.*)\"?")
-	if err != nil {
-		return nil, err
-	}
-	matches := re.FindStringSubmatch(s)
-	if matches == nil {
-		return nil, errors.New("kubeconfig_path not found in image manifest")
-	}
-	return &matches[1], nil
-}
-
 func (p *ScenarioProvider) parseInputFields(s string) ([]typing.InputField, error) {
-	re, err := regexp.Compile("LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?")
+	re, err := regexp.Compile(p.Config.LabelInputFieldsRegex)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package container_manager
+package utils
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/krkn-chaos/krknctl/internal/config"
+	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
@@ -82,7 +83,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	if err != nil {
 		return nil, err
 	}
-	filename := fmt.Sprintf("%s-%s.%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
+	filename := fmt.Sprintf("%s-%s-%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
 	path := filepath.Join(currentDirectory, filename)
 	err = os.WriteFile(path, flattenedConfig, 0777)
 	if err != nil {
@@ -92,7 +93,34 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 }
 
 func CleanKubeconfigFiles(config config.Config) (*int, error) {
-	regex, err := regexp.Compile(fmt.Sprintf("%s-.*\\.[0-9]+", config.KubeconfigPrefix))
+	regex, err := regexp.Compile(fmt.Sprintf("^%s-.*-[0-9]+$", config.KubeconfigPrefix))
+	if err != nil {
+		return nil, err
+	}
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := os.ReadDir(currentDir)
+	if err != nil {
+		return nil, err
+	}
+	deletedFiles := 0
+	for _, file := range files {
+		if regex.MatchString(file.Name()) {
+			err := os.Remove(filepath.Join(currentDir, file.Name()))
+			if err != nil {
+				return nil, err
+			}
+			deletedFiles++
+		}
+	}
+	return &deletedFiles, nil
+}
+
+func CleanLogFiles(config config.Config) (*int, error) {
+	regex, err := regexp.Compile(fmt.Sprintf("%s-.*\\-[0-9]+\\.log", config.ContainerPrefix))
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +159,11 @@ func ExpandHomeFolder(folder string) (*string, error) {
 	return &folder, nil
 }
 
-func GetSocketByContainerEnvironment(environment ContainerRuntime, config config.Config, userId *int) (*string, error) {
+func GetSocketByContainerEnvironment(environment orchestrator_models.ContainerRuntime, config config.Config, userId *int) (*string, error) {
 	switch environment {
-	case Docker:
+	case orchestrator_models.Docker:
 		return &config.DockerSocketRoot, nil
-	case Podman:
+	case orchestrator_models.Podman:
 		if runtime.GOOS == "linux" {
 			uid := os.Getuid()
 			if userId != nil {
@@ -152,23 +180,25 @@ func GetSocketByContainerEnvironment(environment ContainerRuntime, config config
 			return &socket, nil
 		}
 		return nil, errors.New(fmt.Sprintf("could not determine container container runtime socket for podman"))
-	case Both:
+	case orchestrator_models.Both:
 		return nil, errors.New(fmt.Sprintf("%s invalid container environment", environment.String()))
 	}
 	return nil, errors.New("invalid environment value")
 }
 
-func DetectContainerRuntime(config config.Config) (ContainerRuntime, error) {
-	socketDocker, err := GetSocketByContainerEnvironment(Docker, config, nil)
-	socketPodman, err := GetSocketByContainerEnvironment(Podman, config, nil)
-	defaultEnv := EnvironmentFromString(config.DefaultContainerPlatform)
-	if defaultEnv == Both {
-		panic(fmt.Sprintf("wrong default platform ´%s´ check your config.json", defaultEnv.String()))
-	}
+func DetectContainerRuntime(config config.Config) (*orchestrator_models.ContainerRuntime, error) {
+	socketDocker, err := GetSocketByContainerEnvironment(orchestrator_models.Docker, config, nil)
+	socketPodman, err := GetSocketByContainerEnvironment(orchestrator_models.Podman, config, nil)
+	_docker := orchestrator_models.Docker
+	_podman := orchestrator_models.Podman
+	_both := orchestrator_models.Both
 	dockerRuntime := false
 	podmanRuntime := false
 
 	cli, err := client.NewClientWithOpts(client.WithAPIVersionNegotiation(), client.WithHost(*socketDocker))
+	if cli == nil {
+		return nil, fmt.Errorf("could not determine docker runtime")
+	}
 	if err != nil {
 		dockerRuntime = false
 	}
@@ -176,23 +206,42 @@ func DetectContainerRuntime(config config.Config) (ContainerRuntime, error) {
 	if err == nil {
 		dockerRuntime = true
 	}
-
 	_, err = bindings.NewConnection(context.Background(), *socketPodman)
 	if err == nil {
 		podmanRuntime = true
 	}
 
 	if podmanRuntime && dockerRuntime {
-		return defaultEnv, nil
+		return &_both, nil
 	}
 
-	if podmanRuntime && dockerRuntime == false {
-		return Podman, nil
+	if podmanRuntime {
+		return &_podman, nil
 	}
-	if dockerRuntime && podmanRuntime == false {
-		return Docker, nil
+	if dockerRuntime {
+		return &_docker, nil
 	}
 
-	return defaultEnv, errors.New("no supported container runtime found")
+	return nil, fmt.Errorf("could not determine docker runtime")
 
+}
+
+func GenerateContainerName(config config.Config, scenarioName string, graphNodeName *string) string {
+	if graphNodeName != nil {
+		return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, *graphNodeName, time.Now().Unix())
+	}
+	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Unix())
+}
+
+func EnvironmentFromString(s string) orchestrator_models.ContainerRuntime {
+	switch s {
+	case "Podman":
+		return orchestrator_models.Podman
+	case "Docker":
+		return orchestrator_models.Docker
+	case "Both":
+		return orchestrator_models.Both
+	default:
+		panic(fmt.Sprintf("unknown container environment: %q", s))
+	}
 }

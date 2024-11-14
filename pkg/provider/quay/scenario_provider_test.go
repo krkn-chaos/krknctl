@@ -1,6 +1,7 @@
 package quay
 
 import (
+	"encoding/json"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/stretchr/testify/assert"
 	"strings"
@@ -9,7 +10,38 @@ import (
 )
 
 func getTestConfig() krknctlconfig.Config {
-	return krknctlconfig.Config{
+	data := `
+{
+  "version": "0.0.1",
+  "quay_protocol": "https",
+  "quay_host": "quay.io",
+  "quay_org": "krkn-chaos",
+  "quay_registry": "krknctl-test",
+  "quay_repositoryApi": "api/v1/repository",
+  "container_prefix": "krknctl",
+  "kubeconfig_prefix": "krknctl-kubeconfig",
+  "krknctl_logs": "krknct-log",
+  "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
+  "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
+  "podman_socket_root_linux": "unix://run/podman/podman.sock",
+  "docker_socket_root": "unix:///var/run/docker.sock",
+  "default_container_platform": "Podman",
+  "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
+  "alerts_profile_path":"/home/krkn/kraken/config/alerts",
+  "kubeconfig_path": "/home/krkn/.kube/config",
+  "label_title": "krknctl.title",
+  "label_description": "krknctl.description",
+  "label_input_fields": "krknctl.input_fields",
+  "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
+  "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
+  "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?"
+}
+
+`
+	conf := krknctlconfig.Config{}
+	_ = json.Unmarshal([]byte(data), &conf)
+
+	_ = krknctlconfig.Config{
 		Version:           "0.0.1",
 		QuayProtocol:      "https",
 		QuayHost:          "quay.io",
@@ -17,6 +49,7 @@ func getTestConfig() krknctlconfig.Config {
 		QuayRegistry:      "krknctl-test",
 		QuayRepositoryApi: "api/v1/repository",
 	}
+	return conf
 }
 
 func getWrongConfig() krknctlconfig.Config {

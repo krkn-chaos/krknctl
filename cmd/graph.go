@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	provider_factory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"strings"
 )
 
 func NewGraphCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
@@ -26,31 +29,31 @@ func NewGraphCommand(factory *provider_factory.ProviderFactory, config config.Co
 	return command
 }
 
-func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
+func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "Runs a dependency graph based run",
 		Long:  `Runs graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			(*containerManager).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
-			container_manager.PrintDetectedContainerRuntime(containerManager)
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
-			kubeconfig, err := cmd.LocalFlags().GetString("kubeconfig")
+			kubeconfig, err := cmd.Flags().GetString("kubeconfig")
 			if err != nil {
 				return err
 			}
-			alertsProfile, err := cmd.LocalFlags().GetString("alerts-profile")
+			alertsProfile, err := cmd.Flags().GetString("alerts-profile")
 			if err != nil {
 				return err
 			}
-			metricsProfile, err := cmd.LocalFlags().GetString("metrics-profile")
+			metricsProfile, err := cmd.Flags().GetString("metrics-profile")
 			if err != nil {
 				return err
 			}
 
-			kubeconfigPath, err := container_manager.PrepareKubeconfig(&kubeconfig, config)
+			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
 			if err != nil {
 				return err
 			}
@@ -69,7 +72,7 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 				return fmt.Errorf("failed to open scenario file: %s", args[0])
 			}
 
-			nodes := make(map[string]container_manager.ScenarioNode)
+			nodes := make(map[string]models.ScenarioNode)
 			err = json.Unmarshal(file, &nodes)
 
 			dataSource := BuildDataSource(config, false, nil)
@@ -117,7 +120,7 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 			spinner.Suffix = "starting chaos scenarios..."
 			spinner.Start()
 
-			commChannel := make(chan *container_manager.CommChannel)
+			commChannel := make(chan *models.CommChannel)
 			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
 
 			if err != nil {
@@ -136,7 +139,7 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 						// interrupt all running scenarios
 						return c.Err
 					}
-					spinner.FinalMSG = fmt.Sprintf("Running step %d scenario: %s\n", *c.Layer, *c.ScenarioId)
+					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
 
 				}
 
@@ -149,11 +152,15 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 	return command
 }
 
-func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource string, nodes map[string]container_manager.ScenarioNode, scenarioNameChannel chan *struct {
+func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource string, nodes map[string]models.ScenarioNode, scenarioNameChannel chan *struct {
 	name *string
 	err  error
 }) {
 	for _, n := range nodes {
+		// skip _comment
+		if n.Name == "" {
+			continue
+		}
 		scenarioNameChannel <- &struct {
 			name *string
 			err  error
@@ -164,6 +171,13 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource s
 				name *string
 				err  error
 			}{name: &n.Name, err: err}
+			return
+		}
+		if scenarioDetail == nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: fmt.Errorf("scenario %s not found in %s", n.Name, dataSource)}
 			return
 		}
 		for k, v := range n.Env {
@@ -225,9 +239,9 @@ func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config c
 			*/
 
 			dataSource := BuildDataSource(config, false, nil)
-			provider := GetProvider(false, factory)
+			dataProvider := GetProvider(false, factory)
 
-			scenarios, err := FetchScenarios(provider, dataSource)
+			scenarios, err := FetchScenarios(dataProvider, dataSource)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -237,8 +251,8 @@ func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config c
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dataSource := BuildDataSource(config, false, nil)
-			provider := GetProvider(false, factory)
-			output, err := provider.ScaffoldScenarios(args, dataSource)
+			dataProvider := GetProvider(false, factory)
+			output, err := dataProvider.ScaffoldScenarios(args, dataSource)
 			if err != nil {
 				return err
 			}

@@ -3,11 +3,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"
 )
 
-func NewCleanCommand(containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
+func NewCleanCommand(containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "clean",
 		Short: "cleans already run scenario files and containers",
@@ -18,11 +19,15 @@ func NewCleanCommand(containerManager *container_manager.ContainerManager, confi
 			if err != nil {
 				return err
 			}
-			deletedFiles, err := container_manager.CleanKubeconfigFiles(config)
+			deletedKubeconfigFiles, err := utils.CleanKubeconfigFiles(config)
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("%d containers, %d kubeconfig files deleted", *deletedContainers, *deletedFiles))
+			deletedLogFiles, err := utils.CleanLogFiles(config)
+			if err != nil {
+				return err
+			}
+			fmt.Println(fmt.Sprintf("%d containers, %d kubeconfig files, %d log files deleted", *deletedContainers, *deletedKubeconfigFiles, *deletedLogFiles))
 			return nil
 		},
 	}

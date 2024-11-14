@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"os"
 )
 
-func Execute(providerFactory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(providerFactory, config)
 	// TODO: json output + offline repos
@@ -22,7 +22,11 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 		rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
 	*/
 
-	listCmd := NewListCommand(providerFactory, config)
+	listCmd := NewListCommand()
+	listScenariosCmd := NewListScenariosCommand(providerFactory, config)
+	listRunningCmd := NewListRunningScenario(containerManager)
+	listCmd.AddCommand(listScenariosCmd)
+	listCmd.AddCommand(listRunningCmd)
 	rootCmd.AddCommand(listCmd)
 
 	describeCmd := NewDescribeCommand(providerFactory, config)
@@ -42,14 +46,17 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 	// graph subcommands
 	graphCmd := NewGraphCommand(providerFactory, config)
 	graphRunCmd := NewGraphRunCommand(providerFactory, containerManager, config)
-	graphRunCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
-	graphRunCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
-	graphRunCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
+	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
+	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
+	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
 
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphCmd.AddCommand(graphRunCmd)
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)
+
+	attachCmd := NewAttachCmd(containerManager, config)
+	rootCmd.AddCommand(attachCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

@@ -4,14 +4,28 @@ import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	provider_factory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
 	"log"
 )
 
-func NewListCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewListCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "list",
-		Short: "list scenarios",
+		Short: "lists available scenarios and running scenarios",
+		Long:  `lists available scenarios and running scenarios`,
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
+	}
+	return command
+}
+
+func NewListScenariosCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
+	var command = &cobra.Command{
+		Use:   "available",
+		Short: "lists available scenarios",
 		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -36,6 +50,31 @@ func NewListCommand(factory *provider_factory.ProviderFactory, config config.Con
 			scenarioTable := NewScenarioTable(scenarios)
 			scenarioTable.Print()
 			fmt.Print("\n")
+			return nil
+		},
+	}
+	return command
+}
+
+func NewListRunningScenario(containerManager *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
+	var command = &cobra.Command{
+		Use:   "running",
+		Short: "lists running scenarios",
+		Long:  `list running krkn-hub scenarios`,
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			(*containerManager).PrintContainerRuntime()
+			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
+			if err != nil {
+				return err
+			}
+			runningScenarios, err := (*containerManager).ListRunningScenarios(*socket)
+			if err != nil {
+				return err
+			}
+			// TODO: Consider no result message (everywhere ideally)
+			table := NewRunningScenariosTable(*runningScenarios)
+			table.Print()
 			return nil
 		},
 	}
