@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"strings"
+	"time"
 )
 import "github.com/rodaine/table"
 
@@ -49,6 +51,16 @@ func NewGraphTable(graph [][]string) table.Table {
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for i, v := range graph {
 		tbl.AddRow(i, strings.Join(v, ", "))
+	}
+	return tbl
+}
+
+func NewRunningScenariosTable(runningScenarios []orchestrator_models.RunningScenario) table.Table {
+	tbl := table.New("Scenario ID", "Scenario Name", "Running Since", "Container Name")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	for i, v := range runningScenarios {
+		t := time.Unix(v.Container.Started, 0)
+		tbl.AddRow(i, v.Scenario.Name, time.Since(t), v.Container.Name)
 	}
 	return tbl
 }

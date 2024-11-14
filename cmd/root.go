@@ -3,12 +3,13 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/spf13/cobra"
 	"os"
 )
 
-func Execute(providerFactory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(providerFactory, config)
 	// TODO: json output + offline repos
@@ -22,13 +23,43 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 		rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
 	*/
 
-	listCmd := NewListCommand(providerFactory, config)
+	var completionCmd = &cobra.Command{
+		Use:       "completion [bash|zsh]",
+		Short:     "Genera script di completamento per bash o zsh",
+		Args:      cobra.ExactArgs(1),
+		ValidArgs: []string{"bash", "zsh"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			switch args[0] {
+			case "bash":
+				err := rootCmd.GenBashCompletion(os.Stdout)
+				if err != nil {
+					return err
+				}
+			case "zsh":
+				err := rootCmd.GenZshCompletion(os.Stdout)
+				if err != nil {
+					return err
+				}
+			default:
+				fmt.Println("shell not supported:", args[0])
+			}
+			return nil
+		},
+	}
+
+	rootCmd.AddCommand(completionCmd)
+
+	listCmd := NewListCommand()
+	listScenariosCmd := NewListScenariosCommand(providerFactory, config)
+	listRunningCmd := NewListRunningScenario(scenarioOrchestrator)
+	listCmd.AddCommand(listScenariosCmd)
+	listCmd.AddCommand(listRunningCmd)
 	rootCmd.AddCommand(listCmd)
 
 	describeCmd := NewDescribeCommand(providerFactory, config)
 	rootCmd.AddCommand(describeCmd)
 
-	runCmd := NewRunCommand(providerFactory, containerManager, config)
+	runCmd := NewRunCommand(providerFactory, scenarioOrchestrator, config)
 	runCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
@@ -36,20 +67,23 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *contain
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
-	cleanCmd := NewCleanCommand(containerManager, config)
+	cleanCmd := NewCleanCommand(scenarioOrchestrator, config)
 	rootCmd.AddCommand(cleanCmd)
 
 	// graph subcommands
 	graphCmd := NewGraphCommand(providerFactory, config)
-	graphRunCmd := NewGraphRunCommand(providerFactory, containerManager, config)
-	graphRunCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
-	graphRunCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
-	graphRunCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
+	graphRunCmd := NewGraphRunCommand(providerFactory, scenarioOrchestrator, config)
+	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
+	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
+	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
 
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphCmd.AddCommand(graphRunCmd)
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)
+
+	attachCmd := NewAttachCmd(scenarioOrchestrator, config)
+	rootCmd.AddCommand(attachCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

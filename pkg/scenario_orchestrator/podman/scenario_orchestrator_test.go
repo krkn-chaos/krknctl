@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"os/user"
@@ -31,19 +32,53 @@ func getTestConfig() krknctlconfig.Config {
 }
 
 func getGraphConfig() krknctlconfig.Config {
-	return krknctlconfig.Config{
+	data := `
+{
+  "version": "0.0.1",
+  "quay_protocol": "https",
+  "quay_host": "quay.io",
+  "quay_org": "krkn-chaos",
+  "quay_registry": "krknctl-test",
+  "quay_repositoryApi": "api/v1/repository",
+  "container_prefix": "krknctl",
+  "kubeconfig_prefix": "krknctl-kubeconfig",
+  "krknctl_logs": "krknct-log",
+  "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
+  "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
+  "podman_socket_root_linux": "unix://run/podman/podman.sock",
+  "docker_socket_root": "unix:///var/run/docker.sock",
+  "default_container_platform": "Podman",
+  "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
+  "alerts_profile_path":"/home/krkn/kraken/config/alerts",
+  "kubeconfig_path": "/home/krkn/.kube/config",
+  "label_title": "krknctl.title",
+  "label_description": "krknctl.description",
+  "label_input_fields": "krknctl.input_fields",
+  "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
+  "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
+  "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?"
+}
+
+`
+	conf := krknctlconfig.Config{}
+	_ = json.Unmarshal([]byte(data), &conf)
+
+	_ = krknctlconfig.Config{
 		Version:                    "0.0.1",
 		QuayProtocol:               "https",
 		QuayHost:                   "quay.io",
 		QuayOrg:                    "krkn-chaos",
 		QuayRegistry:               "krknctl-test",
 		QuayRepositoryApi:          "api/v1/repository",
-		ContainerPrefix:            "krknctl-containers",
+		ContainerPrefix:            "krknctl",
 		KubeconfigPrefix:           "krknctl-kubeconfig",
 		PodmanDarwinSocketTemplate: "unix://%s/.local/share/containers/podman/machine/podman.sock",
 		PodmanLinuxSocketTemplate:  "unix://run/user/%d/podman/podman.sock",
 		PodmanSocketRoot:           "unix://run/podman/podman.sock",
 	}
+
+	return conf
+
 }
 func TestConnect(t *testing.T) {
 	env := map[string]string{
@@ -53,7 +88,7 @@ func TestConnect(t *testing.T) {
 		"NAMESPACE":      "default",
 	}
 	conf := getTestConfig()
-	cm := ContainerManager{
+	cm := ScenarioOrchestrator{
 		Config: conf,
 	}
 	currentUser, err := user.Current()
@@ -63,7 +98,7 @@ func TestConnect(t *testing.T) {
 	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", conf.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := container_manager.PrepareKubeconfig(nil, getTestConfig())
+	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
 	assert.Nil(t, err)
 	assert.NotNil(t, kubeconfig)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
@@ -149,7 +184,7 @@ func TestRunGraph(t *testing.T) {
 }
 `
 	conf := getGraphConfig()
-	cm := ContainerManager{
+	cm := ScenarioOrchestrator{
 		Config: conf,
 	}
 	currentUser, err := user.Current()
@@ -159,7 +194,7 @@ func TestRunGraph(t *testing.T) {
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", conf.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := container_manager.PrepareKubeconfig(nil, getTestConfig())
+	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
 	assert.Nil(t, err)
 	assert.NotNil(t, kubeconfig)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
@@ -178,7 +213,7 @@ func TestRunGraph(t *testing.T) {
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 
-	nodes := make(map[string]container_manager.ScenarioNode)
+	nodes := make(map[string]models.ScenarioNode)
 	err = json.Unmarshal([]byte(data), &nodes)
 	assert.Nil(t, err)
 
@@ -197,7 +232,7 @@ func TestRunGraph(t *testing.T) {
 	executionPlan := graph.TopoSortedLayers()
 	assert.NotNil(t, executionPlan)
 
-	commChannel := make(chan *container_manager.CommChannel)
+	commChannel := make(chan *models.CommChannel)
 	go func() {
 		cm.RunGraph(nodes, executionPlan, *socket, map[string]string{}, map[string]string{}, false, commChannel)
 	}()
@@ -211,6 +246,55 @@ func TestRunGraph(t *testing.T) {
 			fmt.Printf("Running step %d scenario: %s\n", *c.Layer, *c.ScenarioId)
 		}
 
+	}
+
+}
+
+func TestScenarioOrchestrator_ListRunningScenarios(t *testing.T) {
+	conf := getGraphConfig()
+	cm := ScenarioOrchestrator{
+		Config: conf,
+	}
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := cm.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	containerMap, err := cm.ListRunningContainers(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, containerMap)
+}
+
+func TestScenarioOrchestrator_GetScenarioDetail(t *testing.T) {
+	conf := getGraphConfig()
+	cm := ScenarioOrchestrator{
+		Config: conf,
+	}
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+
+	socket, err := cm.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	scenarios, err := cm.ListRunningContainers(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenarios)
+	for _, v := range *scenarios {
+		containerMap, err := cm.InspectRunningScenario(v, *socket)
+		assert.Nil(t, err)
+		assert.NotNil(t, containerMap)
 	}
 
 }

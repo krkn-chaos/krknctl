@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	"github.com/krkn-chaos/krknctl/pkg/container_manager"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"log"
@@ -14,7 +15,7 @@ import (
 	"time"
 )
 
-func NewRunCommand(factory *factory.ProviderFactory, containerManager *container_manager.ContainerManager, config config.Config) *cobra.Command {
+func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	collectedFlags := make(map[string]*string)
 	var command = &cobra.Command{
 		Use:                "run",
@@ -86,8 +87,8 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 					return err
 				}
 			*/
-			container_manager.PrintDetectedContainerRuntime(containerManager)
 
+			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("validating input...")
 			dataSource := BuildDataSource(config, false, nil)
 			spinner.Start()
@@ -139,7 +140,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 				}
 			}
 
-			kubeconfigPath, err := container_manager.PrepareKubeconfig(foundKubeconfig, config)
+			kubeconfigPath, err := utils.PrepareKubeconfig(foundKubeconfig, config)
 			if err != nil {
 				return err
 			}
@@ -193,22 +194,23 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *container
 			fmt.Print("\n")
 
 			//WIP
-			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
+			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 			if err != nil {
 				return err
 			}
 			startTime := time.Now()
+			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
 			if runDetached == false {
-				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes, os.Stdout, os.Stderr)
-				if err != nil {
-					return err
-				}
-			} else {
 				_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
 				if err != nil {
 					return err
 				}
-				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, scenarioDetail.Name, *socket, environment, false, volumes)
+				_, err = (*scenarioOrchestrator).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr)
+				if err != nil {
+					return err
+				}
+			} else {
+				containerId, _, err := (*scenarioOrchestrator).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes)
 				if err != nil {
 					return err
 				}

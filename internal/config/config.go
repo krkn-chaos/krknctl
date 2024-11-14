@@ -17,11 +17,19 @@ type Config struct {
 	PodmanDarwinSocketTemplate string `json:"podman_darwin_socket_template"`
 	PodmanLinuxSocketTemplate  string `json:"podman_linux_socket_template"`
 	PodmanSocketRoot           string `json:"podman_socket_root_linux"`
+	PodmanRunningState         string `json:"podman_running_state"`
 	DockerSocketRoot           string `json:"docker_socket_root"`
+	DockerRunningState         string `json:"docker_running_state"`
 	DefaultContainerPlatform   string `json:"default_container_platform"`
 	MetricsProfilePath         string `json:"metrics_profile_path"`
 	AlertsProfilePath          string `json:"alerts_profile_path"`
 	KubeconfigPath             string `json:"kubeconfig_path"`
+	LabelTitle                 string `json:"label_title"`
+	LabelDescription           string `json:"label_description"`
+	LabelInputFields           string `json:"label_input_fields"`
+	LabelTitleRegex            string `json:"label_title_regex"`
+	LabelDescriptionRegex      string `json:"label_description_regex"`
+	LabelInputFieldsRegex      string `json:"label_input_fields_regex"`
 }
 
 //go:embed config.json
