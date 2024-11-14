@@ -16,22 +16,6 @@ import (
 )
 
 func getTestConfig() krknctlconfig.Config {
-	return krknctlconfig.Config{
-		Version:                    "0.0.1",
-		QuayProtocol:               "https",
-		QuayHost:                   "quay.io",
-		QuayOrg:                    "krkn-chaos",
-		QuayRegistry:               "krkn-hub",
-		QuayRepositoryApi:          "api/v1/repository",
-		ContainerPrefix:            "krknctl-containers",
-		KubeconfigPrefix:           "krknctl-kubeconfig",
-		PodmanDarwinSocketTemplate: "unix://%s/.local/share/containers/podman/machine/podman.sock",
-		PodmanLinuxSocketTemplate:  "unix://run/user/%d/podman/podman.sock",
-		PodmanSocketRoot:           "unix://run/podman/podman.sock",
-	}
-}
-
-func getGraphConfig() krknctlconfig.Config {
 	data := `
 {
   "version": "0.0.1",
@@ -46,7 +30,9 @@ func getGraphConfig() krknctlconfig.Config {
   "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
   "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
   "podman_socket_root_linux": "unix://run/podman/podman.sock",
+  "podman_running_state": "running",
   "docker_socket_root": "unix:///var/run/docker.sock",
+  "docker_running_state": "running",
   "default_container_platform": "Podman",
   "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
   "alerts_profile_path":"/home/krkn/kraken/config/alerts",
@@ -58,25 +44,45 @@ func getGraphConfig() krknctlconfig.Config {
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?"
 }
-
 `
 	conf := krknctlconfig.Config{}
 	_ = json.Unmarshal([]byte(data), &conf)
+	return conf
 
-	_ = krknctlconfig.Config{
-		Version:                    "0.0.1",
-		QuayProtocol:               "https",
-		QuayHost:                   "quay.io",
-		QuayOrg:                    "krkn-chaos",
-		QuayRegistry:               "krknctl-test",
-		QuayRepositoryApi:          "api/v1/repository",
-		ContainerPrefix:            "krknctl",
-		KubeconfigPrefix:           "krknctl-kubeconfig",
-		PodmanDarwinSocketTemplate: "unix://%s/.local/share/containers/podman/machine/podman.sock",
-		PodmanLinuxSocketTemplate:  "unix://run/user/%d/podman/podman.sock",
-		PodmanSocketRoot:           "unix://run/podman/podman.sock",
-	}
+}
 
+func GetOriginalConfig() krknctlconfig.Config {
+	data := `
+{
+  "version": "0.0.1",
+  "quay_protocol": "https",
+  "quay_host": "quay.io",
+  "quay_org": "krkn-chaos",
+  "quay_registry": "krkn-hub",
+  "quay_repositoryApi": "api/v1/repository",
+  "container_prefix": "krknctl",
+  "kubeconfig_prefix": "krknctl-kubeconfig",
+  "krknctl_logs": "krknct-log",
+  "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
+  "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
+  "podman_socket_root_linux": "unix://run/podman/podman.sock",
+  "podman_running_state": "running",
+  "docker_socket_root": "unix:///var/run/docker.sock",
+  "docker_running_state": "running",
+  "default_container_platform": "Podman",
+  "metrics_profile_path" : "/home/krkn/kraken/config/metrics-aggregated.yaml",
+  "alerts_profile_path":"/home/krkn/kraken/config/alerts",
+  "kubeconfig_path": "/home/krkn/.kube/config",
+  "label_title": "krknctl.title",
+  "label_description": "krknctl.description",
+  "label_input_fields": "krknctl.input_fields",
+  "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
+  "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
+  "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?"
+}
+`
+	conf := krknctlconfig.Config{}
+	_ = json.Unmarshal([]byte(data), &conf)
 	return conf
 
 }
@@ -87,14 +93,14 @@ func TestConnect(t *testing.T) {
 		"CPU_PERCENTAGE": "60",
 		"NAMESPACE":      "default",
 	}
-	conf := getTestConfig()
+	conf := GetOriginalConfig()
 	cm := ScenarioOrchestrator{
 		Config: conf,
 	}
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{}
+	quayProvider := quay.ScenarioProvider{Config: &conf}
 	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", conf.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
@@ -132,7 +138,7 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	},
@@ -141,7 +147,7 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	},
@@ -150,7 +156,7 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	},
@@ -159,7 +165,7 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	},
@@ -168,7 +174,7 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	},
@@ -177,20 +183,20 @@ func TestRunGraph(t *testing.T) {
 		"image":"quay.io/krkn-chaos/krknctl-test:dummy-scenario",
 		"name":"dummy-scenario",
 		"env":{
-			"END":"7"
+			"END":"2"
 		},
 		"volumes":{}
 	}
 }
 `
-	conf := getGraphConfig()
+	conf := getTestConfig()
 	cm := ScenarioOrchestrator{
 		Config: conf,
 	}
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{}
+	quayProvider := quay.ScenarioProvider{Config: &conf}
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", conf.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
@@ -251,7 +257,7 @@ func TestRunGraph(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_ListRunningScenarios(t *testing.T) {
-	conf := getGraphConfig()
+	conf := GetOriginalConfig()
 	cm := ScenarioOrchestrator{
 		Config: conf,
 	}
@@ -272,7 +278,7 @@ func TestScenarioOrchestrator_ListRunningScenarios(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_GetScenarioDetail(t *testing.T) {
-	conf := getGraphConfig()
+	conf := GetOriginalConfig()
 	cm := ScenarioOrchestrator{
 		Config: conf,
 	}

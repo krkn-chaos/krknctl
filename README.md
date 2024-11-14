@@ -9,7 +9,9 @@ Krkn Terminal CLI
 > [!CAUTION]  
 > The tool is currently in alpha stage, use it at your own risk.
 
-## Overview
+<br/>
+
+## Overview:
 `Krknctl` is a tool designed to run and orchestrate [krkn](https://github.com/krkn-chaos/krkn) chaos scenarios utilizing 
 container images from the [krkn-hub](https://github.com/krkn-chaos/krkn-hub). 
 Its primary objective is to streamline the usage of `krkn` by providing features like:
@@ -21,17 +23,19 @@ Its primary objective is to streamline the usage of `krkn` by providing features
 and much more, effectively abstracting the complexities of the container environment. 
 This allows users to focus solely on implementing chaos engineering practices without worrying about runtime complexities.
 
-## Autocompletion
+<br/>
+
+## Autocompletion:
 The first step to have the best experience with the tool is to install the autocompletion in the shell so that the tool
 will be able to suggest to the user the available command and the description simply hitting `tab` twice.
 
-### Bash (linux)
+### Bash (linux):
 ```
 source <(./krknctl completion bash)
 ```
 > [!TIP] 
 > To install autocompletion permanently add this command to `.bashrc` (setting the krknctl binary path correctly)
-### zsh (MacOS)
+### zsh (MacOS):
 ```
 autoload -Uz compinit
 compinit
@@ -40,14 +44,40 @@ source <(./krknctl completion zsh)
 > [!TIP] 
 > To install autocompletion permanently add this command to `.zshrc` (setting the krknctl binary path correctly)
 
+<br/>
 
-## Container Runtime
+## Requirements:
+### Running:
+#### Linux:
+##### Dictionaries:
+To generate the random words we use the american dictionary, it is often available but if that's not the case:
+- **Fedora/RHEL**: `sudo dnf install words`
+- **Ubuntu/Debian**: `sudo apt-get install wamerican`
+
+### Building from sources:
+#### Linux:
+To build the only system package required is libbtrfs:
+
+- **Fedora/RHEL**: `sudo dnf install btrfs-progs-devel`
+- **Ubuntu/Debian**: `sudo apt-get install libbtrfs-dev`
+#### MacOS:
+- **gpgme**: `brew install gpgme` 
+
+#### Build commands: 
+`go build -tags containers_image_openpgp -ldflags="-w -s" -o bin/ ./...`
+
+>[!NOTE]
+> To build for different operating systems/architectures refer to `GOOS` `GOARCH` [golang variables](https://pkg.go.dev/internal/platform)
+
+<br/>
+
+## Container Runtime:
 The tool supports both Podman and Docker to run the krkn-hub scenario containers. The tool interacts with the container
 runtime through Unix socket. If both container runtimes are installed in the system the tool will default on `Podman`.
 
-### Podman
+### Podman:
 Steps required to enable the Podman support
-#### Linux
+#### Linux:
 - enable and activate the podman API daemon
 ```
 sudo systemctl enable --now podman
@@ -57,38 +87,48 @@ sudo systemctl enable --now podman
 systemctl enable --user --now podman.socket 
 ```
 
-#### MacOS
+#### MacOS:
 If both Podman and Docker are installed be sure that the docker compatibility is disabled
 
-### Docker
-#### Linux
+### Docker:
+#### Linux:
 Check that the user has been added to the `docker` group and can correctly connect to the Docker unix socket  
 running the comman `podman ps` if an error is returned  run the command `sudo usermod -aG docker $USER`
 
-## Commands
+<br/>
+
+## Commands:
 Commands are grouped by action and may include one or more subcommands to further define the specific action.
 
-### `list <subcommand>`
+### `list <subcommand>`:
 
-- #### `available`
+- #### `available`:
 Builds a list of all the available scenarios in krkn-hub
 
-- #### `running`
+- #### `running`:
 Builds a list of all the scenarios currently running in the system. The scenarios are filtered based on the tool's naming conventions.
 
 <br/>
-<br/>
 
-### `describe <scenario name>`
+### `describe <scenario name>`:
 Describes the specified scenario giving to the user an overview of what are the actions that the scenario will perform on
 the target system. It will also show all the available flags that the scenario will accept as input to modify the behaviour 
 of the scenario.
 
 <br/>
-<br/>
 
-### `run <scenario name> [flags]`
+### `run <scenario name> [flags]`:
 Will run the selected scenarios with the specified options
+
+> [!NOTE]
+> Because the kubeconfig file may reference external certificates stored on the filesystem, 
+> which won't be accessible once mounted inside the container, it will be automatically 
+> copied to the directory where the tool is executed. During this process, the kubeconfig
+> will be flattened by encoding the certificates in base64 and inlining them directly into the file.
+
+> [!TIP]
+> if you want interrupt the scenario while running in attached mode simply hit `CTRL+C` the
+> container will be killed and the scenario interrupted immediately
 
 __Common flags:__
 
@@ -100,14 +140,13 @@ __Common flags:__
 | --metrics-profile                                    | will mount in the container scenario a custom metrics profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos) |
 
 <br/>
-<br/>
 
-### `graph <subcommand>`
+### `graph <subcommand>`:
 In addition to running individual scenarios, the tool can also orchestrate 
 multiple scenarios in serial, parallel, or mixed execution by utilizing a 
 scenario dependency graph resolution algorithm.
 
-- #### `scaffold <scenario names>`
+- #### `scaffold <scenario names>`:
 
 Scaffolds a basic execution plan structure in json format for all the scenario names provided.
 The default structure is a serial execution with a root node and each node depends on the 
@@ -126,10 +165,15 @@ when defined, or a description of the content expected for the field.
 > [!NOTE]
 > Any graph configuration is supported except cycles (self dependencies or transitive)
 
-- #### `run <json execution plan path> [flags]`
+- #### `run <json execution plan path> [flags]`:
 
 It will display the resolved dependency graph, detailing all the scenarios executed at each dependency step, and will instruct 
 the container runtime to execute the krkn scenarios accordingly.
+> [!NOTE]
+> Since multiple scenarios can be executed within a single running plan, the output is redirected 
+> to files in the directory where the command is run. These files are named using the following 
+> format: krknctl-<scenario-name>-<scenario-id>-<timestamp>.log.
+
 
 #### Supported flags:
 
@@ -139,8 +183,6 @@ the container runtime to execute the krkn scenarios accordingly.
 | --alerts-profile                                     | will mount in the container a custom alert profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
 | --metrics-profile                                    | will mount in the container scenario a custom metrics profile (check krkn [documentation](https://github.com/krkn-chaos/krkn) for further infos)|
 
-<br/>
-<br/>
 
 #### Supported graph configurations:
 ![execution_plans.jpg](media/execution_plans.jpg)
@@ -162,114 +204,19 @@ for a set duration. It serves as an ideal root node, allowing all dependent node
 unnecessary complexity to the codebase.
 
 
+### `attach <scenario ID>`:
+If a scenario has been executed in detached mode or through a graph plan and you want to attach to the container
+standard output this command comes into help.
 
-## Scenario Metadata
-### Online Mode
-In online mode, `krknctl` leverages the `quay.io` API to retrieve scenario metadata. This metadata describes scenarios, enables autocomplete for available scenarios, and validates input. Nothing is stored locally, and no custom APIs are used; everything is based on OCI standards. The image metadata is labeled and accessed through the Quay.io image inspection API.
+> [!TIP]
+> to interrupt the output hit `CTRL+C`, this won't interrupt the container, but only the output 
 
-### Offline Mode
-_Work In Progress_
+> [!TIP]
+> if shell completion is enabled, pressing TAB twice will display a list of running 
+> containers along with their respective IDs, helping you select the correct one.
+ 
+<br/>
 
-## Command Autocompletion
-
-### Mac autocompletion
-
-autoload -Uz compinit
-compinit
-
-Command autocompletion is powered by the [Cobra Command](https://github.com/spf13/cobra) Library. Metadata is retrieved as described above, and the autocompletion feature is installed via the `completion` command. It is compatible with most popular *nix shells:
-
-![command autocomplete](media/autocomplete.gif)
-
-
-
-### `describe` Scenario
-
-Displays details of a scenario and its specific flags:
-![describe scenario](media/describe.gif)
-
-### `list` Available Scenarios
-
-Shows all scenarios available in the registry:
-![list scenarios](media/list.gif)
-
-### `run` Scenario
-
-Executes a scenario image with the necessary flags (translated as the respective container environment variables), validating the inputs against the type schema defined within the image manifest.
-
-#### Type Schema
-The type schema is a simple typing system designed to validate user input. Here is an example of the schema format:
-
-```json
-[
-    {
-        "name":"cpu-percentage",
-        "shortDescription":"CPU percentage",
-        "description":"Percentage of total CPU to be consumed",
-        "variable":"TOTAL_CHAOS_DURATION",
-        "type":"number",
-        "required":"true"
-    },
-    {
-        "name":"namespace", 
-        "shortDescription":"Namespace",
-        "description":"Namespace where the scenario container_manager will be deployed",
-        "variable":"NAMESPACE",
-        "type":"string",
-        "default":"default"
-    }
-]
-```
-
-Supported types include:
-- `number`
-- `bool`
-- `string`
-- `enum`
-- `base64`
-- `file`
-
-Key features for each type:
-- **All types**:
-    - Support for default values and required fields
-    - Upcoming features: dependency on another field (`requires`) and mutual exclusion (`mutuallyExcludes`)
-- **String**:
-    - Regex validation
-- **Enum**:
-    - Specific allowed values
-
-Each schema element corresponds to a command flag in the format `--<field_name>`
-
-![run flags](media/validation.gif)
-
-input is validated against this schema:
-
-![run flags](media/input-validation.gif)
-
-## Container Runtime Integration
-
-### Podman
-
->![NOTE] To compile the project `dnf install btrfs-progs-devel`
-> to enable podman user socket systemctl start --user podman.socket
-> to use podman cli with the socket `export CONTAINER_HOST=unix://run/podman/podman.sock`
-
-Containers are running, working on the wiring, stay tuned!
-
-_Work In Progress_
-
-### Docker
-_Work In Progress_
-
-
-### Build on mac 
-brew install gpgme
-
-
-### Cross compiling
-export GOOS="darwin/linux"
-export GOARCH="amd64/arm64"
-
-go build -tags containers_image_openpgp -gcflags=all="-l -B -wb=false" -ldflags="-w -s" -o bin-linux-amd64/ ./...
-
-go build -tags containers_image_openpgp -ldflags="-w -s" -o bin-darwin-arm/ ./...
+### `clean`:
+will remove all the krkn containers from the container runtime, will delete all the kubeconfig files
+and logfiles created by the tool in the current folder.
