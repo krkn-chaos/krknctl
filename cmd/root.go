@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func Execute(providerFactory *factory.ProviderFactory, containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(providerFactory, config)
 	// TODO: json output + offline repos
@@ -24,7 +24,7 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *scenari
 
 	listCmd := NewListCommand()
 	listScenariosCmd := NewListScenariosCommand(providerFactory, config)
-	listRunningCmd := NewListRunningScenario(containerManager)
+	listRunningCmd := NewListRunningScenario(scenarioOrchestrator)
 	listCmd.AddCommand(listScenariosCmd)
 	listCmd.AddCommand(listRunningCmd)
 	rootCmd.AddCommand(listCmd)
@@ -32,7 +32,7 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *scenari
 	describeCmd := NewDescribeCommand(providerFactory, config)
 	rootCmd.AddCommand(describeCmd)
 
-	runCmd := NewRunCommand(providerFactory, containerManager, config)
+	runCmd := NewRunCommand(providerFactory, scenarioOrchestrator, config)
 	runCmd.LocalFlags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
@@ -40,12 +40,12 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *scenari
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
-	cleanCmd := NewCleanCommand(containerManager, config)
+	cleanCmd := NewCleanCommand(scenarioOrchestrator, config)
 	rootCmd.AddCommand(cleanCmd)
 
 	// graph subcommands
 	graphCmd := NewGraphCommand(providerFactory, config)
-	graphRunCmd := NewGraphRunCommand(providerFactory, containerManager, config)
+	graphRunCmd := NewGraphRunCommand(providerFactory, scenarioOrchestrator, config)
 	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
@@ -55,7 +55,7 @@ func Execute(providerFactory *factory.ProviderFactory, containerManager *scenari
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)
 
-	attachCmd := NewAttachCmd(containerManager, config)
+	attachCmd := NewAttachCmd(scenarioOrchestrator, config)
 	rootCmd.AddCommand(attachCmd)
 
 	if err := rootCmd.Execute(); err != nil {

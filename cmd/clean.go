@@ -8,14 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewCleanCommand(containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewCleanCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "clean",
 		Short: "cleans already run scenario files and containers",
 		Long:  `cleans already run scenario files and containers`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			deletedContainers, err := (*containerManager).CleanContainers()
+			deletedContainers, err := (*scenarioOrchestrator).CleanContainers()
 			if err != nil {
 				return err
 			}

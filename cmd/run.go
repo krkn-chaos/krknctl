@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func NewRunCommand(factory *factory.ProviderFactory, containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	collectedFlags := make(map[string]*string)
 	var command = &cobra.Command{
 		Use:                "run",
@@ -88,7 +88,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *scenario_
 				}
 			*/
 
-			(*containerManager).PrintContainerRuntime()
+			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("validating input...")
 			dataSource := BuildDataSource(config, false, nil)
 			spinner.Start()
@@ -194,7 +194,7 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *scenario_
 			fmt.Print("\n")
 
 			//WIP
-			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
+			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 			if err != nil {
 				return err
 			}
@@ -205,12 +205,12 @@ func NewRunCommand(factory *factory.ProviderFactory, containerManager *scenario_
 				if err != nil {
 					return err
 				}
-				_, err = (*containerManager).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr)
+				_, err = (*scenarioOrchestrator).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr)
 				if err != nil {
 					return err
 				}
 			} else {
-				containerId, _, err := (*containerManager).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes)
+				containerId, _, err := (*scenarioOrchestrator).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes)
 				if err != nil {
 					return err
 				}

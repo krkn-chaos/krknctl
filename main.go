@@ -6,7 +6,7 @@ import (
 	"github.com/krkn-chaos/krknctl/cmd"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	containermanagerfactory "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/factory"
+	scenarioorchestratorfactory "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"os"
 )
@@ -17,15 +17,15 @@ func main() {
 		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to load configuration"))
 		os.Exit(1)
 	}
-	containerManagerFactory := containermanagerfactory.NewContainerManagerFactory(config)
+	scenarioOrchestratorFactory := scenarioorchestratorfactory.NewScenarioOrchestratorFactory(config)
 	detectedRuntime, err := utils.DetectContainerRuntime(config)
 	if err != nil {
 		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to determine container runtime enviroment please install podman or docker and retry"))
 		os.Exit(1)
 	}
 
-	containerManager := containerManagerFactory.NewInstance(*detectedRuntime, &config)
+	scenarioOrchestrator := scenarioOrchestratorFactory.NewInstance(*detectedRuntime, &config)
 	providerFactory := providerfactory.NewProviderFactory(&config)
 
-	cmd.Execute(providerFactory, &containerManager, config)
+	cmd.Execute(providerFactory, &scenarioOrchestrator, config)
 }

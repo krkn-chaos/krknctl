@@ -80,7 +80,7 @@ func getTestConfig() krknctlconfig.Config {
 
 }
 
-func TestContainerManager_Run(t *testing.T) {
+func TestscenarioOrchestrator_Run(t *testing.T) {
 	env := map[string]string{
 		"CHAOS_DURATION": "2",
 		"CORES":          "1",

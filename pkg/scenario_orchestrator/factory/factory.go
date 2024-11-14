@@ -13,7 +13,7 @@ type ScenarioOrchestratorFactory struct {
 	Config config.Config
 }
 
-func NewContainerManagerFactory(config config.Config) *ScenarioOrchestratorFactory {
+func NewScenarioOrchestratorFactory(config config.Config) *ScenarioOrchestratorFactory {
 	return &ScenarioOrchestratorFactory{
 		Config: config,
 	}

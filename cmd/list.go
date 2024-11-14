@@ -56,19 +56,19 @@ func NewListScenariosCommand(factory *provider_factory.ProviderFactory, config c
 	return command
 }
 
-func NewListRunningScenario(containerManager *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
+func NewListRunningScenario(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "running",
 		Short: "lists running scenarios",
 		Long:  `list running krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			(*containerManager).PrintContainerRuntime()
-			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
+			(*scenarioOrchestrator).PrintContainerRuntime()
+			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 			if err != nil {
 				return err
 			}
-			runningScenarios, err := (*containerManager).ListRunningScenarios(*socket)
+			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(*socket)
 			if err != nil {
 				return err
 			}

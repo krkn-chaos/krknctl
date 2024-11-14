@@ -29,14 +29,14 @@ func NewGraphCommand(factory *provider_factory.ProviderFactory, config config.Co
 	return command
 }
 
-func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerManager *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "Runs a dependency graph based run",
 		Long:  `Runs graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			(*containerManager).PrintContainerRuntime()
+			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
@@ -121,13 +121,13 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, containerMana
 			spinner.Start()
 
 			commChannel := make(chan *models.CommChannel)
-			socket, err := (*containerManager).GetContainerRuntimeSocket(nil)
+			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 
 			if err != nil {
 				return err
 			}
 			go func() {
-				(*containerManager).RunGraph(nodes, executionPlan, *socket, environment, volumes, false, commChannel)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, *socket, environment, volumes, false, commChannel)
 			}()
 
 			for {
