@@ -388,7 +388,7 @@ func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, c
 	return containerId, err
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestrator_models.ScenarioSet, resolvedGraph orchestrator_models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestrator_models.CommChannel) {
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestrator_models.ScenarioSet, resolvedGraph orchestrator_models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestrator_models.GraphCommChannel) {
 	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, containerRuntimeUri, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config)
 }
 

@@ -57,7 +57,7 @@ type Container struct {
 type ScenarioSet map[string]ScenarioNode
 type ResolvedGraph [][]string
 
-type CommChannel struct {
+type GraphCommChannel struct {
 	Layer           *int
 	ScenarioId      *string
 	ScenarioLogFile *string

@@ -120,7 +120,7 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrche
 			spinner.Suffix = "starting chaos scenarios..."
 			spinner.Start()
 
-			commChannel := make(chan *models.CommChannel)
+			commChannel := make(chan *models.GraphCommChannel)
 			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 
 			if err != nil {

@@ -20,7 +20,7 @@ type ScenarioOrchestrator interface {
 		extraEnv map[string]string,
 		extraVolumeMounts map[string]string,
 		cache bool,
-		commChannel chan *orchestrator_models.CommChannel,
+		commChannel chan *orchestrator_models.GraphCommChannel,
 	)
 
 	CleanContainers() (*int, error)

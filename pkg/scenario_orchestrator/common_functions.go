@@ -15,7 +15,7 @@ import (
 	"syscall"
 )
 
-func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.CommChannel, orchestrator ScenarioOrchestrator, config config.Config) {
+func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config) {
 	env := make(map[string]string)
 	volumes := make(map[string]string)
 
@@ -43,10 +43,10 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 			file, err := os.Create(filename)
 
 			if err != nil {
-				commChannel <- &models.CommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
-			commChannel <- &models.CommChannel{Layer: &step, ScenarioId: &scId, ScenarioLogFile: &filename, Err: nil}
+			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioId: &scId, ScenarioLogFile: &filename, Err: nil}
 			wg.Add(1)
 
 			go func() {

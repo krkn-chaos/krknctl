@@ -232,7 +232,7 @@ func TestRunGraph(t *testing.T) {
 	executionPlan := graph.TopoSortedLayers()
 	assert.NotNil(t, executionPlan)
 
-	commChannel := make(chan *models.CommChannel)
+	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
 		cm.RunGraph(nodes, executionPlan, *socket, map[string]string{}, map[string]string{}, false, commChannel)
 	}()
