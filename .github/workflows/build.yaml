@@ -21,7 +21,7 @@ jobs:
 
     - name: install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev    
+        sudo apt-get update && sudo apt-get install libbtrfs-dev wamerican   
 
     - name: advance version
       run: |

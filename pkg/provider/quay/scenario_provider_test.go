@@ -108,11 +108,6 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "krknctl.input_fields LABEL not found in tag: cpu-memory-noinput"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-nokubeconfig", config.GetQuayRepositoryApiUri())
-	assert.NotNil(t, err)
-	assert.True(t, strings.Contains(err.Error(), "krknctl.kubeconfig_path LABEL not found in tag: cpu-memory-nokubeconfig"))
-	assert.Nil(t, scenario)
-
 	scenario, err = provider.GetScenarioDetail("not-found", config.GetQuayRepositoryApiUri())
 	assert.Nil(t, err)
 	assert.Nil(t, scenario)

@@ -163,6 +163,8 @@ unnecessary complexity to the codebase.
 
 
 
+
+
 ## Scenario Metadata
 ### Online Mode
 In online mode, `krknctl` leverages the `quay.io` API to retrieve scenario metadata. This metadata describes scenarios, enables autocomplete for available scenarios, and validates input. Nothing is stored locally, and no custom APIs are used; everything is based on OCI standards. The image metadata is labeled and accessed through the Quay.io image inspection API.
