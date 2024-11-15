@@ -30,7 +30,7 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestrator_models.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error) {
+func (c *ScenarioOrchestrator) Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string) (*string, *context.Context, error) {
 
 	ctx, err := c.Connect(containerRuntimeUri)
 	if err != nil {
@@ -47,7 +47,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 		return nil, nil, err
 	}
 	if cache == false || exists == false {
-		err := pullImage(ctx, cli, image)
+		err := pullImage(ctx, cli, image, commChan)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -84,11 +84,6 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 	ctxWithClient := contextWithDockerClient(ctx, cli)
 
 	return &resp.ID, &ctxWithClient, nil
-}
-
-func (c *ScenarioOrchestrator) RunSerialPlan() {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (c *ScenarioOrchestrator) Attach(containerId *string, ctx *context.Context, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer) (bool, error) {
@@ -218,7 +213,7 @@ func ImageExists(ctx context.Context, cli *client.Client, imageName, expectedDig
 	return false, nil
 }
 
-func pullImage(ctx context.Context, cli *client.Client, imageName string) error {
+func pullImage(ctx context.Context, cli *client.Client, imageName string, commChan *chan *string) error {
 	reader, err := cli.ImagePull(ctx, imageName, images.PullOptions{})
 	if err != nil {
 		return err
@@ -243,9 +238,17 @@ func pullImage(ctx context.Context, cli *client.Client, imageName string) error 
 				totalSize = int(message.Progress.Total)
 			}
 			if message.Progress.Current > 0 {
-				fmt.Println(fmt.Sprintf("Downloading image %s: %d/%d MB ", imageName, int(message.Progress.Current/1024/1024), totalSize/1024/1024))
+				if commChan != nil {
+					message := fmt.Sprintf("Downloading image %s  %s ", imageName, message.Progress.String())
+					*commChan <- &message
+				}
+
 			}
 		}
+	}
+
+	if commChan != nil {
+		close(*commChan)
 	}
 
 	return nil
@@ -383,8 +386,8 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, ctx *context.Cont
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer) (*string, error) {
-	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, containerRuntimeUri, env, cache, volumeMounts, stdout, stderr, c)
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string) (*string, error) {
+	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, containerRuntimeUri, env, cache, volumeMounts, stdout, stderr, c, commChan)
 	return containerId, err
 }
 

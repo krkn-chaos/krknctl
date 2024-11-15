@@ -3,6 +3,7 @@
 ![coverage](https://krkn-chaos.github.io/krkn-lib-docs/coverage_badge_krknctl.svg)
 
 ![krknctl_logo.jpg](media/krknctl_logo.png)
+
 # krknctl
 ## [krkn](https://github.com/krkn-chaos/krkn) chaos engineering tool CLI
 

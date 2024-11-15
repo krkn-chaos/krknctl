@@ -229,15 +229,6 @@ func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config c
 		Long:  `Scaffolds a dependency graph based run`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// TODO: datasource offline TBD
-			/*
-					offline, err := cmd.Flags().GetBool("offline")
-					offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-					if err != nil {
-								return []string{}, cobra.ShellCompDirectiveError
-				    }
-			*/
-
 			dataSource := BuildDataSource(config, false, nil)
 			dataProvider := GetProvider(false, factory)
 

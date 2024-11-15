@@ -24,15 +24,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// TODO: datasource offline TBD
-			/*
-					offline, err := cmd.Flags().GetBool("offline")
-					offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-					if err != nil {
-								return []string{}, cobra.ShellCompDirectiveError
-				    }
-			*/
-
 			dataSource := BuildDataSource(config, false, nil)
 			provider := GetProvider(false, factory)
 
@@ -46,14 +37,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: datasource offline TBD
-			/*
-				offline, err := cmd.Flags().GetBool("offline")
-				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-				if err != nil {
-					return err
-				}
-			*/
 			dataSource := BuildDataSource(config, false, nil)
 			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
@@ -79,19 +62,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: datasource offline TBD
-			/*
-				offline, err := cmd.Flags().GetBool("offline")
-				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-				if err != nil {
-					return err
-				}
-			*/
-
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("validating input...")
 			dataSource := BuildDataSource(config, false, nil)
+
+			// Starts validating input message
 			spinner.Start()
+
 			runDetached := false
 
 			provider := GetProvider(false, factory)
@@ -99,7 +76,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-			spinner.Stop()
 
 			if err != nil {
 				return err
@@ -180,20 +156,19 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						volumes[fileSrcDst[0]] = fileSrcDst[1]
 					}
 
-					/*
-						if value == nil && field.Required == false {
-						fmt.Println(fmt.Sprintf("%s: nil default but not required", *field.Name))
-					*/
-
 				}
 
 			}
+			// stops the spinner before printing the input table to not disrupt it
+			spinner.Stop()
 
 			tbl := NewEnvironmentTable(environment)
 			tbl.Print()
 			fmt.Print("\n")
+			// restarts the spinner to present image pull progress
+			spinner.Suffix = "pulling scenario image..."
+			spinner.Start()
 
-			//WIP
 			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
 			if err != nil {
 				return err
@@ -201,16 +176,19 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
 			if runDetached == false {
-				_, err := color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to terminate the scenario")
-				if err != nil {
-					return err
-				}
-				_, err = (*scenarioOrchestrator).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr)
+				commChan := make(chan *string)
+				go func() {
+					for msg := range commChan {
+						spinner.Suffix = *msg
+					}
+					spinner.Stop()
+				}()
+				_, err = (*scenarioOrchestrator).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr, &commChan)
 				if err != nil {
 					return err
 				}
 			} else {
-				containerId, _, err := (*scenarioOrchestrator).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes)
+				containerId, _, err := (*scenarioOrchestrator).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, nil)
 				if err != nil {
 					return err
 				}

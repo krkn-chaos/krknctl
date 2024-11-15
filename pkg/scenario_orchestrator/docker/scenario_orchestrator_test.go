@@ -116,7 +116,7 @@ func TestscenarioOrchestrator_Run(t *testing.T) {
 	assert.NotNil(t, socket)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr)
+	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
