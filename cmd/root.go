@@ -11,18 +11,7 @@ import (
 
 func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
 
-	rootCmd := NewRootCommand(providerFactory, config)
-	// TODO: json output + offline repos
-	/*
-		var jsonFlag bool
-		var offlineFlag bool
-		var offlineRepoConfig string
-		rootCmd.PersistentFlags().BoolVarP(&jsonFlag, "json", "j", false, "Output in JSON")
-		rootCmd.PersistentFlags().BoolVarP(&offlineFlag, "offline", "o", false, "Offline mode")
-		rootCmd.PersistentFlags().StringVarP(&offlineRepoConfig, "offline-repo-config", "r", "", "Offline repository config file")
-		rootCmd.MarkFlagsRequiredTogether("offline", "offline-repo-config")
-	*/
-
+	rootCmd := NewRootCommand(config)
 	var completionCmd = &cobra.Command{
 		Use:       "completion [bash|zsh]",
 		Short:     "Genera script di completamento per bash o zsh",

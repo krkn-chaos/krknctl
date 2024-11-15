@@ -29,12 +29,28 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestrator_models.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) RunSerialPlan() {
-	//TODO implement me
-	panic("implement me")
+type ProgressMessage struct {
+	Status string
+	Detail string
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error) {
+type progressWriter struct {
+	channel chan<- ProgressMessage
+}
+
+func (w *progressWriter) Write(p []byte) (n int, err error) {
+	// Converte il messaggio in stringa e lo invia al canale
+	message := string(p)
+	parts := strings.SplitN(message, ":", 2)
+	if len(parts) == 2 {
+		status := strings.TrimSpace(parts[0])
+		detail := strings.TrimSpace(parts[1])
+		w.channel <- ProgressMessage{Status: status, Detail: detail}
+	}
+	return len(p), nil
+}
+
+func (c *ScenarioOrchestrator) Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string) (*string, *context.Context, error) {
 	conn, err := c.Connect(containerRuntimeUri)
 	if err != nil {
 		return nil, nil, err
@@ -44,10 +60,35 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 	if cache == false || imageExists == false {
 
 		// add a channel to update the status (eventually)
-		options := images.PullOptions{}
-		options.WithQuiet(true)
-		_, err = images.Pull(conn, image, &options)
-		if err != nil {
+		progressChan := make(chan ProgressMessage)
+		errChan := make(chan error)
+		go func() {
+			writer := &progressWriter{channel: progressChan}
+			options := images.PullOptions{}
+			options.WithProgressWriter(writer)
+			_, err = images.Pull(conn, image, &options)
+			if err != nil {
+				errChan <- err
+			}
+			close(progressChan)
+			close(errChan)
+		}()
+		go func() {
+			for msg := range progressChan {
+				if commChan != nil {
+					message := fmt.Sprintf("Status: %s - %s", msg.Status, msg.Detail)
+					*commChan <- &message
+				}
+
+			}
+			if commChan != nil {
+				close(*commChan)
+			}
+
+		}()
+
+		// Attendi il completamento del pull o un errore
+		if err := <-errChan; err != nil {
 			return nil, nil, err
 		}
 	}
@@ -272,9 +313,9 @@ func (c *ScenarioOrchestrator) Connect(containerRuntimeUri string) (context.Cont
 
 // common functions
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer) (*string, error) {
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string) (*string, error) {
 	time.Sleep(2)
-	return scenario_orchestrator.CommonRunAttached(image, containerName, containerRuntimeUri, env, cache, volumeMounts, stdout, stderr, c)
+	return scenario_orchestrator.CommonRunAttached(image, containerName, containerRuntimeUri, env, cache, volumeMounts, stdout, stderr, c, commChan)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerId *string, conn *context.Context, stdout io.Writer, stderr io.Writer) (*bool, error) {

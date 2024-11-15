@@ -10,9 +10,9 @@ import (
 type ScenarioOrchestrator interface {
 	Connect(containerRuntimeUri string) (context.Context, error)
 
-	Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string) (*string, *context.Context, error)
+	Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string) (*string, *context.Context, error)
 
-	RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer) (*string, error)
+	RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string) (*string, error)
 
 	RunGraph(scenarios orchestrator_models.ScenarioSet,
 		resolvedGraph orchestrator_models.ResolvedGraph,

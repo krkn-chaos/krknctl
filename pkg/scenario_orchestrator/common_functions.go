@@ -51,7 +51,7 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 
 			go func() {
 				defer wg.Done()
-				_, _ = orchestrator.RunAttached(scenario.Image, containerName, containerRuntimeUri, env, cache, volumes, file, file)
+				_, _ = orchestrator.RunAttached(scenario.Image, containerName, containerRuntimeUri, env, cache, volumes, file, file, nil)
 			}()
 
 		}
@@ -60,9 +60,9 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 	commChannel <- nil
 }
 
-func CommonRunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator) (*string, error) {
+func CommonRunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string) (*string, error) {
 
-	containerId, ctx, err := c.Run(image, containerName, containerRuntimeUri, env, cache, volumeMounts)
+	containerId, ctx, err := c.Run(image, containerName, containerRuntimeUri, env, cache, volumeMounts, commChan)
 	if err != nil {
 		return nil, err
 	}

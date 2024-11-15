@@ -18,15 +18,6 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 		Long:  `describes a scenario`,
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// TODO: datasource offline TBD
-			/*
-				offline, err := cmd.Flags().GetBool("offline")
-				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-				if err != nil {
-					return []string{}, cobra.ShellCompDirectiveError
-				}
-			*/
-
 			dataSource := BuildDataSource(config, false, nil)
 			provider := GetProvider(false, factory)
 
@@ -40,15 +31,6 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: datasource offline TBD
-			/*
-				offline, err := cmd.Flags().GetBool("offline")
-				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-				if err != nil {
-					return err
-				}
-			*/
-
 			dataSource := BuildDataSource(config, false, nil)
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()

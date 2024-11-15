@@ -29,14 +29,6 @@ func NewListScenariosCommand(factory *provider_factory.ProviderFactory, config c
 		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: datasource offline TBD
-			/*
-				offline, err := cmd.Flags().GetBool("offline")
-				offlineRepo, err := cmd.Flags().GetString("offline-repo-config")
-				if err != nil {
-					return err
-				}
-			*/
 			dataSource := BuildDataSource(config, false, nil)
 			provider := GetProvider(false, factory)
 			s := NewSpinnerWithSuffix("fetching scenarios...")

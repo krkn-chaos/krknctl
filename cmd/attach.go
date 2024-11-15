@@ -12,26 +12,6 @@ import (
 	"time"
 )
 
-func customCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Esempio di mappa di ID e descrizioni
-	completions := map[string]string{
-		"0": "questo rappresenta l'id del container 0",
-		"1": "questo rappresenta l'id del container 1",
-		"2": "questo rappresenta l'id del container 2",
-		"3": "questo rappresenta l'id del container 3",
-	}
-
-	var results []string
-	for id, description := range completions {
-		if strings.HasPrefix(id, toComplete) {
-			// Formatta l'output per mostrare l'ID seguito dalla descrizione
-			results = append(results, fmt.Sprintf("%s\t%s", id, description))
-		}
-	}
-
-	return results, cobra.ShellCompDirectiveNoFileComp
-}
-
 func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "attach",
