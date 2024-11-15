@@ -29,7 +29,10 @@ func NewListScenariosCommand(factory *provider_factory.ProviderFactory, config c
 		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 			provider := GetProvider(false, factory)
 			s := NewSpinnerWithSuffix("fetching scenarios...")
 			s.Start()

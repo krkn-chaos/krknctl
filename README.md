@@ -11,7 +11,7 @@
 <br/>
 
 > [!CAUTION]  
-> __The tool is currently in alpha stage, use it at your own risk.__
+> __The tool is currently in pre-release stage, use it at your own risk.__
 
 <br/>
 

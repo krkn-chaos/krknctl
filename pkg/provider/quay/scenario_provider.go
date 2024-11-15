@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
@@ -72,6 +73,14 @@ func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.S
 
 func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource string) (*string, error) {
 	var scenarioDetails []models.ScenarioDetail
+
+	// handles babble panic when american word dictionary is not installed
+	defer func() {
+		if err := recover(); err != nil {
+			_, err = color.New(color.FgRed, color.Underline).Println("impossible to locate american words dictionary " +
+				"please refer to the documentation on how to install this dependency https://github.com/krkn-chaos/krknctl#Requirements")
+		}
+	}()
 	babbler := babble.NewBabbler()
 	babbler.Count = 1
 	for _, scenarioName := range scenarios {
@@ -102,8 +111,11 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 		} else {
 			scenarioNode.Comment = "I'm the root Node!"
 		}
-
-		scenarioNode.Image = p.Config.GetQuayImageUri() + ":" + scenarioDetail.Name
+		imageUri, err := p.Config.GetQuayImageUri()
+		if err != nil {
+			return nil, err
+		}
+		scenarioNode.Image = imageUri + ":" + scenarioDetail.Name
 		scenarioNode.Name = scenarioDetail.Name
 		scenarioNode.Env = make(map[string]string)
 		scenarioNode.Volumes = make(map[string]string)

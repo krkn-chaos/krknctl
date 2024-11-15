@@ -6,6 +6,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
+	"os"
 	"time"
 )
 
@@ -50,7 +51,7 @@ func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (
 	return &foundScenarios, nil
 }
 
-func BuildDataSource(config config.Config, offline bool, offlineSource *string) string {
+func BuildDataSource(config config.Config, offline bool, offlineSource *string) (string, error) {
 	var dataSource = ""
 	if offline == true {
 		if offlineSource != nil {
@@ -59,7 +60,18 @@ func BuildDataSource(config config.Config, offline bool, offlineSource *string) 
 			dataSource = ""
 		}
 	} else {
-		dataSource = config.GetQuayRepositoryApiUri()
+		var err error
+		dataSource, err = config.GetQuayRepositoryApiUri()
+		if err != nil {
+			return "", err
+		}
 	}
-	return dataSource
+	return dataSource, nil
+}
+
+func CheckFileExists(filePath string) bool {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

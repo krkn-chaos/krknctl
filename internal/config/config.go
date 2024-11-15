@@ -3,11 +3,11 @@ package config
 import (
 	_ "embed"
 	"encoding/json"
+	"net/url"
 )
 
 type Config struct {
 	Version                    string `json:"version"`
-	QuayProtocol               string `json:"quay_protocol"`
 	QuayHost                   string `json:"quay_host"`
 	QuayOrg                    string `json:"quay_org"`
 	QuayRegistry               string `json:"quay_registry"`
@@ -44,15 +44,19 @@ func LoadConfig() (Config, error) {
 	return config, nil
 }
 
-func (c *Config) GetQuayImageUri() string {
-	return c.QuayHost + "/" + c.QuayOrg + "/" + c.QuayRegistry
+func (c *Config) GetQuayImageUri() (string, error) {
+	imageUri, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageUri, nil
 }
 
-func (c *Config) GetQuayRegistryUri() string {
-	return c.QuayProtocol + "://" + c.QuayHost + "/" + c.QuayOrg + "/" + c.QuayRegistry
-}
-
-func (c *Config) GetQuayRepositoryApiUri() string {
-
-	return c.QuayProtocol + "://" + c.QuayHost + "/" + c.QuayRepositoryApi + "/" + c.QuayOrg + "/" + c.QuayRegistry
+func (c *Config) GetQuayRepositoryApiUri() (string, error) {
+	baseHost := "https://" + c.QuayHost
+	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayRegistry)
+	if err != nil {
+		return "", err
+	}
+	return repositoryUri, nil
 }

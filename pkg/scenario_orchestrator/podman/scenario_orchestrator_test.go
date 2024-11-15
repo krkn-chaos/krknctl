@@ -101,7 +101,9 @@ func TestConnect(t *testing.T) {
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{Config: &conf}
-	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", conf.GetQuayRepositoryApiUri())
+	repositoryApiUri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", repositoryApiUri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
@@ -120,9 +122,10 @@ func TestConnect(t *testing.T) {
 	socket, err := cm.GetContainerRuntimeSocket(uid)
 	assert.Nil(t, err)
 	assert.NotNil(t, socket)
-
+	imageUri, err := conf.GetQuayImageUri()
+	assert.Nil(t, err)
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
+	containerId, err := cm.RunAttached(imageUri+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -197,7 +200,9 @@ func TestRunGraph(t *testing.T) {
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{Config: &conf}
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", conf.GetQuayRepositoryApiUri())
+	repositoryApi, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", repositoryApi)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
