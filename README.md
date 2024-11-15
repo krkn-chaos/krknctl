@@ -5,13 +5,13 @@
 ![krknctl_logo.jpg](media/krknctl_logo.png)
 
 # krknctl
-## [krkn](https://github.com/krkn-chaos/krkn) chaos engineering tool CLI
+## [krkn](https://github.com/krkn-chaos/krkn) chaos CLI
 
 <br/>
 <br/>
 
 > [!CAUTION]  
-> __The tool is currently in pre-release stage, use it at your own risk.__
+> __The tool is currently in beta stage, use it at your own risk.__
 
 <br/>
 
