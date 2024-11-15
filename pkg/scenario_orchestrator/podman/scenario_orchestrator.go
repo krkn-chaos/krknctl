@@ -81,7 +81,10 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 				}
 
 			}
-			close(*commChan)
+			if commChan != nil {
+				close(*commChan)
+			}
+
 		}()
 
 		// Attendi il completamento del pull o un errore
