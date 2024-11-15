@@ -158,9 +158,8 @@ func (c *ScenarioOrchestrator) Kill(containerId *string, ctx *context.Context) e
 }
 
 func (c *ScenarioOrchestrator) CleanContainers() (*int, error) {
-	return nil, nil
+	panic("not yet implemented on docker")
 }
-
 func (c *ScenarioOrchestrator) GetContainerRuntimeSocket(userId *int) (*string, error) {
 	return utils.GetSocketByContainerEnvironment(orchestrator_models.Docker, c.Config, userId)
 }

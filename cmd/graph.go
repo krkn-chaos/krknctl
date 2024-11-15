@@ -51,14 +51,14 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrche
 			if err != nil {
 				return err
 			}
-			if CheckFileExists(alertsProfile) == false {
+			if alertsProfile != "" && CheckFileExists(alertsProfile) == false {
 				return fmt.Errorf("file %s does not exist", alertsProfile)
 			}
 			metricsProfile, err := cmd.Flags().GetString("metrics-profile")
 			if err != nil {
 				return err
 			}
-			if CheckFileExists(metricsProfile) == false {
+			if metricsProfile != "" && CheckFileExists(metricsProfile) == false {
 				return fmt.Errorf("file %s does not exist", metricsProfile)
 			}
 
