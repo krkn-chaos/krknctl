@@ -43,7 +43,6 @@ func getTestConfig() krknctlconfig.Config {
 
 	_ = krknctlconfig.Config{
 		Version:           "0.0.1",
-		QuayProtocol:      "https",
 		QuayHost:          "quay.io",
 		QuayOrg:           "krkn-chaos",
 		QuayRegistry:      "krknctl-test",
@@ -55,7 +54,6 @@ func getTestConfig() krknctlconfig.Config {
 func getWrongConfig() krknctlconfig.Config {
 	return krknctlconfig.Config{
 		Version:           "0.0.1",
-		QuayProtocol:      "https",
 		QuayHost:          "quay.io",
 		QuayOrg:           "krkn-chaos",
 		QuayRegistry:      "do_not_exist",
@@ -67,7 +65,9 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 	config := getTestConfig()
 	provider := ScenarioProvider{Config: &config}
 
-	scenarios, err := provider.GetScenarios(config.GetQuayRepositoryApiUri())
+	uri, err := config.GetQuayRepositoryApiUri()
+	assert.NoError(t, err)
+	scenarios, err := provider.GetScenarios(uri)
 	assert.Nil(t, err)
 	assert.Greater(t, len(*scenarios), 0)
 	assert.NotEqual(t, (*scenarios)[0].Name, "")
@@ -78,48 +78,52 @@ func TestQuayScenarioProvider_GetScenarios(t *testing.T) {
 
 	wrongConfig := getWrongConfig()
 	wrongProvider := ScenarioProvider{Config: &wrongConfig}
-
-	_, err = wrongProvider.GetScenarios(wrongConfig.GetQuayRepositoryApiUri())
+	uri, err = wrongConfig.GetQuayRepositoryApiUri()
+	assert.NoError(t, err)
+	_, err = wrongProvider.GetScenarios(uri)
 	assert.NotNil(t, err)
 }
 
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig()
 	provider := ScenarioProvider{Config: &config}
-
-	scenario, err := provider.GetScenarioDetail("cpu-hog", config.GetQuayRepositoryApiUri())
+	uri, err := config.GetQuayRepositoryApiUri()
+	assert.NoError(t, err)
+	scenario, err := provider.GetScenarioDetail(uri, "cpu-hog")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	assert.Equal(t, len(scenario.Fields), 5)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", config.GetQuayRepositoryApiUri())
+	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", uri)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.title LABEL not found in tag: cpu-memory-notitle"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription", config.GetQuayRepositoryApiUri())
+	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription", uri)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.description LABEL not found in tag: cpu-memory-nodescription"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput", config.GetQuayRepositoryApiUri())
+	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput", uri)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.input_fields LABEL not found in tag: cpu-memory-noinput"))
 	assert.Nil(t, scenario)
 
-	scenario, err = provider.GetScenarioDetail("not-found", config.GetQuayRepositoryApiUri())
+	scenario, err = provider.GetScenarioDetail("not-found", uri)
 	assert.Nil(t, err)
 	assert.Nil(t, scenario)
 
 }
 
 func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
-	config, _ := krknctlconfig.LoadConfig()
 
+	config, _ := krknctlconfig.LoadConfig()
+	uri, err := config.GetQuayRepositoryApiUri()
+	assert.NoError(t, err)
 	provider := ScenarioProvider{Config: &config}
 
-	scenarios, err := provider.GetScenarios(config.GetQuayRepositoryApiUri())
+	scenarios, err := provider.GetScenarios(uri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
 	var scenarioNames []string
@@ -128,11 +132,11 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 		scenarioNames = append(scenarioNames, scenario.Name)
 	}
 
-	json, err := provider.ScaffoldScenarios(scenarioNames, config.GetQuayRepositoryApiUri())
+	json, err := provider.ScaffoldScenarios(scenarioNames, uri)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, config.GetQuayRepositoryApiUri())
+	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, uri)
 	assert.Nil(t, json)
 	assert.NotNil(t, err)
 
