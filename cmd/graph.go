@@ -44,13 +44,22 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrche
 			if err != nil {
 				return err
 			}
+			if CheckFileExists(kubeconfig) == false {
+				return fmt.Errorf("file %s does not exist", kubeconfig)
+			}
 			alertsProfile, err := cmd.Flags().GetString("alerts-profile")
 			if err != nil {
 				return err
 			}
+			if CheckFileExists(alertsProfile) == false {
+				return fmt.Errorf("file %s does not exist", alertsProfile)
+			}
 			metricsProfile, err := cmd.Flags().GetString("metrics-profile")
 			if err != nil {
 				return err
+			}
+			if CheckFileExists(metricsProfile) == false {
+				return fmt.Errorf("file %s does not exist", metricsProfile)
 			}
 
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)

@@ -6,6 +6,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
+	"os"
 	"time"
 )
 
@@ -66,4 +67,11 @@ func BuildDataSource(config config.Config, offline bool, offlineSource *string) 
 		}
 	}
 	return dataSource, nil
+}
+
+func CheckFileExists(filePath string) bool {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }

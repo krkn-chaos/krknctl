@@ -104,17 +104,26 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
+						if CheckFileExists(args[i+1]) == false {
+							return fmt.Errorf("file %s does not exist", args[i+1])
+						}
 						foundKubeconfig = &args[i+1]
 					}
 					if a == "--alerts-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
+						if CheckFileExists(args[i+1]) == false {
+							return fmt.Errorf("file %s does not exist", args[i+1])
+						}
 						alertsProfile = &args[i+1]
 					}
 					if a == "--metrics-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
+						}
+						if CheckFileExists(args[i+1]) == false {
+							return fmt.Errorf("file %s does not exist", args[i+1])
 						}
 						metricsProfile = &args[i+1]
 					}
