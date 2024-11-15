@@ -89,7 +89,7 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	provider := ScenarioProvider{Config: &config}
 	uri, err := config.GetQuayRepositoryApiUri()
 	assert.NoError(t, err)
-	scenario, err := provider.GetScenarioDetail(uri, "cpu-hog")
+	scenario, err := provider.GetScenarioDetail("cpu-hog", uri)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)

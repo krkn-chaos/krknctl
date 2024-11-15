@@ -16,7 +16,6 @@ import (
 func getTestConfig() krknctlconfig.Config {
 	_ = krknctlconfig.Config{
 		Version:                    "0.0.1",
-		QuayProtocol:               "https",
 		QuayHost:                   "quay.io",
 		QuayOrg:                    "krkn-chaos",
 		QuayRegistry:               "krkn-hub",
@@ -64,7 +63,6 @@ func getTestConfig() krknctlconfig.Config {
 
 	_ = krknctlconfig.Config{
 		Version:                    "0.0.1",
-		QuayProtocol:               "https",
 		QuayHost:                   "quay.io",
 		QuayOrg:                    "krkn-chaos",
 		QuayRegistry:               "krknctl-test",
@@ -95,7 +93,9 @@ func TestscenarioOrchestrator_Run(t *testing.T) {
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{Config: &conf}
-	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", conf.GetQuayRepositoryApiUri())
+	uri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", uri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
@@ -116,7 +116,7 @@ func TestscenarioOrchestrator_Run(t *testing.T) {
 	assert.NotNil(t, socket)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(conf.GetQuayImageUri()+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
+	containerId, err := cm.RunAttached(uri+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}

@@ -103,7 +103,7 @@ func TestConnect(t *testing.T) {
 	quayProvider := quay.ScenarioProvider{Config: &conf}
 	repositoryApiUri, err := conf.GetQuayRepositoryApiUri()
 	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail(repositoryApiUri, "node-cpu-hog")
+	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", repositoryApiUri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, getTestConfig())
