@@ -1,6 +1,5 @@
 {
   "version": "0.0.1",
-  "quay_protocol": "https",
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
   "quay_registry": "krkn-hub",

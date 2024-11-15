@@ -24,7 +24,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
 			provider := GetProvider(false, factory)
 
 			scenarios, err := FetchScenarios(provider, dataSource)
@@ -37,7 +40,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
 			if err != nil {
@@ -64,7 +70,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		RunE: func(cmd *cobra.Command, args []string) error {
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("validating input...")
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 
 			// Starts validating input message
 			spinner.Start()
@@ -175,6 +184,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
+			quayImageUri, err := config.GetQuayImageUri()
+			if err != nil {
+				return err
+			}
+
 			if runDetached == false {
 				commChan := make(chan *string)
 				go func() {
@@ -183,12 +197,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 					spinner.Stop()
 				}()
-				_, err = (*scenarioOrchestrator).RunAttached(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr, &commChan)
+
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr, &commChan)
 				if err != nil {
 					return err
 				}
 			} else {
-				containerId, _, err := (*scenarioOrchestrator).Run(config.GetQuayImageUri()+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, nil)
+				containerId, _, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, nil)
 				if err != nil {
 					return err
 				}

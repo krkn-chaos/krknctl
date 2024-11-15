@@ -39,7 +39,6 @@ type progressWriter struct {
 }
 
 func (w *progressWriter) Write(p []byte) (n int, err error) {
-	// Converte il messaggio in stringa e lo invia al canale
 	message := string(p)
 	parts := strings.SplitN(message, ":", 2)
 	if len(parts) == 2 {
@@ -87,7 +86,6 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 
 		}()
 
-		// Attendi il completamento del pull o un errore
 		if err := <-errChan; err != nil {
 			return nil, nil, err
 		}

@@ -75,7 +75,10 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrche
 			nodes := make(map[string]models.ScenarioNode)
 			err = json.Unmarshal(file, &nodes)
 
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 			dataProvider := GetProvider(false, factory)
 			nameChannel := make(chan *struct {
 				name *string
@@ -229,7 +232,10 @@ func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config c
 		Long:  `Scaffolds a dependency graph based run`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
 			dataProvider := GetProvider(false, factory)
 
 			scenarios, err := FetchScenarios(dataProvider, dataSource)
@@ -241,7 +247,10 @@ func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config c
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 			dataProvider := GetProvider(false, factory)
 			output, err := dataProvider.ScaffoldScenarios(args, dataSource)
 			if err != nil {

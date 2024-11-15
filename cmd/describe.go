@@ -18,7 +18,10 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 		Long:  `describes a scenario`,
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
 			provider := GetProvider(false, factory)
 
 			scenarios, err := FetchScenarios(provider, dataSource)
@@ -31,7 +34,10 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource := BuildDataSource(config, false, nil)
+			dataSource, err := BuildDataSource(config, false, nil)
+			if err != nil {
+				return err
+			}
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()
 			provider := GetProvider(false, factory)
