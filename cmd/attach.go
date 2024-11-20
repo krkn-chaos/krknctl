@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
 	"os"
@@ -12,7 +11,7 @@ import (
 	"time"
 )
 
-func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "attach",
 		Short: "connects krknctl to the running scenario logs",
@@ -23,7 +22,11 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 			if err != nil {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-			scenarios, err := (*scenarioOrchestrator).ListRunningScenarios(*socket)
+			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			scenarios, err := (*scenarioOrchestrator).ListRunningScenarios(ctx)
 			if err != nil || scenarios == nil {
 				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
@@ -50,7 +53,7 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 				return err
 			}
 
-			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(*socket)
+			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(nil)
 			if err != nil {
 				return err
 			}
@@ -72,7 +75,7 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 			if err != nil {
 				return err
 			}
-			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.Id, &ctx, os.Stdout, os.Stderr)
+			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.Id, os.Stdout, os.Stderr, ctx)
 			if err != nil {
 				return err
 			}

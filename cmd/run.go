@@ -54,7 +54,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			for _, field := range scenarioDetail.Fields {
-				var defaultValue string = ""
+				var defaultValue = ""
 				if field.Default != nil {
 					defaultValue = *field.Default
 				}
@@ -99,7 +99,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				if strings.HasPrefix(a, "--") {
 
 					// since automatic flag parsing is disabled to allow dynamic flags
-					// flags need to be parsed manually here eg. kubeconfig
+					// flags need to be parsed manually here e.g. kubeconfig
 					if a == "--kubeconfig" {
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
@@ -147,7 +147,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				volumes[*alertsProfile] = config.AlertsProfilePath
 			}
 			//dynamic flags parsing
-			for k, _ := range collectedFlags {
+			for k := range collectedFlags {
 				field := scenarioDetail.GetFieldByName(k)
 				if field == nil {
 					return fmt.Errorf("field %s not found", k)
@@ -191,6 +191,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
+			conn, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return err
+			}
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
 			quayImageUri, err := config.GetQuayImageUri()
@@ -207,12 +211,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, os.Stdout, os.Stderr, &commChan)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn)
 				if err != nil {
 					return err
 				}
 			} else {
-				containerId, _, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, *socket, environment, false, volumes, nil)
+				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn)
 				if err != nil {
 					return err
 				}

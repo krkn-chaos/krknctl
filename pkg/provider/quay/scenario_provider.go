@@ -36,7 +36,10 @@ func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTa
 	tagBaseUrl.RawQuery = params.Encode()
 
 	resp, _ := http.Get(tagBaseUrl.String())
-	defer resp.Body.Close()
+	var deferErr error = nil
+	defer func() {
+		deferErr = resp.Body.Close()
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to retrieve tags, " + tagBaseUrl.String() + " returned: " + resp.Status)
 	}
@@ -59,7 +62,7 @@ func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTa
 		})
 	}
 
-	return &scenarioTags, nil
+	return &scenarioTags, deferErr
 }
 
 func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.ScenarioNode {
@@ -177,7 +180,12 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	
+	var deferErr error = nil
+	defer func() {
+		deferErr = resp.Body.Close()
+	}()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to retrieve scenario details, " + baseURL.String() + " returned: " + resp.Status)
 	}
@@ -226,7 +234,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 	scenarioDetail.Title = *parsedTitle
 	scenarioDetail.Description = *parsedDescription
 	scenarioDetail.Fields = parsedInputFields
-	return &scenarioDetail, nil
+	return &scenarioDetail, deferErr
 }
 
 func (p *ScenarioProvider) parseTitle(s string) (*string, error) {

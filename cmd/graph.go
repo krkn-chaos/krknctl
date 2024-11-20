@@ -6,7 +6,7 @@ import (
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
-	provider_factory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-func NewGraphCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewGraphCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "graph",
 		Short: "Runs or scaffolds a dependency graph based run",
@@ -29,7 +29,7 @@ func NewGraphCommand(factory *provider_factory.ProviderFactory, config config.Co
 	return command
 }
 
-func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "Runs a dependency graph based run",
@@ -134,12 +134,17 @@ func NewGraphRunCommand(factory *provider_factory.ProviderFactory, scenarioOrche
 
 			commChannel := make(chan *models.GraphCommChannel)
 			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
-
 			if err != nil {
 				return err
 			}
+
+			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return err
+			}
+
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, *socket, environment, volumes, false, commChannel)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx)
 			}()
 
 			for {
@@ -234,7 +239,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource s
 	scenarioNameChannel <- nil
 }
 
-func NewGraphScaffoldCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "scaffold",
 		Short: "Scaffolds a dependency graph based run",

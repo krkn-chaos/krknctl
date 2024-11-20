@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"strings"
 	"time"
@@ -27,11 +27,11 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 	tbl := table.New("Name", "Type", "Description", "Required", "Default")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, inputField := range inputFields {
-		default_value := ""
+		defaultValue := ""
 		if inputField.Default != nil {
-			default_value = *inputField.Default
+			defaultValue = *inputField.Default
 		}
-		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, default_value)
+		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, defaultValue)
 	}
 	return tbl
 }
@@ -55,7 +55,7 @@ func NewGraphTable(graph [][]string) table.Table {
 	return tbl
 }
 
-func NewRunningScenariosTable(runningScenarios []orchestrator_models.RunningScenario) table.Table {
+func NewRunningScenariosTable(runningScenarios []orchestratormodels.RunningScenario) table.Table {
 	tbl := table.New("Scenario ID", "Scenario Name", "Running Since", "Container Name")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for i, v := range runningScenarios {

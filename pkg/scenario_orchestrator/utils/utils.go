@@ -2,14 +2,13 @@ package utils
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/containers/podman/v5/pkg/bindings"
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
@@ -23,10 +22,6 @@ import (
 type SigTermChannel struct {
 	Message string
 	Error   error
-}
-
-func encodeToBase64(data []byte) string {
-	return base64.StdEncoding.EncodeToString(data)
 }
 
 func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, error) {
@@ -159,11 +154,11 @@ func ExpandHomeFolder(folder string) (*string, error) {
 	return &folder, nil
 }
 
-func GetSocketByContainerEnvironment(environment orchestrator_models.ContainerRuntime, config config.Config, userId *int) (*string, error) {
+func GetSocketByContainerEnvironment(environment orchestatormodels.ContainerRuntime, config config.Config, userId *int) (*string, error) {
 	switch environment {
-	case orchestrator_models.Docker:
+	case orchestatormodels.Docker:
 		return &config.DockerSocketRoot, nil
-	case orchestrator_models.Podman:
+	case orchestatormodels.Podman:
 		if runtime.GOOS == "linux" {
 			uid := os.Getuid()
 			if userId != nil {
@@ -180,18 +175,18 @@ func GetSocketByContainerEnvironment(environment orchestrator_models.ContainerRu
 			return &socket, nil
 		}
 		return nil, errors.New(fmt.Sprintf("could not determine container container runtime socket for podman"))
-	case orchestrator_models.Both:
+	case orchestatormodels.Both:
 		return nil, errors.New(fmt.Sprintf("%s invalid container environment", environment.String()))
 	}
 	return nil, errors.New("invalid environment value")
 }
 
-func DetectContainerRuntime(config config.Config) (*orchestrator_models.ContainerRuntime, error) {
-	socketDocker, err := GetSocketByContainerEnvironment(orchestrator_models.Docker, config, nil)
-	socketPodman, err := GetSocketByContainerEnvironment(orchestrator_models.Podman, config, nil)
-	_docker := orchestrator_models.Docker
-	_podman := orchestrator_models.Podman
-	_both := orchestrator_models.Both
+func DetectContainerRuntime(config config.Config) (*orchestatormodels.ContainerRuntime, error) {
+	socketDocker, err := GetSocketByContainerEnvironment(orchestatormodels.Docker, config, nil)
+	socketPodman, err := GetSocketByContainerEnvironment(orchestatormodels.Podman, config, nil)
+	_docker := orchestatormodels.Docker
+	_podman := orchestatormodels.Podman
+	_both := orchestatormodels.Both
 	dockerRuntime := false
 	podmanRuntime := false
 
@@ -233,14 +228,14 @@ func GenerateContainerName(config config.Config, scenarioName string, graphNodeN
 	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Unix())
 }
 
-func EnvironmentFromString(s string) orchestrator_models.ContainerRuntime {
+func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
 	switch s {
 	case "Podman":
-		return orchestrator_models.Podman
+		return orchestatormodels.Podman
 	case "Docker":
-		return orchestrator_models.Docker
+		return orchestatormodels.Docker
 	case "Both":
-		return orchestrator_models.Both
+		return orchestatormodels.Both
 	default:
 		panic(fmt.Sprintf("unknown container environment: %q", s))
 	}

@@ -10,30 +10,23 @@ import (
 type ScenarioOrchestrator interface {
 	Connect(containerRuntimeUri string) (context.Context, error)
 
-	Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string) (*string, *context.Context, error)
+	Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context) (*string, error)
 
-	RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string) (*string, error)
+	RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error)
 
-	RunGraph(scenarios orchestrator_models.ScenarioSet,
-		resolvedGraph orchestrator_models.ResolvedGraph,
-		containerRuntimeUri string,
-		extraEnv map[string]string,
-		extraVolumeMounts map[string]string,
-		cache bool,
-		commChannel chan *orchestrator_models.GraphCommChannel,
-	)
+	RunGraph(scenarios orchestrator_models.ScenarioSet, resolvedGraph orchestrator_models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestrator_models.GraphCommChannel, ctx context.Context)
 
-	CleanContainers() (*int, error)
+	CleanContainers(ctx context.Context) (*int, error)
 
-	AttachWait(containerId *string, ctx *context.Context, stdout io.Writer, stderr io.Writer) (*bool, error)
+	AttachWait(containerId *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error)
 
-	Attach(containerId *string, ctx *context.Context, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer) (bool, error)
+	Attach(containerId *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error)
 
-	Kill(containerId *string, ctx *context.Context) error
+	Kill(containerId *string, ctx context.Context) error
 
-	ListRunningContainers(containerRuntimeUri string) (*map[int64]orchestrator_models.Container, error)
-	ListRunningScenarios(containerRuntimeUri string) (*[]orchestrator_models.RunningScenario, error)
-	InspectRunningScenario(container orchestrator_models.Container, containerRuntimeUri string) (*orchestrator_models.RunningScenario, error)
+	ListRunningContainers(ctx context.Context) (*map[int64]orchestrator_models.Container, error)
+	ListRunningScenarios(ctx context.Context) (*[]orchestrator_models.RunningScenario, error)
+	InspectRunningScenario(container orchestrator_models.Container, ctx context.Context) (*orchestrator_models.RunningScenario, error)
 
 	GetContainerRuntimeSocket(userId *int) (*string, error)
 
