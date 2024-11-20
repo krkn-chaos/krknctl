@@ -88,6 +88,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 }
 
 func (f *InputField) Validate(value *string) (*string, error) {
+	var deferErr error
 	// if string value is nil, the default value is nil and the field is required the field is not valid
 	if value == nil && f.Default == nil && f.Required == true && f.Type == String {
 		return nil, errors.New("`" + f.Type.String() + " can be blank, but not null without a default if required")
@@ -164,7 +165,11 @@ func (f *InputField) Validate(value *string) (*string, error) {
 				if err != nil {
 					return nil, err
 				}
-				defer file.Close()
+
+				defer func() {
+					deferErr = file.Close()
+				}()
+
 				var buffer bytes.Buffer
 				encoder := base64.NewEncoder(base64.StdEncoding, &buffer)
 				defer encoder.Close()
@@ -194,5 +199,5 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			return nil, errors.New("impossible to validate object")
 		}
 	}
-	return selectedValue, nil
+	return selectedValue, deferErr
 }

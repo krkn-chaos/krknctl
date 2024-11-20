@@ -10,9 +10,9 @@ import (
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -26,7 +26,7 @@ import (
 
 type ScenarioOrchestrator struct {
 	Config           config.Config
-	ContainerRuntime orchestrator_models.ContainerRuntime
+	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
 type ProgressMessage struct {
@@ -49,13 +49,8 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string) (*string, *context.Context, error) {
-	conn, err := c.Connect(containerRuntimeUri)
-	if err != nil {
-		return nil, nil, err
-	}
-	//if the image exists but the digest has changed pulls the image again
-	imageExists, err := images.Exists(conn, image, nil)
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context) (*string, error) {
+	imageExists, err := images.Exists(ctx, image, nil)
 	if cache == false || imageExists == false {
 
 		// add a channel to update the status (eventually)
@@ -65,7 +60,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 			writer := &progressWriter{channel: progressChan}
 			options := images.PullOptions{}
 			options.WithProgressWriter(writer)
-			_, err = images.Pull(conn, image, &options)
+			_, err = images.Pull(ctx, image, &options)
 			if err != nil {
 				errChan <- err
 			}
@@ -87,12 +82,12 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 		}()
 
 		if err := <-errChan; err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	s := specgen.NewSpecGenerator(image, false)
 
@@ -113,24 +108,24 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, container
 	s.NetNS = specgen.Namespace{
 		NSMode: "host",
 	}
-	createResponse, err := containers.CreateWithSpec(conn, s, nil)
+	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	if err := containers.Start(conn, createResponse.ID, nil); err != nil {
-		return nil, nil, err
+	if err := containers.Start(ctx, createResponse.ID, nil); err != nil {
+		return nil, err
 	}
-	return &createResponse.ID, &conn, nil
+	return &createResponse.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerId *string, conn *context.Context, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 
 	errorChannel := make(chan error, 1)
 	finishChannel := make(chan bool, 1)
 	go func() {
-		err := containers.Attach(*conn, *containerId, nil, stdout, stderr, nil, options)
+		err := containers.Attach(ctx, *containerId, nil, stdout, stderr, nil, options)
 		if err != nil {
 			errorChannel <- err
 		}
@@ -147,22 +142,10 @@ func (c *ScenarioOrchestrator) Attach(containerId *string, conn *context.Context
 	}
 }
 
-func (c *ScenarioOrchestrator) CleanContainers() (*int, error) {
+func (c *ScenarioOrchestrator) CleanContainers(ctx context.Context) (*int, error) {
 	_true := true
 	nameRegex, err := regexp.Compile(fmt.Sprintf("^%s.*-[0-9]+$", c.Config.ContainerPrefix))
-	if err != nil {
-		return nil, err
-	}
-	socket, err := c.GetContainerRuntimeSocket(nil)
-	if err != nil {
-		return nil, err
-	}
-	conn, err := c.Connect(*socket)
-	if err != nil {
-		return nil, err
-	}
-
-	foundContainers, err := containers.List(conn, &containers.ListOptions{
+	foundContainers, err := containers.List(ctx, &containers.ListOptions{
 		All: &_true,
 	})
 	if err != nil {
@@ -173,7 +156,7 @@ func (c *ScenarioOrchestrator) CleanContainers() (*int, error) {
 	for _, c := range foundContainers {
 		for _, n := range c.Names {
 			if nameRegex.MatchString(n) {
-				_, err := containers.Remove(conn, n, &containers.RemoveOptions{
+				_, err := containers.Remove(ctx, n, &containers.RemoveOptions{
 					Force: &_true,
 				})
 				if err != nil {
@@ -187,8 +170,8 @@ func (c *ScenarioOrchestrator) CleanContainers() (*int, error) {
 	return &deletedContainers, nil
 }
 
-func (c *ScenarioOrchestrator) Kill(containerId *string, ctx *context.Context) error {
-	err := containers.Kill(*ctx, *containerId, nil)
+func (c *ScenarioOrchestrator) Kill(containerId *string, ctx context.Context) error {
+	err := containers.Kill(ctx, *containerId, nil)
 	if err != nil {
 		return err
 	}
@@ -196,24 +179,20 @@ func (c *ScenarioOrchestrator) Kill(containerId *string, ctx *context.Context) e
 }
 
 func (c *ScenarioOrchestrator) GetContainerRuntimeSocket(userId *int) (*string, error) {
-	return utils.GetSocketByContainerEnvironment(orchestrator_models.Podman, c.Config, userId)
+	return utils.GetSocketByContainerEnvironment(orchestratormodels.Podman, c.Config, userId)
 }
 
-func (c *ScenarioOrchestrator) GetContainerRuntime() orchestrator_models.ContainerRuntime {
+func (c *ScenarioOrchestrator) GetContainerRuntime() orchestratormodels.ContainerRuntime {
 	return c.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) ListRunningContainers(containerRuntimeUri string) (*map[int64]orchestrator_models.Container, error) {
-	scenarios := make(map[int64]orchestrator_models.Container)
+func (c *ScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[int64]orchestratormodels.Container, error) {
+	scenarios := make(map[int64]orchestratormodels.Container)
 	scenarioNameRegex, err := regexp.Compile(fmt.Sprintf("%s-.*-([0-9]+)", c.Config.ContainerPrefix))
 	if err != nil {
 		return nil, err
 	}
-	conn, err := c.Connect(containerRuntimeUri)
-	if err != nil {
-		return nil, err
-	}
-	containerList, err := containers.List(conn, nil)
+	containerList, err := containers.List(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +204,7 @@ func (c *ScenarioOrchestrator) ListRunningContainers(containerRuntimeUri string)
 				if err != nil {
 					return nil, err
 				}
-				scenarios[index] = orchestrator_models.Container{
+				scenarios[index] = orchestratormodels.Container{
 					Name:    container.Names[0],
 					Id:      container.ID,
 					Image:   container.Image,
@@ -239,17 +218,13 @@ func (c *ScenarioOrchestrator) ListRunningContainers(containerRuntimeUri string)
 
 }
 
-func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestrator_models.Container, containerRuntimeUri string) (*orchestrator_models.RunningScenario, error) {
-	conn, err := c.Connect(containerRuntimeUri)
-	runningScenario := &orchestrator_models.RunningScenario{}
-	scenario := orchestrator_models.Scenario{}
+func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.RunningScenario, error) {
+	runningScenario := &orchestratormodels.RunningScenario{}
+	scenario := orchestratormodels.Scenario{}
 	scenario.Volumes = make(map[string]string)
 	scenario.Env = make(map[string]string)
 	runningScenario.Container = &container
-	if err != nil {
-		return nil, err
-	}
-	inspectData, err := containers.Inspect(conn, container.Id, nil)
+	inspectData, err := containers.Inspect(ctx, container.Id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -260,10 +235,9 @@ func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestrator_mod
 	if inspectData.Config == nil {
 		return nil, fmt.Errorf("container %s has no config", container.Id)
 	}
-	scenarioDetail := provider_models.ScenarioDetail{}
+	scenarioDetail := providermodels.ScenarioDetail{}
 	scenarioDetail.Digest = inspectData.ImageDigest
 	imageAndTag := strings.Split(inspectData.ImageName, ":")
-	// if the image does not contain a tag the tag becomes all the image
 	if len(imageAndTag) == 2 {
 		scenarioDetail.Name = imageAndTag[1]
 	} else {
@@ -311,28 +285,29 @@ func (c *ScenarioOrchestrator) Connect(containerRuntimeUri string) (context.Cont
 
 // common functions
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string) (*string, error) {
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
 	time.Sleep(2)
-	return scenario_orchestrator.CommonRunAttached(image, containerName, containerRuntimeUri, env, cache, volumeMounts, stdout, stderr, c, commChan)
+	return scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx)
 }
 
-func (c *ScenarioOrchestrator) AttachWait(containerId *string, conn *context.Context, stdout io.Writer, stderr io.Writer) (*bool, error) {
+func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
 
-	interrupted, err := scenario_orchestrator.CommonAttachWait(containerId, conn, stdout, stderr, c)
+	interrupted, err := scenario_orchestrator.CommonAttachWait(containerId, stdout, stderr, c, ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestrator_models.ScenarioSet, resolvedGraph orchestrator_models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestrator_models.GraphCommChannel) {
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, containerRuntimeUri, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config)
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context) {
+	//TODO: add a getconfig method in scenarioOrchestrator
+	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
 	scenario_orchestrator.CommonPrintRuntime(c.ContainerRuntime)
 }
 
-func (c *ScenarioOrchestrator) ListRunningScenarios(containerRuntimeUri string) (*[]orchestrator_models.RunningScenario, error) {
-	return scenario_orchestrator.CommonListRunningScenarios(containerRuntimeUri, c)
+func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.RunningScenario, error) {
+	return scenario_orchestrator.CommonListRunningScenarios(c, ctx)
 }

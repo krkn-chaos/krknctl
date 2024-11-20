@@ -60,7 +60,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	rootCmd.AddCommand(cleanCmd)
 
 	// graph subcommands
-	graphCmd := NewGraphCommand(providerFactory, config)
+	graphCmd := NewGraphCommand()
 	graphRunCmd := NewGraphRunCommand(providerFactory, scenarioOrchestrator, config)
 	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
@@ -71,7 +71,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)
 
-	attachCmd := NewAttachCmd(scenarioOrchestrator, config)
+	attachCmd := NewAttachCmd(scenarioOrchestrator)
 	rootCmd.AddCommand(attachCmd)
 
 	if err := rootCmd.Execute(); err != nil {

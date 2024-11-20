@@ -116,7 +116,7 @@ func TestscenarioOrchestrator_Run(t *testing.T) {
 	assert.NotNil(t, socket)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(uri+":"+scenario.Name, scenario.Name, *socket, env, false, map[string]string{}, os.Stdout, os.Stderr, nil)
+	containerId, err := cm.RunAttached(uri+":"+scenario.Name, scenario.Name, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -146,7 +146,7 @@ func TestScenarioOrchestrator_ListRunningContainers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, socket)
 
-	containers, err := cm.ListRunningContainers(*socket)
+	containers, err := cm.ListRunningContainers(nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, containers)
 }

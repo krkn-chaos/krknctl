@@ -20,7 +20,8 @@
 # Go workspace file
 go.work
 go.work.sum
-.krknctl-kubeconfig*
+.krknctl-*
+krknctl-*
 
 # env file
 .env

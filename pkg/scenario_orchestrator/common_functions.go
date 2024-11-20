@@ -15,7 +15,7 @@ import (
 	"syscall"
 )
 
-func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, containerRuntimeUri string, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config) {
+func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, ctx context.Context) {
 	env := make(map[string]string)
 	volumes := make(map[string]string)
 
@@ -51,7 +51,7 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 
 			go func() {
 				defer wg.Done()
-				_, _ = orchestrator.RunAttached(scenario.Image, containerName, containerRuntimeUri, env, cache, volumes, file, file, nil)
+				_, _ = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx)
 			}()
 
 		}
@@ -60,9 +60,9 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 	commChannel <- nil
 }
 
-func CommonRunAttached(image string, containerName string, containerRuntimeUri string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string) (*string, error) {
+func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context) (*string, error) {
 
-	containerId, ctx, err := c.Run(image, containerName, containerRuntimeUri, env, cache, volumeMounts, commChan)
+	containerId, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func CommonRunAttached(image string, containerName string, containerRuntimeUri s
 
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	kill, err := c.Attach(containerId, ctx, signalChan, stdout, stderr)
+	kill, err := c.Attach(containerId, signalChan, stdout, stderr, ctx)
 
 	if err != nil {
 		return nil, err
@@ -96,15 +96,15 @@ func CommonPrintRuntime(containerRuntime models.ContainerRuntime) {
 	fmt.Printf("\n\n%s %s\n\n", green("container runtime:"), boldGreen(containerRuntime.String()))
 }
 
-func CommonAttachWait(containerId *string, ctx *context.Context, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator) (bool, error) {
+func CommonAttachWait(containerId *string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, ctx context.Context) (bool, error) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	interrupted, err := c.Attach(containerId, ctx, sigCh, stdout, stderr)
+	interrupted, err := c.Attach(containerId, sigCh, stdout, stderr, ctx)
 	return interrupted, err
 }
 
-func CommonListRunningScenarios(containerRuntimeUri string, c ScenarioOrchestrator) (*[]models.RunningScenario, error) {
-	containersMap, err := c.ListRunningContainers(containerRuntimeUri)
+func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[]models.RunningScenario, error) {
+	containersMap, err := c.ListRunningContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func CommonListRunningScenarios(containerRuntimeUri string, c ScenarioOrchestrat
 
 	for _, index := range indexes {
 		container := (*containersMap)[index]
-		scenario, err := c.InspectRunningScenario(container, containerRuntimeUri)
+		scenario, err := c.InspectRunningScenario(container, nil)
 		if err != nil {
 			return nil, err
 		}

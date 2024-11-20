@@ -15,7 +15,16 @@ func NewCleanCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchest
 		Long:  `cleans already run scenario files and containers`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			deletedContainers, err := (*scenarioOrchestrator).CleanContainers()
+			(*scenarioOrchestrator).PrintContainerRuntime()
+			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
+			if err != nil {
+				return err
+			}
+			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return err
+			}
+			deletedContainers, err := (*scenarioOrchestrator).CleanContainers(ctx)
 			if err != nil {
 				return err
 			}

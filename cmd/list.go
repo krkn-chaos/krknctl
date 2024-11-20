@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
-	provider_factory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
 	"log"
@@ -22,7 +22,7 @@ func NewListCommand() *cobra.Command {
 	return command
 }
 
-func NewListScenariosCommand(factory *provider_factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "available",
 		Short: "lists available scenarios",
@@ -63,7 +63,11 @@ func NewListRunningScenario(scenarioOrchestrator *scenario_orchestrator.Scenario
 			if err != nil {
 				return err
 			}
-			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(*socket)
+			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return err
+			}
+			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(ctx)
 			if err != nil {
 				return err
 			}
