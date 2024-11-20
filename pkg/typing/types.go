@@ -85,9 +85,11 @@ func IsFile(f string) bool {
 	file, err := os.Open(f)
 
 	defer func() {
-		err := file.Close()
-		if err != nil {
-			panic(err)
+		if err == nil && file != nil {
+			deferErr := file.Close()
+			if deferErr != nil {
+				panic(deferErr)
+			}
 		}
 	}()
 

@@ -125,7 +125,10 @@ func TestConnect(t *testing.T) {
 	imageUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerId, err := cm.RunAttached(imageUri+":"+scenario.Name, scenario.Name, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, nil)
+	ctx, err := cm.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+	containerId, err := cm.RunAttached(imageUri+":"+scenario.Name, scenario.Name, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -221,6 +224,9 @@ func TestRunGraph(t *testing.T) {
 	socket, err := cm.GetContainerRuntimeSocket(uid)
 	assert.Nil(t, err)
 	assert.NotNil(t, socket)
+	ctx, err := cm.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 
@@ -245,7 +251,7 @@ func TestRunGraph(t *testing.T) {
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		cm.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil)
+		cm.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, ctx)
 	}()
 
 	for {
@@ -277,7 +283,10 @@ func TestScenarioOrchestrator_ListRunningScenarios(t *testing.T) {
 	socket, err := cm.GetContainerRuntimeSocket(uid)
 	assert.Nil(t, err)
 	assert.NotNil(t, socket)
-	containerMap, err := cm.ListRunningContainers(nil)
+	ctx, err := cm.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+	containerMap, err := cm.ListRunningContainers(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerMap)
 }
@@ -299,11 +308,14 @@ func TestScenarioOrchestrator_GetScenarioDetail(t *testing.T) {
 	socket, err := cm.GetContainerRuntimeSocket(uid)
 	assert.Nil(t, err)
 	assert.NotNil(t, socket)
-	scenarios, err := cm.ListRunningContainers(nil)
+	ctx, err := cm.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+	scenarios, err := cm.ListRunningContainers(ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
 	for _, v := range *scenarios {
-		containerMap, err := cm.InspectRunningScenario(v, nil)
+		containerMap, err := cm.InspectRunningScenario(v, ctx)
 		assert.Nil(t, err)
 		assert.NotNil(t, containerMap)
 	}
