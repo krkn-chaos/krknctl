@@ -24,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	scenarioOrchestrator := scenarioOrchestratorFactory.NewInstance(*detectedRuntime, &config)
+	scenarioOrchestrator := scenarioOrchestratorFactory.NewInstance(*detectedRuntime)
 	providerFactory := providerfactory.NewProviderFactory(&config)
 
 	cmd.Execute(providerFactory, &scenarioOrchestrator, config)

@@ -8,7 +8,7 @@ import (
 type ScenarioProvider struct {
 }
 
-func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) GetRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
 	return nil, errors.New("not yet implemented")
 }
 

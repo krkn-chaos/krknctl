@@ -23,7 +23,7 @@ type ScenarioProvider struct {
 	Config *config.Config
 }
 
-func (p *ScenarioProvider) GetScenarios(dataSource string) (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) GetRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
 	tagBaseUrl, err := url.Parse(dataSource + "/tag")
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 }
 
 func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error) {
-	scenarios, err := p.GetScenarios(dataSource)
+	scenarios, err := p.GetRegistryImages(dataSource)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var deferErr error = nil
 	defer func() {
 		deferErr = resp.Body.Close()
