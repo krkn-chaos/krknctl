@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -83,15 +84,15 @@ func TestScenarioOrchestrator_Podman_CleanContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Podman_AttachWait(t *testing.T) {
-
-}
-
-func TestScenarioOrchestrator_Podman_Attach(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	fileContent := test.CommonAttachWait(t, &sopodman, config)
+	fmt.Println("FILE CONTENT -> ", fileContent)
+	assert.True(t, strings.Contains(fileContent, "Release the krkn 10"))
 
 }
 
 func TestScenarioOrchestrator_Podman_Kill(t *testing.T) {
-
 }
 
 func TestScenarioOrchestrator_Podman_ListRunningContainers(t *testing.T) {

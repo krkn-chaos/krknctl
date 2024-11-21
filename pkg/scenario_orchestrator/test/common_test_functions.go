@@ -9,6 +9,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/letsencrypt/boulder/core"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"os/user"
@@ -29,7 +30,7 @@ func CommonGetTestConfig(t *testing.T) krknctlconfig.Config {
 	return conf
 }
 
-func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) {
+func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) string {
 	env := map[string]string{
 		"END": fmt.Sprintf("%d", duration),
 	}
@@ -73,9 +74,10 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	containerId, err := so.Run(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
+	return *containerId
 }
 
-func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) {
+func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) string {
 	env := map[string]string{
 		"END": fmt.Sprintf("%d", duration),
 	}
@@ -119,6 +121,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	}
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
+	return *containerId
 }
 
 func CommonTestScenarioOrchestratorConnect(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, config krknctlconfig.Config) {
@@ -321,4 +324,32 @@ func CommonScenarioDetail(t *testing.T, so scenario_orchestrator.ScenarioOrchest
 		assert.Nil(t, err)
 		assert.NotNil(t, containerMap)
 	}
+}
+
+func CommonAttachWait(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) string {
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := so.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	ctx, err := so.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+	testFilename := fmt.Sprintf("krknctl-attachwait-%s-%d", core.RandomString(5), time.Now().Unix())
+	fmt.Println("FILE_NAME -> ", testFilename)
+	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	assert.Nil(t, err)
+	containerId := CommonTestScenarioOrchestratorRunAttached(t, so, conf, 10)
+	so.AttachWait(&containerId, file, file, ctx)
+	err = file.Close()
+	assert.Nil(t, err)
+	filecontent, err := os.ReadFile(testFilename)
+	assert.Nil(t, err)
+	return string(filecontent)
 }

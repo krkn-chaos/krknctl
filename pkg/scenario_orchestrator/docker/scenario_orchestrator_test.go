@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -84,10 +85,11 @@ func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_AttachWait(t *testing.T) {
-
-}
-
-func TestScenarioOrchestrator_Docker_Attach(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	fileContent := test.CommonAttachWait(t, &sopodman, config)
+	fmt.Println("FILE CONTENT -> ", fileContent)
+	assert.True(t, strings.Contains(fileContent, "Release the krkn 10"))
 
 }
 
