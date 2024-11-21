@@ -52,8 +52,11 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 			if err != nil {
 				return err
 			}
-
-			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(nil)
+			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			if err != nil {
+				return err
+			}
+			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(ctx)
 			if err != nil {
 				return err
 			}
@@ -71,7 +74,7 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 				return err
 			}
 			scenario := (*runningScenarios)[scenarioId]
-			ctx, err := (*scenarioOrchestrator).Connect(*socket)
+			ctx, err = (*scenarioOrchestrator).Connect(*socket)
 			if err != nil {
 				return err
 			}
