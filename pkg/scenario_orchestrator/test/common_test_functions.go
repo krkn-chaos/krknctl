@@ -29,9 +29,9 @@ func CommonGetTestConfig(t *testing.T) krknctlconfig.Config {
 	return conf
 }
 
-func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) {
+func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) {
 	env := map[string]string{
-		"END": "7",
+		"END": fmt.Sprintf("%d", duration),
 	}
 
 	currentUser, err := user.Current()
@@ -75,12 +75,9 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	assert.NotNil(t, containerId)
 }
 
-func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) {
+func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) {
 	env := map[string]string{
-		"CHAOS_DURATION": "2",
-		"CORES":          "1",
-		"CPU_PERCENTAGE": "60",
-		"NAMESPACE":      "default",
+		"END": fmt.Sprintf("%d", duration),
 	}
 
 	currentUser, err := user.Current()
@@ -91,7 +88,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	assert.Nil(t, err)
 	apiUri, err := conf.GetQuayRepositoryApiUri()
 	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("node-cpu-hog", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)

@@ -1,8 +1,16 @@
 package docker
 
 import (
+	"context"
+	"fmt"
+	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/test"
+	"github.com/stretchr/testify/assert"
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 )
 
@@ -15,13 +23,13 @@ func TestScenarioOrchestrator_Docker_Connect(t *testing.T) {
 func TestScenarioOrchestrator_Docker_RunAttached(t *testing.T) {
 	config := test.CommonGetConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config)
+	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 10)
 }
 
 func TestScenarioOrchestrator_Docker_Run(t *testing.T) {
 	config := test.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRun(t, &sodocker, config)
+	test.CommonTestScenarioOrchestratorRun(t, &sodocker, config, 5)
 }
 
 func TestScenarioOrchestrator_Docker_RunGraph(t *testing.T) {
@@ -30,7 +38,48 @@ func TestScenarioOrchestrator_Docker_RunGraph(t *testing.T) {
 	test.CommonTestScenarioOrchestratorRunGraph(t, &sodocker, config)
 }
 
+func findContainers(t *testing.T, config config.Config, ctx context.Context) []string {
+	scenarioNameRegex, err := regexp.Compile(fmt.Sprintf("%s-.*-([0-9]+)", config.ContainerPrefix))
+	assert.Nil(t, err)
+
+	cli, err := dockerClientFromContext(ctx)
+	assert.Nil(t, err)
+
+	// Recuperare i container attualmente in esecuzione
+	containers, err := cli.ContainerList(ctx, dockercontainer.ListOptions{All: true})
+	assert.Nil(t, err)
+	var foundContainers []string
+	for _, container := range containers {
+		if scenarioNameRegex.MatchString(container.Names[0]) {
+			foundContainers = append(foundContainers, container.Names[0])
+		}
+	}
+	return foundContainers
+}
+
 func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := sodocker.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	ctx, err := sodocker.Connect(*socket)
+	assert.Nil(t, err)
+	test.CommonTestScenarioOrchestratorRunAttached(t, &sodocker, config, 5)
+	foundContainers := findContainers(t, config, ctx)
+	assert.Greater(t, len(foundContainers), 0)
+	numcontainers, err := sodocker.CleanContainers(ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, len(foundContainers), *numcontainers)
+	foundContainers = findContainers(t, config, ctx)
+	assert.Equal(t, len(foundContainers), 0)
 
 }
 
