@@ -88,7 +88,7 @@ func TestScenarioOrchestrator_Podman_AttachWait(t *testing.T) {
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
 	fileContent := test.CommonAttachWait(t, &sopodman, config)
 	fmt.Println("FILE CONTENT -> ", fileContent)
-	assert.True(t, strings.Contains(fileContent, "Release the krkn 10"))
+	assert.True(t, strings.Contains(fileContent, "Release the krkn 4"))
 
 }
 

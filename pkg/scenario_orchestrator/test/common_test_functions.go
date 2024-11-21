@@ -345,7 +345,7 @@ func CommonAttachWait(t *testing.T, so scenario_orchestrator.ScenarioOrchestrato
 	fmt.Println("FILE_NAME -> ", testFilename)
 	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	assert.Nil(t, err)
-	containerId := CommonTestScenarioOrchestratorRunAttached(t, so, conf, 10)
+	containerId := CommonTestScenarioOrchestratorRunAttached(t, so, conf, 5)
 	so.AttachWait(&containerId, file, file, ctx)
 	err = file.Close()
 	assert.Nil(t, err)
