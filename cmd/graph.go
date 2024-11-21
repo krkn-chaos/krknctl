@@ -44,7 +44,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
-			if CheckFileExists(kubeconfig) == false {
+			if kubeconfig != "" && CheckFileExists(kubeconfig) == false {
 				return fmt.Errorf("file %s does not exist", kubeconfig)
 			}
 			alertsProfile, err := cmd.Flags().GetString("alerts-profile")
