@@ -87,6 +87,16 @@ func CommonRunAttached(image string, containerName string, env map[string]string
 			return nil, err
 		}
 	}
+
+	containerStatus, err := c.InspectScenario(models.Container{Id: *containerId}, ctx)
+	if err != nil {
+		return nil, err
+	}
+	// if there is an error exit status it is propagated via error to the cmd
+	if containerStatus.Container.ExitStatus > 0 {
+		return containerId, fmt.Errorf("%s %d", c.GetConfig().ContainerExitStatusPrefix, containerStatus.Container.ExitStatus)
+	}
+
 	return containerId, nil
 }
 
@@ -103,14 +113,14 @@ func CommonAttachWait(containerId *string, stdout io.Writer, stderr io.Writer, c
 	return interrupted, err
 }
 
-func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[]models.RunningScenario, error) {
+func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[]models.ScenarioContainer, error) {
 	containersMap, err := c.ListRunningContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	var indexes []int64
-	var runningScenarios []models.RunningScenario
+	var runningScenarios []models.ScenarioContainer
 
 	for k, _ := range *containersMap {
 		indexes = append(indexes, k)
@@ -119,7 +129,7 @@ func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[
 
 	for _, index := range indexes {
 		container := (*containersMap)[index]
-		scenario, err := c.InspectRunningScenario(container, nil)
+		scenario, err := c.InspectScenario(container, nil)
 		if err != nil {
 			return nil, err
 		}

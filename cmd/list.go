@@ -36,7 +36,7 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 			provider := GetProvider(false, factory)
 			s := NewSpinnerWithSuffix("fetching scenarios...")
 			s.Start()
-			scenarios, err := provider.GetScenarios(dataSource)
+			scenarios, err := provider.GetRegistryImages(dataSource)
 			if err != nil {
 				s.Stop()
 				log.Fatalf("failed to fetch scenarios: %v", err)

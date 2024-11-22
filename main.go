@@ -24,7 +24,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	scenarioOrchestrator := scenarioOrchestratorFactory.NewInstance(*detectedRuntime, &config)
+	scenarioOrchestrator := scenarioOrchestratorFactory.NewInstance(*detectedRuntime)
+	if scenarioOrchestrator == nil {
+		fmt.Printf("%s\n", color.New(color.FgHiRed).Sprint("failed to build scenario orchestrator instance"))
+		os.Exit(1)
+	}
 	providerFactory := providerfactory.NewProviderFactory(&config)
 
 	cmd.Execute(providerFactory, &scenarioOrchestrator, config)

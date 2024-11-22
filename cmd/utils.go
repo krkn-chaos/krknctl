@@ -40,7 +40,7 @@ func GetProvider(offline bool, providerFactory *factory.ProviderFactory) provide
 }
 
 func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (*[]string, error) {
-	scenarios, err := provider.GetScenarios(dataSource)
+	scenarios, err := provider.GetRegistryImages(dataSource)
 	if err != nil {
 		return nil, err
 	}

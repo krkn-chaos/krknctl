@@ -2,6 +2,7 @@ package scenario_orchestrator
 
 import (
 	"context"
+	"github.com/krkn-chaos/krknctl/internal/config"
 	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"io"
 	"os"
@@ -25,11 +26,13 @@ type ScenarioOrchestrator interface {
 	Kill(containerId *string, ctx context.Context) error
 
 	ListRunningContainers(ctx context.Context) (*map[int64]orchestrator_models.Container, error)
-	ListRunningScenarios(ctx context.Context) (*[]orchestrator_models.RunningScenario, error)
-	InspectRunningScenario(container orchestrator_models.Container, ctx context.Context) (*orchestrator_models.RunningScenario, error)
+	ListRunningScenarios(ctx context.Context) (*[]orchestrator_models.ScenarioContainer, error)
+	InspectScenario(container orchestrator_models.Container, ctx context.Context) (*orchestrator_models.ScenarioContainer, error)
 
 	GetContainerRuntimeSocket(userId *int) (*string, error)
 
 	GetContainerRuntime() orchestrator_models.ContainerRuntime
 	PrintContainerRuntime()
+	GetConfig() config.Config
+	ResolveContainerName(containerName string, ctx context.Context) (*string, error)
 }

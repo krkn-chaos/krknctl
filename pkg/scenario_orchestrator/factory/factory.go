@@ -19,27 +19,28 @@ func NewScenarioOrchestratorFactory(config config.Config) *ScenarioOrchestratorF
 	}
 }
 
-func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.ContainerRuntime, config *config.Config) scenario_orchestrator.ScenarioOrchestrator {
+func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.ContainerRuntime) scenario_orchestrator.ScenarioOrchestrator {
 	switch containerEnvironment {
 	case models.Podman:
+		return f.getOrchestratorInstance(models.Podman)
 	case models.Docker:
-		return f.getOrchestratorInstance(containerEnvironment, config)
+		return f.getOrchestratorInstance(models.Docker)
 	case models.Both:
-		defaultContainerEnvironment := utils.EnvironmentFromString(config.DefaultContainerPlatform)
-		return f.getOrchestratorInstance(defaultContainerEnvironment, config)
+		defaultContainerEnvironment := utils.EnvironmentFromString(f.Config.DefaultContainerPlatform)
+		return f.getOrchestratorInstance(defaultContainerEnvironment)
 	}
 	return nil
 }
 
-func (f *ScenarioOrchestratorFactory) getOrchestratorInstance(containerEnvironment models.ContainerRuntime, config *config.Config) scenario_orchestrator.ScenarioOrchestrator {
+func (f *ScenarioOrchestratorFactory) getOrchestratorInstance(containerEnvironment models.ContainerRuntime) scenario_orchestrator.ScenarioOrchestrator {
 	if containerEnvironment == models.Podman {
 		return &podman.ScenarioOrchestrator{
-			Config:           *config,
+			Config:           f.Config,
 			ContainerRuntime: containerEnvironment,
 		}
 	} else {
 		return &docker.ScenarioOrchestrator{
-			Config:           *config,
+			Config:           f.Config,
 			ContainerRuntime: containerEnvironment,
 		}
 	}

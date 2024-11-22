@@ -41,17 +41,19 @@ type Scenario struct {
 	Volumes map[string]string `json:"volumes,omitempty"`
 }
 
-type RunningScenario struct {
+type ScenarioContainer struct {
 	Scenario       *Scenario
 	ScenarioDetail *models.ScenarioDetail
 	Container      *Container
 }
 
 type Container struct {
-	Id      string `json:"id,omitempty"`
-	Name    string `json:"name,omitempty"`
-	Image   string `json:"image,omitempty"`
-	Started int64  `json:"started,omitempty"`
+	Id         string `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Image      string `json:"image,omitempty"`
+	Started    int64  `json:"started,omitempty"`
+	Status     string `json:"status,omitempty"`
+	ExitStatus int32  `json:"exit_status"`
 }
 
 type ScenarioSet map[string]ScenarioNode

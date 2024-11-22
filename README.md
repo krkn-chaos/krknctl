@@ -224,3 +224,12 @@ standard output this command comes into help.
 ### `clean`:
 will remove all the krkn containers from the container runtime, will delete all the kubeconfig files
 and logfiles created by the tool in the current folder.
+
+### `query-status <container Id or Name> [--graph <graph file path>]`:
+
+Will query the container platform to return container informations of a container name or Id if the `--graph` flag is not 
+set, else will query the status of all the container names contained in the graph file.
+If a single container Id or name is queried the tool will exit with the same exit status of the container.
+
+>[!TIP]
+> This function can be integrated into CI/CD pipelines to halt execution if the chaos run encounters any failure.

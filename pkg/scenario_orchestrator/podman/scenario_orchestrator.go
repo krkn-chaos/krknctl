@@ -218,8 +218,8 @@ func (c *ScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[
 
 }
 
-func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.RunningScenario, error) {
-	runningScenario := &orchestratormodels.RunningScenario{}
+func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) {
+	runningScenario := &orchestratormodels.ScenarioContainer{}
 	scenario := orchestratormodels.Scenario{}
 	scenario.Volumes = make(map[string]string)
 	scenario.Env = make(map[string]string)
@@ -231,6 +231,10 @@ func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestratormode
 	if inspectData == nil {
 		return nil, fmt.Errorf("container %s not found", container.Id)
 	}
+
+	container.Name = inspectData.Name
+	container.Status = inspectData.State.Status
+	container.ExitStatus = inspectData.State.ExitCode
 
 	if inspectData.Config == nil {
 		return nil, fmt.Errorf("container %s has no config", container.Id)
@@ -283,6 +287,26 @@ func (c *ScenarioOrchestrator) Connect(containerRuntimeUri string) (context.Cont
 	return bindings.NewConnection(context.Background(), containerRuntimeUri)
 }
 
+func (c *ScenarioOrchestrator) GetConfig() config.Config {
+	return c.Config
+}
+
+func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) {
+	_true := true
+	containerList, err := containers.List(ctx, &containers.ListOptions{
+		All: &_true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containerList {
+		if strings.Contains(container.Names[0], containerName) {
+			return &container.ID, nil
+		}
+	}
+	return nil, nil
+}
+
 // common functions
 
 func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
@@ -308,6 +332,6 @@ func (c *ScenarioOrchestrator) PrintContainerRuntime() {
 	scenario_orchestrator.CommonPrintRuntime(c.ContainerRuntime)
 }
 
-func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.RunningScenario, error) {
+func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
 	return scenario_orchestrator.CommonListRunningScenarios(c, ctx)
 }

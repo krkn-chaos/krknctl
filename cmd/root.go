@@ -7,6 +7,8 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
@@ -73,9 +75,23 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	attachCmd := NewAttachCmd(scenarioOrchestrator)
 	rootCmd.AddCommand(attachCmd)
+	queryCmd := NewQueryStatusCommand(scenarioOrchestrator, config)
+	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
+	rootCmd.AddCommand(queryCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		// intercept the propagated exit status from the container and exits with the same code
+		if strings.Contains(err.Error(), config.ContainerExitStatusPrefix) {
+			exitCodeStr := strings.Split(err.Error(), " ")
+			if len(exitCodeStr) == 2 {
+				exitStatus, err := strconv.ParseInt(exitCodeStr[1], 10, 32)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("Error converting exit code to int: %s", err))
+					os.Exit(1)
+				}
+				os.Exit(int(exitStatus))
+			}
+		}
 		os.Exit(1)
 	}
 }
