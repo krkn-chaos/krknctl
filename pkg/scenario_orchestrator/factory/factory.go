@@ -22,8 +22,9 @@ func NewScenarioOrchestratorFactory(config config.Config) *ScenarioOrchestratorF
 func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.ContainerRuntime) scenario_orchestrator.ScenarioOrchestrator {
 	switch containerEnvironment {
 	case models.Podman:
+		return f.getOrchestratorInstance(models.Podman)
 	case models.Docker:
-		return f.getOrchestratorInstance(containerEnvironment)
+		return f.getOrchestratorInstance(models.Docker)
 	case models.Both:
 		defaultContainerEnvironment := utils.EnvironmentFromString(f.Config.DefaultContainerPlatform)
 		return f.getOrchestratorInstance(defaultContainerEnvironment)

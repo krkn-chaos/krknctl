@@ -55,7 +55,7 @@ func NewGraphTable(graph [][]string) table.Table {
 	return tbl
 }
 
-func NewRunningScenariosTable(runningScenarios []orchestratormodels.RunningScenario) table.Table {
+func NewRunningScenariosTable(runningScenarios []orchestratormodels.ScenarioContainer) table.Table {
 	tbl := table.New("Scenario ID", "Scenario Name", "Running Since", "Container Name")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for i, v := range runningScenarios {

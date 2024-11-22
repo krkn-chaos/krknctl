@@ -319,8 +319,8 @@ func (c *ScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[
 
 }
 
-func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.RunningScenario, error) {
-	runningScenario := &orchestratormodels.RunningScenario{}
+func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) {
+	runningScenario := &orchestratormodels.ScenarioContainer{}
 	scenario := orchestratormodels.Scenario{}
 	scenario.Volumes = make(map[string]string)
 	scenario.Env = make(map[string]string)
@@ -334,6 +334,9 @@ func (c *ScenarioOrchestrator) InspectRunningScenario(container orchestratormode
 	if err != nil {
 		return nil, err
 	}
+	container.Status = inspectData.State.Status
+	container.ExitStatus = int32(inspectData.State.ExitCode)
+
 	scenarioDetail := providermodels.ScenarioDetail{}
 	scenarioDetail.Digest = inspectData.ContainerJSONBase.Image
 	imageAndTag := strings.Split(inspectData.Config.Image, ":")
@@ -389,6 +392,10 @@ func (c *ScenarioOrchestrator) Connect(containerRuntimeUri string) (context.Cont
 	return ctxWithClient, nil
 }
 
+func (c *ScenarioOrchestrator) GetConfig() config.Config {
+	return c.Config
+}
+
 // common functions
 
 func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
@@ -414,6 +421,6 @@ func (c *ScenarioOrchestrator) PrintContainerRuntime() {
 	scenario_orchestrator.CommonPrintRuntime(c.ContainerRuntime)
 }
 
-func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.RunningScenario, error) {
+func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
 	return scenario_orchestrator.CommonListRunningScenarios(c, ctx)
 }

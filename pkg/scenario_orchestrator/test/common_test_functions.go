@@ -79,7 +79,8 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 
 func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) string {
 	env := map[string]string{
-		"END": fmt.Sprintf("%d", duration),
+		"END":         fmt.Sprintf("%d", duration),
+		"EXIT_STATUS": "0",
 	}
 
 	currentUser, err := user.Current()
@@ -90,7 +91,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	assert.Nil(t, err)
 	apiUri, err := conf.GetQuayRepositoryApiUri()
 	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", apiUri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -114,13 +115,27 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	assert.NotNil(t, ctx)
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
-	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
+	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
+
+	// Testing exit status > 0
+	exitStatus := "3"
+	env["END"] = fmt.Sprintf("%d", duration)
+	env["EXIT_STATUS"] = exitStatus
+	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
+	containerId, err = so.RunAttached(registryUri+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	if err != nil {
+		fmt.Println("ERROR -> " + err.Error())
+	}
+	assert.NotNil(t, err)
+	assert.NotNil(t, containerId)
+	assert.Equal(t, fmt.Sprintf("%s %s", conf.ContainerExitStatusPrefix, exitStatus), err.Error())
+
 	return *containerId
 }
 
@@ -320,7 +335,7 @@ func CommonScenarioDetail(t *testing.T, so scenario_orchestrator.ScenarioOrchest
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
 	for _, v := range *scenarios {
-		containerMap, err := so.InspectRunningScenario(v, ctx)
+		containerMap, err := so.InspectScenario(v, ctx)
 		assert.Nil(t, err)
 		assert.NotNil(t, containerMap)
 	}

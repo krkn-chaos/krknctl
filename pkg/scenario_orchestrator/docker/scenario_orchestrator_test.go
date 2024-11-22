@@ -22,9 +22,9 @@ func TestScenarioOrchestrator_Docker_Connect(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_RunAttached(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := test.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 10)
+	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 3)
 }
 
 func TestScenarioOrchestrator_Docker_Run(t *testing.T) {
