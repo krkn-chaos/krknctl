@@ -232,6 +232,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 		return nil, fmt.Errorf("container %s not found", container.Id)
 	}
 
+	container.Name = inspectData.Name
 	container.Status = inspectData.State.Status
 	container.ExitStatus = inspectData.State.ExitCode
 

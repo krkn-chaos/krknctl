@@ -53,7 +53,7 @@ type Container struct {
 	Image      string `json:"image,omitempty"`
 	Started    int64  `json:"started,omitempty"`
 	Status     string `json:"status,omitempty"`
-	ExitStatus int32  `json:"exit_status,omitempty"`
+	ExitStatus int32  `json:"exit_status"`
 }
 
 type ScenarioSet map[string]ScenarioNode

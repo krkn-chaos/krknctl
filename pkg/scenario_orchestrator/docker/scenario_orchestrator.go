@@ -333,6 +333,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	if err != nil {
 		return nil, err
 	}
+	container.Name = inspectData.Name
 	container.Status = inspectData.State.Status
 	container.ExitStatus = int32(inspectData.State.ExitCode)
 
