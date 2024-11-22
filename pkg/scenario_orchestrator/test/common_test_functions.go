@@ -368,3 +368,56 @@ func CommonAttachWait(t *testing.T, so scenario_orchestrator.ScenarioOrchestrato
 	assert.Nil(t, err)
 	return string(filecontent)
 }
+
+func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) {
+	env := map[string]string{
+		"END":         fmt.Sprintf("%d", duration),
+		"EXIT_STATUS": "0",
+	}
+
+	currentUser, err := user.Current()
+	fmt.Println("Current user: " + (*currentUser).Name)
+	fmt.Println("current user id" + (*currentUser).Uid)
+	quayProvider := quay.ScenarioProvider{Config: &conf}
+	registryUri, err := conf.GetQuayImageUri()
+	assert.Nil(t, err)
+	apiUri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", apiUri)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenario)
+	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
+	assert.Nil(t, err)
+	assert.NotNil(t, kubeconfig)
+	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
+
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := so.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	ctx, err := so.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+
+	fmt.Println("CONTAINER SOCKET -> " + *socket)
+	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
+	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, containerId)
+
+	resolvedContainerId, err := so.ResolveContainerName(containerName, ctx)
+	assert.Nil(t, err)
+	assert.Equal(t, *containerId, *resolvedContainerId)
+
+	resolvedContainerId, err = so.ResolveContainerName("not_found", ctx)
+	assert.Nil(t, resolvedContainerId)
+	assert.Nil(t, err)
+
+}

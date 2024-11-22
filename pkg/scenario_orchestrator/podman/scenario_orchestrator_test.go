@@ -71,7 +71,7 @@ func findContainers(t *testing.T, config config.Config) (int, context.Context) {
 }
 
 func TestScenarioOrchestrator_Podman_CleanContainers(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := test.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
 	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 5)
 	foundContainers, ctx := findContainers(t, config)
@@ -84,7 +84,7 @@ func TestScenarioOrchestrator_Podman_CleanContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Podman_AttachWait(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := test.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
 	fileContent := test.CommonAttachWait(t, &sopodman, config)
 	fmt.Println("FILE CONTENT -> ", fileContent)
@@ -118,4 +118,10 @@ func TestScenarioOrchestrator_Podman_GetContainerRuntime(t *testing.T) {
 
 func TestScenarioOrchestrator_Podman_PrintContainerRuntime(t *testing.T) {
 
+}
+
+func TestScenarioOrchestrator_Podman_ResolveContainerId(t *testing.T) {
+	config := test.CommonGetTestConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	test.CommonTestScenarioOrchestratorResolveContainerName(t, &sodocker, config, 3)
 }

@@ -293,7 +293,6 @@ func (c *ScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[
 		return nil, err
 	}
 
-	// Recuperare i container attualmente in esecuzione
 	containers, err := cli.ContainerList(ctx, dockercontainer.ListOptions{All: true})
 	if err != nil {
 		return nil, err
@@ -394,6 +393,24 @@ func (c *ScenarioOrchestrator) Connect(containerRuntimeUri string) (context.Cont
 
 func (c *ScenarioOrchestrator) GetConfig() config.Config {
 	return c.Config
+}
+
+func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) {
+	cli, err := dockerClientFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	containers, err := cli.ContainerList(ctx, dockercontainer.ListOptions{All: true})
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containers {
+		if strings.Contains(container.Names[0], containerName) {
+			return &container.ID, nil
+		}
+	}
+	return nil, nil
 }
 
 // common functions

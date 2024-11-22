@@ -34,4 +34,5 @@ type ScenarioOrchestrator interface {
 	GetContainerRuntime() orchestrator_models.ContainerRuntime
 	PrintContainerRuntime()
 	GetConfig() config.Config
+	ResolveContainerName(containerName string, ctx context.Context) (*string, error)
 }

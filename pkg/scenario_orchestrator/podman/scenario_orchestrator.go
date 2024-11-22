@@ -290,6 +290,22 @@ func (c *ScenarioOrchestrator) GetConfig() config.Config {
 	return c.Config
 }
 
+func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) {
+	_true := true
+	containerList, err := containers.List(ctx, &containers.ListOptions{
+		All: &_true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containerList {
+		if strings.Contains(container.Names[0], containerName) {
+			return &container.ID, nil
+		}
+	}
+	return nil, nil
+}
+
 // common functions
 
 func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {

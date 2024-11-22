@@ -59,7 +59,7 @@ func findContainers(t *testing.T, config config.Config, ctx context.Context) []s
 }
 
 func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := test.CommonGetTestConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
 	envuid := os.Getenv("USERID")
 	var uid *int = nil
@@ -85,7 +85,7 @@ func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_AttachWait(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := test.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
 	fileContent := test.CommonAttachWait(t, &sopodman, config)
 	fmt.Println("FILE CONTENT -> ", fileContent)
@@ -120,4 +120,10 @@ func TestScenarioOrchestrator_Docker_GetContainerRuntime(t *testing.T) {
 
 func TestScenarioOrchestrator_Docker_PrintContainerRuntime(t *testing.T) {
 
+}
+
+func TestScenarioOrchestrator_Docker_ResolveContainerId(t *testing.T) {
+	config := test.CommonGetTestConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	test.CommonTestScenarioOrchestratorResolveContainerName(t, &sodocker, config, 3)
 }
