@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -239,4 +240,26 @@ func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
 	default:
 		panic(fmt.Sprintf("unknown container environment: %q", s))
 	}
+}
+
+func ErrorToStatusCode(err error, conf config.Config) *int32 {
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), conf.ContainerExitStatusPrefix) {
+		exit := strings.Split(err.Error(), " ")
+		if len(exit) == 2 {
+			status, err := strconv.ParseInt(exit[1], 10, 32)
+			if err != nil {
+				return nil
+			}
+			status32 := int32(status)
+			return &status32
+		}
+	}
+	return nil
+}
+
+func StatusCodeToError(statusCode int32, conf config.Config) error {
+	return fmt.Errorf("%s %d", conf.ContainerExitStatusPrefix, statusCode)
 }

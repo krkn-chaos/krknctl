@@ -213,7 +213,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn)
 				if err != nil {
-					return err
+					if exit := utils.ErrorToStatusCode(err, config); exit != nil {
+						os.Exit(int(*exit))
+					} else {
+						return err
+					}
 				}
 			} else {
 				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn)

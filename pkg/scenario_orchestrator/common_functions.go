@@ -94,7 +94,7 @@ func CommonRunAttached(image string, containerName string, env map[string]string
 	}
 	// if there is an error exit status it is propagated via error to the cmd
 	if containerStatus.Container.ExitStatus > 0 {
-		return containerId, fmt.Errorf("%s %d", c.GetConfig().ContainerExitStatusPrefix, containerStatus.Container.ExitStatus)
+		return containerId, utils.StatusCodeToError(containerStatus.Container.ExitStatus, c.GetConfig())
 	}
 
 	return containerId, nil
