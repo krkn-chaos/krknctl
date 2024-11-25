@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -35,11 +36,16 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 		return fmt.Errorf("scenarioContainer with id or name %s not found", arg)
 	}
 
-	containerJson, err := json.Marshal(scenarioContainer.Container)
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(scenarioContainer.Container)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(containerJson))
+
+	fmt.Println(buf.String())
 	if scenarioContainer.Container.ExitStatus != 0 {
 		return utils.StatusCodeToError(scenarioContainer.Container.ExitStatus, conf)
 	}
@@ -78,11 +84,16 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 			}
 		}
 	}
-	containersJson, err := json.Marshal(containers)
+
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(containers)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(containersJson))
+	fmt.Println(buf.String())
 	return statusCodeError
 }
 
