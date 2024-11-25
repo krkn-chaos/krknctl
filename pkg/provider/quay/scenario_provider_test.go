@@ -93,11 +93,7 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	scenarios, err := provider.GetRegistryImages(uri)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
-	var scenarioNames []string
-
-	for _, scenario := range *scenarios {
-		scenarioNames = append(scenarioNames, scenario.Name)
-	}
+	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
 
 	json, err := provider.ScaffoldScenarios(scenarioNames, uri)
 	assert.Nil(t, err)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -34,13 +36,18 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 		return fmt.Errorf("scenarioContainer with id or name %s not found", arg)
 	}
 
-	containerJson, err := json.Marshal(scenarioContainer.Container)
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(scenarioContainer.Container)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(containerJson))
+
+	fmt.Println(buf.String())
 	if scenarioContainer.Container.ExitStatus != 0 {
-		return fmt.Errorf("%s %d", conf.ContainerExitStatusPrefix, scenarioContainer.Container.ExitStatus)
+		return utils.StatusCodeToError(scenarioContainer.Container.ExitStatus, conf)
 	}
 	return nil
 }
@@ -48,7 +55,7 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, filename string, conn context.Context, conf config.Config) error {
 	var scenarioFile = make(map[string]provider_models.ScenarioDetail)
 	var containers = make([]models.Container, 0)
-
+	var statusCodeError error
 	fileData, err := os.ReadFile(filename)
 	if err != nil {
 		return err
@@ -70,16 +77,24 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 			if containerScenario != nil {
 				if (*containerScenario).Container != nil {
 					containers = append(containers, *(*containerScenario).Container)
+					if (*containerScenario).Container.ExitStatus != 0 {
+						statusCodeError = utils.StatusCodeToError((*containerScenario).Container.ExitStatus, orchestrator.GetConfig())
+					}
 				}
 			}
 		}
 	}
-	containersJson, err := json.Marshal(containers)
+
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(containers)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(containersJson))
-	return nil
+	fmt.Println(buf.String())
+	return statusCodeError
 }
 
 func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
@@ -100,6 +115,9 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 			if len(args) > 0 {
 				err = resolveContainerIdOrName(*scenarioOrchestrator, args[0], conn, config)
+				if exit := utils.ErrorToStatusCode(err, config); exit != nil {
+					os.Exit(int(*exit))
+				}
 				return err
 			}
 
@@ -117,6 +135,11 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 
 			err = resolveGraphFile(*scenarioOrchestrator, graphPath, conn, config)
+			if exit := utils.ErrorToStatusCode(err, config); exit != nil {
+				// since multiple errors of different values might be set
+				// on graph it exits with a generic 1
+				os.Exit(1)
+			}
 
 			if err != nil {
 				return err

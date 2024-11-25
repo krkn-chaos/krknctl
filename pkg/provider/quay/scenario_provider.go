@@ -88,13 +88,15 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 	babbler.Count = 1
 	for _, scenarioName := range scenarios {
 		scenarioDetail, err := p.GetScenarioDetail(scenarioName, dataSource)
+
 		if err != nil {
-			// skips images that doesn't have proper scenario details in the Containerfile
-			continue
+			return nil, err
 		}
+
 		if scenarioDetail == nil {
-			return nil, fmt.Errorf("scenario %s does not exist", scenarioName)
+			return nil, fmt.Errorf("scenario '%s' not found", scenarioName)
 		}
+
 		scenarioDetails = append(scenarioDetails, *scenarioDetail)
 	}
 	// builds all the indexes for the json upfront so I can suggest the root node in the _comment
