@@ -31,6 +31,7 @@ type Config struct {
 	LabelTitleRegex            string `json:"label_title_regex"`
 	LabelDescriptionRegex      string `json:"label_description_regex"`
 	LabelInputFieldsRegex      string `json:"label_input_fields_regex"`
+	DebugEnvironmentVariable   string `json:"debug_environment_variable"`
 }
 
 //go:embed config.json

@@ -71,7 +71,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerId, err := so.Run(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx)
+	containerId, err := so.Run(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, false)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
 	return *containerId
@@ -116,7 +116,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, false)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -128,7 +128,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	env["END"] = fmt.Sprintf("%d", duration)
 	env["EXIT_STATUS"] = exitStatus
 	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerId, err = so.RunAttached(registryUri+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	containerId, err = so.RunAttached(registryUri+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, false)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -273,7 +273,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, ctx)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, ctx, false)
 	}()
 
 	for {
@@ -408,7 +408,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx)
+	containerId, err := so.RunAttached(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, false)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
 

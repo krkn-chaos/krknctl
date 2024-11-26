@@ -53,6 +53,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
+	runCmd.LocalFlags().Bool("debug", false, "if set this flag will enable debug output in krkn")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
@@ -65,6 +66,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
+	graphRunCmd.Flags().Bool("debug", false, "if set this flag will enable debug output in krkn")
 
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphCmd.AddCommand(graphRunCmd)

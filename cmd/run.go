@@ -79,6 +79,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			spinner.Start()
 
 			runDetached := false
+			debug := false
 
 			provider := GetProvider(false, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
@@ -130,6 +131,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 					if a == "--detached" {
 						runDetached = true
+					}
+
+					if a == "--debug" {
+						debug = true
 					}
 				}
 			}
@@ -211,7 +216,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, debug)
 				if err != nil {
 					if exit := utils.ErrorToStatusCode(err, config); exit != nil {
 						os.Exit(int(*exit))
@@ -220,7 +225,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 				}
 			} else {
-				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn)
+				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, debug)
 				if err != nil {
 					return err
 				}
