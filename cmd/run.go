@@ -229,6 +229,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				if err != nil {
 					return err
 				}
+				spinner.Stop()
 				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, *containerId))
 				if err != nil {
 					return err
