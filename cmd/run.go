@@ -224,18 +224,20 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						return err
 					}
 				}
+				scenarioDuration := time.Since(startTime)
+				fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
 			} else {
 				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, debug)
 				if err != nil {
 					return err
 				}
+				spinner.Stop()
 				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, *containerId))
 				if err != nil {
 					return err
 				}
 			}
-			scenarioDuration := time.Since(startTime)
-			fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
+
 			return nil
 		},
 	}

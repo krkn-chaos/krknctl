@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
@@ -68,8 +69,16 @@ func NewListRunningScenario(scenarioOrchestrator *scenario_orchestrator.Scenario
 				return err
 			}
 			runningScenarios, err := (*scenarioOrchestrator).ListRunningScenarios(ctx)
+
 			if err != nil {
 				return err
+			}
+			if len(*runningScenarios) == 0 {
+				_, err = color.New(color.FgYellow).Println("No scenarios are currently running.")
+				if err != nil {
+					return err
+				}
+				return nil
 			}
 			// TODO: Consider no result message (everywhere ideally)
 			table := NewRunningScenariosTable(*runningScenarios)
