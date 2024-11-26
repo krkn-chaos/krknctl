@@ -15,7 +15,7 @@ import (
 	"syscall"
 )
 
-func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, ctx context.Context) {
+func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, ctx context.Context, debug bool) {
 	env := make(map[string]string)
 	volumes := make(map[string]string)
 
@@ -51,7 +51,7 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 
 			go func() {
 				defer wg.Done()
-				_, _ = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx)
+				_, _ = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, debug)
 			}()
 
 		}
@@ -60,9 +60,9 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 	commChannel <- nil
 }
 
-func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context) (*string, error) {
+func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, debug bool) (*string, error) {
 
-	containerId, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx)
+	containerId, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, debug)
 	if err != nil {
 		return nil, err
 	}
