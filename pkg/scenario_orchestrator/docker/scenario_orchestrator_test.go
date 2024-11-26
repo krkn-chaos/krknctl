@@ -94,7 +94,9 @@ func TestScenarioOrchestrator_Docker_AttachWait(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_Kill(t *testing.T) {
-
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	test.CommonTestScenarioOrchestratorKillContainers(t, &sodocker, config)
 }
 
 func TestScenarioOrchestrator_Docker_ListRunningContainers(t *testing.T) {
@@ -104,22 +106,43 @@ func TestScenarioOrchestrator_Docker_ListRunningContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_ListRunningScenarios(t *testing.T) {
-
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	test.CommonTestScenarioOrchestratorListRunningScenarios(t, &sodocker, config)
 }
 func TestScenarioOrchestrator_Docker_InspectRunningScenario(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	test.CommonTestScenarioOrchestratorInspectRunningScenario(t, &sodocker, config)
 
 }
 
 func TestScenarioOrchestrator_Docker_GetContainerRuntimeSocket(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	var uid *int = nil
+	envuid := os.Getenv("USERID")
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	} else {
+		_uid := 1337
+		uid = &_uid
+	}
+	assert.NotNil(t, uid)
+
+	socket, err := sodocker.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.Equal(t, config.DockerSocketRoot, *socket)
 
 }
 
 func TestScenarioOrchestrator_Docker_GetContainerRuntime(t *testing.T) {
-
-}
-
-func TestScenarioOrchestrator_Docker_PrintContainerRuntime(t *testing.T) {
-
+	config := test.CommonGetTestConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	assert.Equal(t, sopodman.GetContainerRuntime(), models.Docker)
 }
 
 func TestScenarioOrchestrator_Docker_ResolveContainerId(t *testing.T) {

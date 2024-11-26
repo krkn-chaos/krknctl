@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -223,10 +222,14 @@ func DetectContainerRuntime(config config.Config) (*orchestatormodels.ContainerR
 }
 
 func GenerateContainerName(config config.Config, scenarioName string, graphNodeName *string) string {
+	// sleep is needed to avoid the same timestamp to two different containers
+	// and break all the logic related to the container name timestamp
+
+	time.Sleep(1 * time.Nanosecond)
 	if graphNodeName != nil {
-		return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, *graphNodeName, time.Now().Unix())
+		return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, *graphNodeName, time.Now().Nanosecond())
 	}
-	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Unix())
+	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Nanosecond())
 }
 
 func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
@@ -240,26 +243,4 @@ func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
 	default:
 		panic(fmt.Sprintf("unknown container environment: %q", s))
 	}
-}
-
-func ErrorToStatusCode(err error, conf config.Config) *int32 {
-	if err == nil {
-		return nil
-	}
-	if strings.Contains(err.Error(), conf.ContainerExitStatusPrefix) {
-		exit := strings.Split(err.Error(), " ")
-		if len(exit) == 2 {
-			status, err := strconv.ParseInt(exit[1], 10, 32)
-			if err != nil {
-				return nil
-			}
-			status32 := int32(status)
-			return &status32
-		}
-	}
-	return nil
-}
-
-func StatusCodeToError(statusCode int32, conf config.Config) error {
-	return fmt.Errorf("%s %d", conf.ContainerExitStatusPrefix, statusCode)
 }

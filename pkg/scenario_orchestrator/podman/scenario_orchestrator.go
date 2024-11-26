@@ -3,10 +3,12 @@ package podman
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
+	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/internal/config"
@@ -227,12 +229,15 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	scenario.Volumes = make(map[string]string)
 	scenario.Env = make(map[string]string)
 	runningScenario.Container = &container
+
 	inspectData, err := containers.Inspect(ctx, container.Id, nil)
 	if err != nil {
-		return nil, err
-	}
-	if inspectData == nil {
-		return nil, fmt.Errorf("container %s not found", container.Id)
+		var customErr *errorhandling.ErrorModel
+		if errors.As(err, &customErr) {
+			if customErr.ResponseCode == 404 {
+				return nil, nil
+			}
+		}
 	}
 
 	container.Name = inspectData.Name

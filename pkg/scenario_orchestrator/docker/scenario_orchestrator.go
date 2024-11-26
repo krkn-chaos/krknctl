@@ -309,8 +309,9 @@ func (c *ScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[
 				if err != nil {
 					return nil, err
 				}
+				containerName := strings.Replace(container.Names[0], "/", "", 1)
 				scenarios[index] = orchestratormodels.Container{
-					Name:    container.Names[0],
+					Name:    containerName,
 					Id:      container.ID,
 					Image:   container.Image,
 					Started: index,
@@ -335,9 +336,12 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	}
 	inspectData, err := cli.ContainerInspect(ctx, container.Id)
 	if err != nil {
+		if strings.Contains(err.Error(), "No such container") {
+			return nil, nil
+		}
 		return nil, err
 	}
-	container.Name = inspectData.Name
+	container.Name = strings.Replace(inspectData.Name, "/", "", 1)
 	container.Status = inspectData.State.Status
 	container.ExitStatus = int32(inspectData.State.ExitCode)
 
