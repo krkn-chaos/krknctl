@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -132,6 +133,14 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 
 			executionPlan := graph.TopoSortedLayers()
+			if len(executionPlan) == 0 {
+				_, err = color.New(color.FgYellow).Println("No scenario to execute; the graph file appears to be empty (single-node graphs are not supported).")
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
 			table := NewGraphTable(executionPlan)
 			table.Print()
 			fmt.Print("\n\n")
