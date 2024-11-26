@@ -129,7 +129,7 @@ func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[
 
 	for _, index := range indexes {
 		container := (*containersMap)[index]
-		scenario, err := c.InspectScenario(container, nil)
+		scenario, err := c.InspectScenario(container, ctx)
 		if err != nil {
 			return nil, err
 		}
