@@ -144,6 +144,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
+			if kubeconfigPath == nil {
+				return fmt.Errorf("kubeconfig not found: %s", *foundKubeconfig)
+			}
 			volumes[*kubeconfigPath] = config.KubeconfigPath
 			if metricsProfile != nil {
 				volumes[*metricsProfile] = config.MetricsProfilePath
