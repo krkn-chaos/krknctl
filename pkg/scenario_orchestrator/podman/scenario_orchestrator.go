@@ -98,6 +98,10 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	if debug == true {
 		s.Env[c.GetConfig().DebugEnvironmentVariable] = "True"
 	}
+
+	// THIS WILL BE REMOVED WHEN GLOBAL ENV WILL BE INTRODUCED
+	s.Env["WAIT_DURATION"] = "1"
+
 	for k, v := range volumeMounts {
 		containerMount := specs.Mount{
 			Destination: v,
