@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -124,9 +126,9 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	assert.NotNil(t, containerId)
 
 	// Testing exit status > 0
-	exitStatus := "3"
+	exitStatus := 3
 	env["END"] = fmt.Sprintf("%d", duration)
-	env["EXIT_STATUS"] = exitStatus
+	env["EXIT_STATUS"] = fmt.Sprintf("%d", exitStatus)
 	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
 	containerId, err = so.RunAttached(registryUri+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, false)
 	if err != nil {
@@ -134,7 +136,10 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	}
 	assert.NotNil(t, err)
 	assert.NotNil(t, containerId)
-	assert.Equal(t, fmt.Sprintf("%s %s", conf.ContainerExitStatusPrefix, exitStatus), err.Error())
+	var staterr *utils.ExitError
+	assert.True(t, errors.As(err, &staterr))
+	assert.NotNil(t, staterr)
+	assert.Equal(t, staterr.ExitStatus, exitStatus)
 
 	return *containerId
 }
@@ -419,5 +424,200 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	resolvedContainerId, err = so.ResolveContainerName("not_found", ctx)
 	assert.Nil(t, resolvedContainerId)
 	assert.Nil(t, err)
+
+}
+
+func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) {
+	env := map[string]string{
+		"END": "20",
+	}
+
+	currentUser, err := user.Current()
+	fmt.Println("Current user: " + (*currentUser).Name)
+	fmt.Println("current user id" + (*currentUser).Uid)
+	quayProvider := quay.ScenarioProvider{Config: &conf}
+	registryUri, err := conf.GetQuayImageUri()
+	assert.Nil(t, err)
+
+	apiUri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenario)
+	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
+	assert.Nil(t, err)
+	assert.NotNil(t, kubeconfig)
+	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
+
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := so.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	ctx, err := so.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+
+	fmt.Println("CONTAINER SOCKET -> " + *socket)
+	timestamp := time.Now().Unix()
+	containerName := fmt.Sprintf("%s-%s-kill-%d", conf.ContainerPrefix, scenario.Name, timestamp)
+	containerId, err := so.Run(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, false)
+	time.Sleep(2 * time.Second)
+	containers, err := so.ListRunningContainers(ctx)
+	assert.Nil(t, err)
+	found := false
+	for _, v := range *containers {
+		if strings.Contains(v.Name, "kill") {
+			found = true
+		}
+	}
+	assert.True(t, found)
+
+	err = so.Kill(containerId, ctx)
+	assert.Nil(t, err)
+	time.Sleep(2 * time.Second)
+	containers, err = so.ListRunningContainers(ctx)
+	assert.Nil(t, err)
+	found = false
+	for _, v := range *containers {
+		if strings.Contains(v.Name, "kill") {
+			found = true
+		}
+	}
+	assert.False(t, found)
+	end := time.Now().Unix()
+	assert.True(t, end-timestamp < 20)
+}
+
+func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) {
+	env := map[string]string{
+		"END": "20",
+	}
+
+	currentUser, err := user.Current()
+	fmt.Println("Current user: " + (*currentUser).Name)
+	fmt.Println("current user id" + (*currentUser).Uid)
+	quayProvider := quay.ScenarioProvider{Config: &conf}
+	registryUri, err := conf.GetQuayImageUri()
+	assert.Nil(t, err)
+
+	apiUri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenario)
+	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
+	assert.Nil(t, err)
+	assert.NotNil(t, kubeconfig)
+	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
+
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := so.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	ctx, err := so.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+
+	fmt.Println("CONTAINER SOCKET -> " + *socket)
+
+	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
+	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
+
+	//starting containers in inverted order to check if lisRunningScenarios returns them sorted
+	sortedContainers := make(map[int]string)
+	_, err = so.Run(registryUri+":"+scenario.Name, containerName2, env, false, map[string]string{}, nil, ctx, false)
+	_, err = so.Run(registryUri+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, false)
+	time.Sleep(1 * time.Second)
+
+	assert.Nil(t, err)
+	runningContainers, err := so.ListRunningScenarios(ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, runningContainers)
+	i := 0
+	for _, r := range *runningContainers {
+		if r.Container.Name == containerName1 || r.Container.Name == containerName2 {
+			sortedContainers[i] = r.Container.Name
+			i++
+		}
+	}
+	assert.Nil(t, err)
+	fmt.Println(sortedContainers)
+	assert.True(t, len(*runningContainers) >= 2)
+	assert.Equal(t, sortedContainers[0], containerName1)
+	assert.Equal(t, sortedContainers[1], containerName2)
+}
+
+func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config) {
+	env := map[string]string{
+		"END": "20",
+	}
+
+	currentUser, err := user.Current()
+	fmt.Println("Current user: " + (*currentUser).Name)
+	fmt.Println("current user id" + (*currentUser).Uid)
+	quayProvider := quay.ScenarioProvider{Config: &conf}
+	registryUri, err := conf.GetQuayImageUri()
+	assert.Nil(t, err)
+
+	apiUri, err := conf.GetQuayRepositoryApiUri()
+	assert.Nil(t, err)
+
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenario)
+	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
+	assert.Nil(t, err)
+	assert.NotNil(t, kubeconfig)
+	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
+
+	envuid := os.Getenv("USERID")
+	var uid *int = nil
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	}
+	socket, err := so.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	assert.NotNil(t, socket)
+	ctx, err := so.Connect(*socket)
+	assert.Nil(t, err)
+	assert.NotNil(t, ctx)
+
+	fmt.Println("CONTAINER SOCKET -> " + *socket)
+
+	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
+	containerId1, err := so.Run(registryUri+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, false)
+	assert.Nil(t, err)
+	time.Sleep(1 * time.Second)
+
+	inspectData, err := so.InspectScenario(models.Container{Id: *containerId1}, ctx)
+	assert.Nil(t, err)
+	assert.NotNil(t, inspectData)
+
+	assert.Equal(t, inspectData.Container.Name, containerName1)
+	assert.Equal(t, inspectData.Container.Id, *containerId1)
+	assert.Equal(t, inspectData.Scenario.Name, scenario.Name)
+
+	inspectData, err = so.InspectScenario(models.Container{Id: "mimmo"}, ctx)
+	assert.Nil(t, err)
+	assert.Nil(t, inspectData)
 
 }

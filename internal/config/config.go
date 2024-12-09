@@ -16,7 +16,6 @@ type Config struct {
 	KubeconfigPrefix           string `json:"kubeconfig_prefix"`
 	PodmanDarwinSocketTemplate string `json:"podman_darwin_socket_template"`
 	PodmanLinuxSocketTemplate  string `json:"podman_linux_socket_template"`
-	ContainerExitStatusPrefix  string `json:"container_exit_status_prefix"`
 	PodmanSocketRoot           string `json:"podman_socket_root_linux"`
 	PodmanRunningState         string `json:"podman_running_state"`
 	DockerSocketRoot           string `json:"docker_socket_root"`

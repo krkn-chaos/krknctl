@@ -10,12 +10,12 @@ import (
 	"github.com/krkn-chaos/krknctl/internal/config"
 	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
+	"io/fs"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -27,25 +27,36 @@ type SigTermChannel struct {
 
 func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, error) {
 	var configPath string
-
+	var configFolder string
 	if kubeconfigPath == nil || *kubeconfigPath == "" {
 		configPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	} else {
-		path, err := ExpandHomeFolder(*kubeconfigPath)
+		path, err := ExpandFolder(*kubeconfigPath, nil)
 		if err != nil {
 			return nil, err
 		}
 		configPath = *path
 	}
 
+	configFolder = filepath.Dir(configPath)
+
 	kubeconfig, err := clientcmd.LoadFromFile(configPath)
 	if err != nil {
+		var fserr *fs.PathError
+		if errors.As(err, &fserr) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to load kubeconfig: %v", err)
 	}
 
 	for clusterName, cluster := range kubeconfig.Clusters {
 		if cluster.CertificateAuthorityData == nil && cluster.CertificateAuthority != "" {
-			certData, err := os.ReadFile(cluster.CertificateAuthority)
+			path, err := ExpandFolder(cluster.CertificateAuthority, &configFolder)
+			if err != nil {
+				return nil, err
+			}
+
+			certData, err := os.ReadFile(*path)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load cluster certificate  '%s': %v", clusterName, err)
 			}
@@ -56,7 +67,11 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 
 	for authName, auth := range kubeconfig.AuthInfos {
 		if auth.ClientCertificateData == nil && auth.ClientCertificate != "" {
-			certData, err := os.ReadFile(auth.ClientCertificate)
+			path, err := ExpandFolder(auth.ClientCertificate, &configFolder)
+			if err != nil {
+				return nil, err
+			}
+			certData, err := os.ReadFile(*path)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load user certificate '%s': %v", authName, err)
 			}
@@ -65,7 +80,11 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 		}
 
 		if auth.ClientKeyData == nil && auth.ClientKey != "" {
-			keyData, err := os.ReadFile(auth.ClientKey)
+			path, err := ExpandFolder(auth.ClientKey, &configFolder)
+			if err != nil {
+				return nil, err
+			}
+			keyData, err := os.ReadFile(*path)
 			if err != nil {
 				return nil, fmt.Errorf("failed to load user key '%s': %v", authName, err)
 			}
@@ -142,7 +161,7 @@ func CleanLogFiles(config config.Config) (*int, error) {
 	return &deletedFiles, nil
 }
 
-func ExpandHomeFolder(folder string) (*string, error) {
+func ExpandFolder(folder string, basePath *string) (*string, error) {
 	if strings.HasPrefix(folder, "~/") {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -151,6 +170,19 @@ func ExpandHomeFolder(folder string) (*string, error) {
 		replacedHome := strings.Replace(folder, "~/", "", 1)
 		expandedPath := filepath.Join(home, replacedHome)
 		return &expandedPath, nil
+	}
+	if filepath.IsAbs(folder) == false {
+		if basePath != nil {
+			path := filepath.Join(*basePath, folder)
+			return &path, nil
+		} else {
+			path, err := filepath.Abs(folder)
+			if err != nil {
+				return nil, err
+			}
+			return &path, nil
+		}
+
 	}
 	return &folder, nil
 }
@@ -223,10 +255,14 @@ func DetectContainerRuntime(config config.Config) (*orchestatormodels.ContainerR
 }
 
 func GenerateContainerName(config config.Config, scenarioName string, graphNodeName *string) string {
+	// sleep is needed to avoid the same timestamp to two different containers
+	// and break all the logic related to the container name timestamp
+
+	time.Sleep(1 * time.Nanosecond)
 	if graphNodeName != nil {
-		return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, *graphNodeName, time.Now().Unix())
+		return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, *graphNodeName, time.Now().Nanosecond())
 	}
-	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Unix())
+	return fmt.Sprintf("%s-%s-%d", config.ContainerPrefix, scenarioName, time.Now().Nanosecond())
 }
 
 func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
@@ -240,26 +276,4 @@ func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
 	default:
 		panic(fmt.Sprintf("unknown container environment: %q", s))
 	}
-}
-
-func ErrorToStatusCode(err error, conf config.Config) *int32 {
-	if err == nil {
-		return nil
-	}
-	if strings.Contains(err.Error(), conf.ContainerExitStatusPrefix) {
-		exit := strings.Split(err.Error(), " ")
-		if len(exit) == 2 {
-			status, err := strconv.ParseInt(exit[1], 10, 32)
-			if err != nil {
-				return nil
-			}
-			status32 := int32(status)
-			return &status32
-		}
-	}
-	return nil
-}
-
-func StatusCodeToError(statusCode int32, conf config.Config) error {
-	return fmt.Errorf("%s %d", conf.ContainerExitStatusPrefix, statusCode)
 }

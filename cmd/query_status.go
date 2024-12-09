@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/internal/config"
 	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -47,7 +48,7 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 
 	fmt.Println(buf.String())
 	if scenarioContainer.Container.ExitStatus != 0 {
-		return utils.StatusCodeToError(scenarioContainer.Container.ExitStatus, conf)
+		return &utils.ExitError{ExitStatus: int(scenarioContainer.Container.ExitStatus)}
 	}
 	return nil
 }
@@ -78,7 +79,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 				if (*containerScenario).Container != nil {
 					containers = append(containers, *(*containerScenario).Container)
 					if (*containerScenario).Container.ExitStatus != 0 {
-						statusCodeError = utils.StatusCodeToError((*containerScenario).Container.ExitStatus, orchestrator.GetConfig())
+						return &utils.ExitError{ExitStatus: int((*containerScenario).Container.ExitStatus)}
 					}
 				}
 			}
@@ -115,8 +116,11 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 			if len(args) > 0 {
 				err = resolveContainerIdOrName(*scenarioOrchestrator, args[0], conn, config)
-				if exit := utils.ErrorToStatusCode(err, config); exit != nil {
-					os.Exit(int(*exit))
+				var staterr *utils.ExitError
+				if errors.As(err, &staterr) {
+					if staterr.ExitStatus != 0 {
+						os.Exit(staterr.ExitStatus)
+					}
 				}
 				return err
 			}
@@ -135,10 +139,13 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 
 			err = resolveGraphFile(*scenarioOrchestrator, graphPath, conn, config)
-			if exit := utils.ErrorToStatusCode(err, config); exit != nil {
-				// since multiple errors of different values might be set
-				// on graph it exits with a generic 1
-				os.Exit(1)
+			// since multiple errors of different values might be set
+			// on graph it exits with a generic 1
+			var staterr *utils.ExitError
+			if errors.As(err, &staterr) {
+				if staterr.ExitStatus != 0 {
+					os.Exit(1)
+				}
 			}
 
 			if err != nil {

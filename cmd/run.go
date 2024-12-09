@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/internal/config"
@@ -143,6 +144,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
+			if kubeconfigPath == nil {
+				return fmt.Errorf("kubeconfig not found: %s", *foundKubeconfig)
+			}
 			volumes[*kubeconfigPath] = config.KubeconfigPath
 			if metricsProfile != nil {
 				volumes[*metricsProfile] = config.MetricsProfilePath
@@ -218,11 +222,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, debug)
 				if err != nil {
-					if exit := utils.ErrorToStatusCode(err, config); exit != nil {
-						os.Exit(int(*exit))
-					} else {
-						return err
+					var staterr *utils.ExitError
+					if errors.As(err, &staterr) {
+						os.Exit(staterr.ExitStatus)
 					}
+					return err
 				}
 				scenarioDuration := time.Since(startTime)
 				fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))

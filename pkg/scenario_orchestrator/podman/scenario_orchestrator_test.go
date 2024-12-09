@@ -8,8 +8,9 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/test"
 	"github.com/stretchr/testify/assert"
-	"os"
+	operating_system "os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -41,7 +42,7 @@ func TestScenarioOrchestrator_Podman_RunGraph(t *testing.T) {
 
 func findContainers(t *testing.T, config config.Config) (int, context.Context) {
 	_true := true
-	envuid := os.Getenv("USERID")
+	envuid := operating_system.Getenv("USERID")
 	var uid *int = nil
 	if envuid != "" {
 		_uid, err := strconv.Atoi(envuid)
@@ -93,35 +94,69 @@ func TestScenarioOrchestrator_Podman_AttachWait(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Podman_Kill(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	test.CommonTestScenarioOrchestratorKillContainers(t, &sopodman, config)
+
 }
 
 func TestScenarioOrchestrator_Podman_ListRunningContainers(t *testing.T) {
 	config := test.CommonGetConfig(t)
-	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
-	test.CommonTestScenarioOrchestratorListRunningContainers(t, &sodocker, config)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	test.CommonTestScenarioOrchestratorListRunningContainers(t, &sopodman, config)
 }
 
 func TestScenarioOrchestrator_Podman_ListRunningScenarios(t *testing.T) {
-
+	config := test.CommonGetConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	test.CommonTestScenarioOrchestratorListRunningScenarios(t, &sopodman, config)
 }
 func TestScenarioOrchestrator_Podman_InspectRunningScenario(t *testing.T) {
-
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	test.CommonTestScenarioOrchestratorInspectRunningScenario(t, &sodocker, config)
 }
 
 func TestScenarioOrchestrator_Podman_GetContainerRuntimeSocket(t *testing.T) {
+	config := test.CommonGetConfig(t)
+	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
+	var uid *int = nil
+	envuid := operating_system.Getenv("USERID")
+	if envuid != "" {
+		_uid, err := strconv.Atoi(envuid)
+		assert.Nil(t, err)
+		uid = &_uid
+		fmt.Println("USERID -> ", *uid)
+	} else {
+		_uid := 1337
+		uid = &_uid
+	}
+	assert.NotNil(t, uid)
+
+	socket, err := sodocker.GetContainerRuntimeSocket(uid)
+	assert.Nil(t, err)
+	switch os := runtime.GOOS; os {
+	case "darwin":
+		home, err := operating_system.UserHomeDir()
+		assert.Nil(t, err)
+		assert.NotNil(t, home)
+		assert.Equal(t, fmt.Sprintf(config.PodmanDarwinSocketTemplate, home), *socket)
+	case "linux":
+		assert.Equal(t, fmt.Sprintf(config.PodmanLinuxSocketTemplate, *uid), *socket)
+	default:
+		panic("😱")
+	}
 
 }
 
 func TestScenarioOrchestrator_Podman_GetContainerRuntime(t *testing.T) {
-
-}
-
-func TestScenarioOrchestrator_Podman_PrintContainerRuntime(t *testing.T) {
-
+	config := test.CommonGetTestConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	assert.Equal(t, sopodman.GetContainerRuntime(), models.Podman)
 }
 
 func TestScenarioOrchestrator_Podman_ResolveContainerId(t *testing.T) {
 	config := test.CommonGetTestConfig(t)
-	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
-	test.CommonTestScenarioOrchestratorResolveContainerName(t, &sodocker, config, 3)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	test.CommonTestScenarioOrchestratorResolveContainerName(t, &sopodman, config, 3)
 }

@@ -73,6 +73,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
+			if kubeconfigPath == nil {
+				return fmt.Errorf("kubeconfig not found: %s", kubeconfig)
+			}
 			volumes[*kubeconfigPath] = config.KubeconfigPath
 
 			if metricsProfile != "" {

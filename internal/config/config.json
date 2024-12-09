@@ -9,7 +9,6 @@
   "krknctl_logs": "krknct-log",
   "podman_darwin_socket_template": "unix://%s/.local/share/containers/podman/machine/podman.sock",
   "podman_linux_socket_template": "unix://run/user/%d/podman/podman.sock",
-  "container_exit_status_prefix": "!#KRKN_EXIT_STATUS",
   "podman_socket_root_linux": "unix://run/podman/podman.sock",
   "podman_running_state": "running",
   "docker_socket_root": "unix:///var/run/docker.sock",
