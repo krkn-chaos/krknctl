@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
@@ -94,10 +94,6 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			nodes := make(map[string]models.ScenarioNode)
 			err = json.Unmarshal(file, &nodes)
 
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			dataProvider := GetProvider(false, factory)
 			nameChannel := make(chan *struct {
 				name *string
@@ -105,7 +101,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			})
 			spinner.Start()
 			go func() {
-				validateScenariosInput(dataProvider, dataSource, nodes, nameChannel)
+				validateScenariosInput(dataProvider, nodes, nameChannel)
 			}()
 
 			for {
@@ -187,7 +183,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 	return command
 }
 
-func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource string, nodes map[string]models.ScenarioNode, scenarioNameChannel chan *struct {
+func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[string]models.ScenarioNode, scenarioNameChannel chan *struct {
 	name *string
 	err  error
 }) {
@@ -200,7 +196,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource s
 			name *string
 			err  error
 		}{name: &n.Name, err: nil}
-		scenarioDetail, err := provider.GetScenarioDetail(n.Name, dataSource)
+		scenarioDetail, err := provider.GetScenarioDetail(n.Name)
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -212,7 +208,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, dataSource s
 			scenarioNameChannel <- &struct {
 				name *string
 				err  error
-			}{name: &n.Name, err: fmt.Errorf("scenario %s not found in %s", n.Name, dataSource)}
+			}{name: &n.Name, err: fmt.Errorf("scenario %s not found", n.Name)}
 			return
 		}
 		for k, v := range n.Env {
@@ -264,13 +260,9 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 		Long:  `Scaffolds a dependency graph based run`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return nil, cobra.ShellCompDirectiveError
-			}
 			dataProvider := GetProvider(false, factory)
 
-			scenarios, err := FetchScenarios(dataProvider, dataSource)
+			scenarios, err := FetchScenarios(dataProvider)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -279,12 +271,8 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			dataProvider := GetProvider(false, factory)
-			output, err := dataProvider.ScaffoldScenarios(args, dataSource)
+			output, err := dataProvider.ScaffoldScenarios(args)
 			if err != nil {
 				return err
 			}

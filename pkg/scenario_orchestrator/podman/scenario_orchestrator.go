@@ -11,7 +11,7 @@ import (
 	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"

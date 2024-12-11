@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
@@ -25,13 +25,8 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return nil, cobra.ShellCompDirectiveError
-			}
 			provider := GetProvider(false, factory)
-
-			scenarios, err := FetchScenarios(provider, dataSource)
+			scenarios, err := FetchScenarios(provider)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -41,12 +36,8 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0])
 			if err != nil {
 				return err
 			}
@@ -71,10 +62,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		RunE: func(cmd *cobra.Command, args []string) error {
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("validating input...")
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 
 			// Starts validating input message
 			spinner.Start()
@@ -83,7 +70,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			debug := false
 
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0])
 			if err != nil {
 				return err
 			}

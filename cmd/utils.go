@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/briandowns/spinner"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/spf13/cobra"
@@ -39,8 +39,8 @@ func GetProvider(offline bool, providerFactory *factory.ProviderFactory) provide
 	return dataProvider
 }
 
-func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (*[]string, error) {
-	scenarios, err := provider.GetRegistryImages(dataSource)
+func FetchScenarios(provider provider.ScenarioDataProvider) (*[]string, error) {
+	scenarios, err := provider.GetRegistryImages()
 	if err != nil {
 		return nil, err
 	}
@@ -49,24 +49,6 @@ func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (
 		foundScenarios = append(foundScenarios, scenario.Name)
 	}
 	return &foundScenarios, nil
-}
-
-func BuildDataSource(config config.Config, offline bool, offlineSource *string) (string, error) {
-	var dataSource = ""
-	if offline == true {
-		if offlineSource != nil {
-			dataSource = *offlineSource
-		} else {
-			dataSource = ""
-		}
-	} else {
-		var err error
-		dataSource, err = config.GetQuayRepositoryApiUri()
-		if err != nil {
-			return "", err
-		}
-	}
-	return dataSource, nil
 }
 
 func CheckFileExists(filePath string) bool {

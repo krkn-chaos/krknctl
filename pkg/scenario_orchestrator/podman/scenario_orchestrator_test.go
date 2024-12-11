@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/test"
 	"github.com/stretchr/testify/assert"

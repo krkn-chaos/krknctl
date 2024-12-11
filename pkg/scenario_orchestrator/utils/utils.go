@@ -7,7 +7,7 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings"
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"io/fs"

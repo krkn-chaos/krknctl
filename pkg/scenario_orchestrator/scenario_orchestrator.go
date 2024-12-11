@@ -2,7 +2,7 @@ package scenario_orchestrator
 
 import (
 	"context"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"io"
 	"os"

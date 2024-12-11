@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
@@ -30,14 +30,10 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			provider := GetProvider(false, factory)
 			s := NewSpinnerWithSuffix("fetching scenarios...")
 			s.Start()
-			scenarios, err := provider.GetRegistryImages(dataSource)
+			scenarios, err := provider.GetRegistryImages()
 			if err != nil {
 				s.Stop()
 				log.Fatalf("failed to fetch scenarios: %v", err)

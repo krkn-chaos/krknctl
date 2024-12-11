@@ -187,6 +187,22 @@ func TestStringField(t *testing.T) {
 	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
+	// tests the correctness of a complex string with lots of escapes as a default value
+
+	stringComplexRegex := `
+  {
+    "name": "telemetry-filter-pattern",
+    "short_description": "Telemetry filter pattern",
+    "description": "Filter pattern for telemetry logs",
+    "variable": "TELEMETRY_FILTER_PATTERN",
+    "type": "string",
+    "default": "[\"(\\\\w{3}\\\\s\\\\d{1,2}\\\\s\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d+).+\",\"kinit (\\\\d+/\\\\d+/\\\\d+\\\\s\\\\d{2}:\\\\d{2}:\\\\d{2})\\\\s+\",\"(\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d+Z).+\"]",
+    "required": "false"
+  }
+`
+	err = json.Unmarshal([]byte(stringComplexRegex), &field)
+	assert.Nil(t, err)
+
 }
 
 func TestBooleanField(t *testing.T) {

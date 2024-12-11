@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/docker"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"

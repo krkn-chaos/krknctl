@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"io"

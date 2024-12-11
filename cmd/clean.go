@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"

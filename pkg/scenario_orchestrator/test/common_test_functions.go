@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
@@ -28,7 +28,7 @@ func CommonGetConfig(t *testing.T) krknctlconfig.Config {
 
 func CommonGetTestConfig(t *testing.T) krknctlconfig.Config {
 	conf := CommonGetConfig(t)
-	conf.QuayRegistry = "krknctl-test"
+	conf.QuayScenarioRegistry = "krknctl-test"
 	return conf
 }
 
@@ -44,10 +44,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -91,9 +88,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	quayProvider := quay.ScenarioProvider{Config: &conf}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -230,9 +225,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{Config: &config}
-	repositoryApi, err := config.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", repositoryApi)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, config)
@@ -386,9 +379,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	quayProvider := quay.ScenarioProvider{Config: &conf}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -439,10 +430,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orch
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -508,10 +496,7 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -575,10 +560,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	apiUri, err := conf.GetQuayRepositoryApiUri()
-	assert.Nil(t, err)
-
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", apiUri)
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)

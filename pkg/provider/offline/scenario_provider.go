@@ -8,15 +8,20 @@ import (
 type ScenarioProvider struct {
 }
 
-func (p *ScenarioProvider) GetRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) GetRegistryImages() (*[]models.ScenarioTag, error) {
 	return nil, errors.New("not yet implemented")
 }
 
-func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error) {
+func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioDetail, error) {
 	return nil, errors.New("not yet implemented")
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource string) (*string, error) {
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string) (*string, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (p *ScenarioProvider) GetGlobalEnvironment() (*models.ScenarioDetail, error) {
 	//TODO implement me
 	panic("implement me")
 }
