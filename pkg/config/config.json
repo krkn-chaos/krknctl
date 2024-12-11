@@ -3,7 +3,7 @@
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
   "quay_scenario_registry": "krkn-hub",
-  "quay_base_image_registry" : "krkn",
+  "quay_base_image_registry" : "krkn-base",
   "quay_base_image_tag" : "latest",
   "quay_repository_api": "api/v1/repository",
   "container_prefix": "krknctl",

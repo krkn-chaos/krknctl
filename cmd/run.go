@@ -6,10 +6,12 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"log"
 	"os"
 	"strings"
@@ -17,7 +19,8 @@ import (
 )
 
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
-	collectedFlags := make(map[string]*string)
+	scenarioCollectedFlags := make(map[string]*string)
+	globalCollectedFlags := make(map[string]*string)
 	var command = &cobra.Command{
 		Use:                "run",
 		Short:              "runs a scenario",
@@ -41,6 +44,14 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
+			globalEnvDetail, err := provider.GetGlobalEnvironment()
+			if err != nil {
+				return err
+			}
+
+			globalFlags := pflag.NewFlagSet("global", pflag.ExitOnError)
+			scenarioFlags := pflag.NewFlagSet("scenario", pflag.ExitOnError)
+
 			if scenarioDetail == nil {
 				return fmt.Errorf("%s scenario not found", args[0])
 			}
@@ -50,12 +61,39 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				if field.Default != nil {
 					defaultValue = *field.Default
 				}
-				collectedFlags[*field.Name] = cmd.LocalFlags().String(*field.Name, defaultValue, *field.Description)
+				scenarioCollectedFlags[*field.Name] = scenarioFlags.String(*field.Name, defaultValue, *field.Description)
 				if err != nil {
 					return err
 				}
 
 			}
+
+			for _, field := range globalEnvDetail.Fields {
+				var defaultValue = ""
+				if field.Default != nil {
+					defaultValue = *field.Default
+				}
+				globalCollectedFlags[*field.Name] = globalFlags.String(*field.Name, defaultValue, *field.Description)
+				if err != nil {
+					return err
+				}
+			}
+
+			//cmd.LocalFlags().AddFlagSet(globalFlags)
+			cmd.LocalFlags().AddFlagSet(scenarioFlags)
+
+			cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
+				fmt.Println("Krkn global flags:")
+				globalFlags.VisitAll(func(f *pflag.Flag) {
+					fmt.Printf("  --%s: %s\n", f.Name, f.Usage)
+				})
+
+				fmt.Println(fmt.Sprintf("\n%s Flags:", scenarioDetail.Name))
+				scenarioFlags.VisitAll(func(f *pflag.Flag) {
+					fmt.Printf("  --%s: %s\n", f.Name, f.Usage)
+				})
+				fmt.Print("\n\n")
+			})
 
 			return nil
 		},
@@ -74,7 +112,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-
+			globalDetail, err := provider.GetGlobalEnvironment()
 			if err != nil {
 				return err
 			}
@@ -124,6 +162,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					if a == "--debug" {
 						debug = true
 					}
+
+					if a == "--help" {
+						spinner.Stop()
+						cmd.Help()
+						return nil
+					}
 				}
 			}
 
@@ -143,37 +187,30 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				volumes[*alertsProfile] = config.AlertsProfilePath
 			}
 			//dynamic flags parsing
-			for k := range collectedFlags {
-				field := scenarioDetail.GetFieldByName(k)
-				if field == nil {
-					return fmt.Errorf("field %s not found", k)
-				}
-				var foundArg *string = nil
-				for i, a := range args {
-					if a == fmt.Sprintf("--%s", k) {
-						if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-							return fmt.Errorf("%s has no value", args[i])
-						}
-						foundArg = &args[i+1]
-					}
-				}
-				if field != nil {
-
-					value, err := field.Validate(foundArg)
-					if err != nil {
-						return err
-					}
-					if value != nil && field.Type != typing.File {
-						environment[*field.Variable] = *value
-					} else if value != nil && field.Type == typing.File {
-						fileSrcDst := strings.Split(*value, ":")
-						volumes[fileSrcDst[0]] = fileSrcDst[1]
-					}
-
-				}
-
+			scenarioEnv, scenarioVol, err := parseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
+			if err != nil {
+				return err
 			}
-			// stops the spinner before printing the input table to not disrupt it
+			globalEnv, globalVol, err := parseFlags(globalDetail, args, globalCollectedFlags, true)
+			if err != nil {
+				return err
+			}
+
+			for k, v := range *scenarioVol {
+				volumes[k] = v
+			}
+
+			for k, v := range *globalVol {
+				volumes[k] = v
+			}
+
+			for k, v := range *scenarioEnv {
+				environment[k] = v
+			}
+			for k, v := range *globalEnv {
+				environment[k] = v
+			}
+
 			spinner.Stop()
 
 			tbl := NewEnvironmentTable(environment)
@@ -232,7 +269,45 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 	}
+
 	return command
+}
+
+func parseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
+	environment := make(map[string]string)
+	volumes := make(map[string]string)
+	for k := range scenarioCollectedFlags {
+		field := scenarioDetail.GetFieldByName(k)
+		if field == nil {
+			return nil, nil, fmt.Errorf("field %s not found", k)
+		}
+		var foundArg *string = nil
+		for i, a := range args {
+			if a == fmt.Sprintf("--%s", k) {
+				if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
+					return nil, nil, fmt.Errorf("%s has no value", args[i])
+				}
+				foundArg = &args[i+1]
+			}
+		}
+		var value *string = nil
+		if foundArg != nil || skipDefault == false {
+			value, err = field.Validate(foundArg)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		if value != nil && field.Type != typing.File {
+			environment[*field.Variable] = *value
+		} else if value != nil && field.Type == typing.File {
+			fileSrcDst := strings.Split(*value, ":")
+			volumes[fileSrcDst[0]] = fileSrcDst[1]
+		}
+
+	}
+
+	return &environment, &volumes, nil
 }
 
 func checkStringArgValue(args []string, index int) error {
