@@ -102,7 +102,6 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 
 func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	config := getConfig(t)
-	config.QuayOrg = "rh_ee_tsebasti"
 	provider := ScenarioProvider{Config: &config}
 
 	baseImageScenario, err := provider.GetGlobalEnvironment()
