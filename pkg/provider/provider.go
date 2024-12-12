@@ -13,5 +13,5 @@ type ScenarioDataProvider interface {
 	GetRegistryImages() (*[]models.ScenarioTag, error)
 	GetGlobalEnvironment() (*models.ScenarioDetail, error)
 	GetScenarioDetail(scenario string) (*models.ScenarioDetail, error)
-	ScaffoldScenarios(scenarios []string) (*string, error)
+	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error)
 }

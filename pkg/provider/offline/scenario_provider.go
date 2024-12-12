@@ -16,7 +16,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioD
 	return nil, errors.New("not yet implemented")
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string) (*string, error) {
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error) {
 	//TODO implement me
 	panic("implement me")
 }

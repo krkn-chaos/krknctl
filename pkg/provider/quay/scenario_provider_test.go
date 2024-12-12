@@ -86,11 +86,15 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
 
-	json, err := provider.ScaffoldScenarios(scenarioNames)
+	json, err := provider.ScaffoldScenarios(scenarioNames, false)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"})
+	json, err = provider.ScaffoldScenarios(scenarioNames, true)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+
+	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false)
 	assert.Nil(t, json)
 	assert.NotNil(t, err)
 

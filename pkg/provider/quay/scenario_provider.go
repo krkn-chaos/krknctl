@@ -87,7 +87,7 @@ func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.S
 	return node
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string) (*string, error) {
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error) {
 	var scenarioDetails []models.ScenarioDetail
 
 	// handles babble panic when american word dictionary is not installed
@@ -156,6 +156,18 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string) (*string, error
 
 			}
 
+		}
+
+		if includeGlobalEnv == true {
+			globalDetail, err := p.GetGlobalEnvironment()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, field := range globalDetail.Fields {
+				scenarioNode.Env[*field.Variable] = *field.Default
+
+			}
 		}
 		scenarioNodes[indexes[i]] = scenarioNode
 	}

@@ -6,10 +6,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
-	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"log"
@@ -187,11 +185,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				volumes[*alertsProfile] = config.AlertsProfilePath
 			}
 			//dynamic flags parsing
-			scenarioEnv, scenarioVol, err := parseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
+			scenarioEnv, scenarioVol, err := ParseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
 			if err != nil {
 				return err
 			}
-			globalEnv, globalVol, err := parseFlags(globalDetail, args, globalCollectedFlags, true)
+			globalEnv, globalVol, err := ParseFlags(globalDetail, args, globalCollectedFlags, true)
 			if err != nil {
 				return err
 			}
@@ -271,43 +269,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 	}
 
 	return command
-}
-
-func parseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
-	environment := make(map[string]string)
-	volumes := make(map[string]string)
-	for k := range scenarioCollectedFlags {
-		field := scenarioDetail.GetFieldByName(k)
-		if field == nil {
-			return nil, nil, fmt.Errorf("field %s not found", k)
-		}
-		var foundArg *string = nil
-		for i, a := range args {
-			if a == fmt.Sprintf("--%s", k) {
-				if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-					return nil, nil, fmt.Errorf("%s has no value", args[i])
-				}
-				foundArg = &args[i+1]
-			}
-		}
-		var value *string = nil
-		if foundArg != nil || skipDefault == false {
-			value, err = field.Validate(foundArg)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-
-		if value != nil && field.Type != typing.File {
-			environment[*field.Variable] = *value
-		} else if value != nil && field.Type == typing.File {
-			fileSrcDst := strings.Split(*value, ":")
-			volumes[fileSrcDst[0]] = fileSrcDst[1]
-		}
-
-	}
-
-	return &environment, &volumes, nil
 }
 
 func checkStringArgValue(args []string, index int) error {

@@ -69,6 +69,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().Bool("debug", false, "if set this flag will enable debug output in krkn")
 
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
+	graphScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
 	graphCmd.AddCommand(graphRunCmd)
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)

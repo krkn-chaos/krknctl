@@ -197,6 +197,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			err  error
 		}{name: &n.Name, err: nil}
 		scenarioDetail, err := provider.GetScenarioDetail(n.Name)
+
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -204,6 +205,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			}{name: &n.Name, err: err}
 			return
 		}
+
 		if scenarioDetail == nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -211,6 +213,21 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			}{name: &n.Name, err: fmt.Errorf("scenario %s not found", n.Name)}
 			return
 		}
+
+		globalDetail, err := provider.GetGlobalEnvironment()
+		if err != nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: err}
+			return
+		}
+
+		// adding the global env fields to the scenario fields so, if global env is
+		// added to the scenario the validation is available
+
+		scenarioDetail.Fields = append(scenarioDetail.Fields, globalDetail.Fields...)
+
 		for k, v := range n.Env {
 			field := scenarioDetail.GetFieldByEnvVar(k)
 			if field == nil {
@@ -272,7 +289,12 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dataProvider := GetProvider(false, factory)
-			output, err := dataProvider.ScaffoldScenarios(args)
+			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
+			if err != nil {
+				return err
+			}
+
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv)
 			if err != nil {
 				return err
 			}

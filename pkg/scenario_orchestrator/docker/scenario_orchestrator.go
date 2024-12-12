@@ -53,9 +53,6 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		envVars = append(envVars, fmt.Sprintf("%s='True'", c.GetConfig().DebugEnvironmentVariable))
 	}
 
-	// THIS WILL BE REMOVED WHEN GLOBAL ENV WILL BE INTRODUCED
-	envVars = append(envVars, "WAIT_DURATION=1")
-
 	for k, v := range env {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", k, v))
 	}
