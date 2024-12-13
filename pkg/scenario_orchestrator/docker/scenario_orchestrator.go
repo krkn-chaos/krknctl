@@ -30,7 +30,7 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, debug bool) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
@@ -49,9 +49,6 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	}
 
 	var envVars []string
-	if debug == true {
-		envVars = append(envVars, fmt.Sprintf("%s='True'", c.GetConfig().DebugEnvironmentVariable))
-	}
 
 	for k, v := range env {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", k, v))
@@ -434,13 +431,13 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer,
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, debug bool) (*string, error) {
-	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, debug)
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
+	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx)
 	return containerId, err
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context, debug bool) {
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx, false)
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context) {
+	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {

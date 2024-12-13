@@ -41,7 +41,6 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
-			debug := false
 			kubeconfig, err := cmd.Flags().GetString("kubeconfig")
 			if err != nil {
 				return err
@@ -64,7 +63,6 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return fmt.Errorf("file %s does not exist", metricsProfile)
 			}
 
-			debug, err = cmd.Flags().GetBool("debug")
 			if err != nil {
 				return err
 			}
@@ -158,7 +156,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx, debug)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx)
 			}()
 
 			for {

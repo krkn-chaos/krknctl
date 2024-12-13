@@ -25,5 +25,4 @@
   "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?",
-  "debug_environment_variable": "KRKN_DEBUG"
 }
