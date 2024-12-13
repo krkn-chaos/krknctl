@@ -6,8 +6,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"log"
@@ -84,29 +86,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				yellow := color.New(color.FgYellow).SprintFunc()
 				green := color.New(color.FgGreen).SprintFunc()
 				boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
-
 				fmt.Println(fmt.Sprintf("%s", yellow("Krkn Global flags")))
-				for _, f := range globalEnvDetail.Fields {
-					if f.Default != nil && *f.Default != "" {
-						fmt.Printf("  --%s (%s): %s (Default: %s)\n", *f.Name, f.Type.String(), *f.Description, *f.Default)
-					} else {
-						fmt.Printf("  --%s (%s): %s\n", *f.Name, f.Type.String(), *f.Description)
-					}
-
-				}
-
+				printHelp(*globalEnvDetail)
 				fmt.Println(fmt.Sprintf("\n%s %s", boldGreen(scenarioDetail.Name), green("Flags")))
-				for _, f := range scenarioDetail.Fields {
-					if f.Default != nil && *f.Default != "" {
-						fmt.Printf("  --%s (%s): %s (Default: %s)\n", *f.Name, f.Type.String(), *f.Description, *f.Default)
-					} else {
-						fmt.Printf("  --%s (%s): %s\n", *f.Name, f.Type.String(), *f.Description)
-					}
-
-				}
-
+				printHelp(*scenarioDetail)
 				fmt.Print("\n\n")
-
 			})
 
 			return nil
@@ -288,4 +272,21 @@ func checkStringArgValue(args []string, index int) error {
 		return fmt.Errorf("%s has no value", args[index])
 	}
 	return nil
+}
+
+func printHelp(scenario models.ScenarioDetail) {
+	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
+	for _, f := range scenario.Fields {
+
+		enum := ""
+		if f.Type == typing.Enum {
+			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
+		}
+		def := ""
+		if f.Default != nil && *f.Default != "" {
+			def = fmt.Sprintf("(Default: %s)", *f.Default)
+		}
+
+		fmt.Printf("\t--%s %s: %s [%s]%s\n", *f.Name, boldWhite(enum), *f.Description, boldWhite(f.Type.String()), def)
+	}
 }
