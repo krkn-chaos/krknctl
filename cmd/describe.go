@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
@@ -18,13 +18,9 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 		Long:  `describes a scenario`,
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return nil, cobra.ShellCompDirectiveError
-			}
 			provider := GetProvider(false, factory)
 
-			scenarios, err := FetchScenarios(provider, dataSource)
+			scenarios, err := FetchScenarios(provider)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -34,14 +30,10 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0])
 			if err != nil {
 				return err
 			}

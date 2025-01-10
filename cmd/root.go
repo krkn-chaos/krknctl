@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/spf13/cobra"
@@ -53,7 +53,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
-	runCmd.LocalFlags().Bool("debug", false, "if set this flag will enable debug output in krkn")
+
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
@@ -66,9 +66,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
-	graphRunCmd.Flags().Bool("debug", false, "if set this flag will enable debug output in krkn")
 
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
+	graphScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
 	graphCmd.AddCommand(graphRunCmd)
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)

@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"log"
 	"os"
 	"strings"
@@ -17,7 +19,8 @@ import (
 )
 
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
-	collectedFlags := make(map[string]*string)
+	scenarioCollectedFlags := make(map[string]*string)
+	globalCollectedFlags := make(map[string]*string)
 	var command = &cobra.Command{
 		Use:                "run",
 		Short:              "runs a scenario",
@@ -25,13 +28,8 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return nil, cobra.ShellCompDirectiveError
-			}
 			provider := GetProvider(false, factory)
-
-			scenarios, err := FetchScenarios(provider, dataSource)
+			scenarios, err := FetchScenarios(provider)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -41,15 +39,19 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0])
 			if err != nil {
 				return err
 			}
+			globalEnvDetail, err := provider.GetGlobalEnvironment()
+			if err != nil {
+				return err
+			}
+
+			globalFlags := pflag.NewFlagSet("global", pflag.ExitOnError)
+			scenarioFlags := pflag.NewFlagSet("scenario", pflag.ExitOnError)
+
 			if scenarioDetail == nil {
 				return fmt.Errorf("%s scenario not found", args[0])
 			}
@@ -59,35 +61,55 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				if field.Default != nil {
 					defaultValue = *field.Default
 				}
-				collectedFlags[*field.Name] = cmd.LocalFlags().String(*field.Name, defaultValue, *field.Description)
+				scenarioCollectedFlags[*field.Name] = scenarioFlags.String(*field.Name, defaultValue, *field.Description)
 				if err != nil {
 					return err
 				}
 
 			}
 
+			for _, field := range globalEnvDetail.Fields {
+				var defaultValue = ""
+				if field.Default != nil {
+					defaultValue = *field.Default
+				}
+				globalCollectedFlags[*field.Name] = globalFlags.String(*field.Name, defaultValue, *field.Description)
+				if err != nil {
+					return err
+				}
+			}
+
+			cmd.LocalFlags().AddFlagSet(globalFlags)
+			cmd.LocalFlags().AddFlagSet(scenarioFlags)
+
+			cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
+				yellow := color.New(color.FgYellow).SprintFunc()
+				green := color.New(color.FgGreen).SprintFunc()
+				boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
+				fmt.Println(fmt.Sprintf("%s", yellow("Krkn Global flags")))
+				printHelp(*globalEnvDetail)
+				fmt.Println(fmt.Sprintf("\n%s %s", boldGreen(scenarioDetail.Name), green("Flags")))
+				printHelp(*scenarioDetail)
+				fmt.Print("\n\n")
+			})
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			(*scenarioOrchestrator).PrintContainerRuntime()
-			spinner := NewSpinnerWithSuffix("validating input...")
-			dataSource, err := BuildDataSource(config, false, nil)
-			if err != nil {
-				return err
-			}
+			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
 
 			// Starts validating input message
 			spinner.Start()
 
 			runDetached := false
-			debug := false
 
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], dataSource)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0])
 			if err != nil {
 				return err
 			}
-
+			globalDetail, err := provider.GetGlobalEnvironment()
 			if err != nil {
 				return err
 			}
@@ -134,8 +156,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						runDetached = true
 					}
 
-					if a == "--debug" {
-						debug = true
+					if a == "--help" {
+						spinner.Stop()
+						cmd.Help()
+						return nil
 					}
 				}
 			}
@@ -155,38 +179,32 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if alertsProfile != nil {
 				volumes[*alertsProfile] = config.AlertsProfilePath
 			}
+			spinner.Suffix = "validating input ..."
 			//dynamic flags parsing
-			for k := range collectedFlags {
-				field := scenarioDetail.GetFieldByName(k)
-				if field == nil {
-					return fmt.Errorf("field %s not found", k)
-				}
-				var foundArg *string = nil
-				for i, a := range args {
-					if a == fmt.Sprintf("--%s", k) {
-						if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-							return fmt.Errorf("%s has no value", args[i])
-						}
-						foundArg = &args[i+1]
-					}
-				}
-				if field != nil {
-
-					value, err := field.Validate(foundArg)
-					if err != nil {
-						return err
-					}
-					if value != nil && field.Type != typing.File {
-						environment[*field.Variable] = *value
-					} else if value != nil && field.Type == typing.File {
-						fileSrcDst := strings.Split(*value, ":")
-						volumes[fileSrcDst[0]] = fileSrcDst[1]
-					}
-
-				}
-
+			scenarioEnv, scenarioVol, err := ParseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
+			if err != nil {
+				return err
 			}
-			// stops the spinner before printing the input table to not disrupt it
+			globalEnv, globalVol, err := ParseFlags(globalDetail, args, globalCollectedFlags, true)
+			if err != nil {
+				return err
+			}
+
+			for k, v := range *scenarioVol {
+				volumes[k] = v
+			}
+
+			for k, v := range *globalVol {
+				volumes[k] = v
+			}
+
+			for k, v := range *scenarioEnv {
+				environment[k] = v
+			}
+			for k, v := range *globalEnv {
+				environment[k] = v
+			}
+
 			spinner.Stop()
 
 			tbl := NewEnvironmentTable(environment)
@@ -220,7 +238,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, debug)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn)
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -231,7 +249,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				scenarioDuration := time.Since(startTime)
 				fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
 			} else {
-				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, debug)
+				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn)
 				if err != nil {
 					return err
 				}
@@ -245,6 +263,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 	}
+
 	return command
 }
 
@@ -253,4 +272,21 @@ func checkStringArgValue(args []string, index int) error {
 		return fmt.Errorf("%s has no value", args[index])
 	}
 	return nil
+}
+
+func printHelp(scenario models.ScenarioDetail) {
+	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
+	for _, f := range scenario.Fields {
+
+		enum := ""
+		if f.Type == typing.Enum {
+			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
+		}
+		def := ""
+		if f.Default != nil && *f.Default != "" {
+			def = fmt.Sprintf("(Default: %s)", *f.Default)
+		}
+
+		fmt.Printf("\t--%s %s: %s [%s]%s\n", *f.Name, boldWhite(enum), *f.Description, boldWhite(f.Type.String()), def)
+	}
 }

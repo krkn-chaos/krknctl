@@ -11,7 +11,7 @@ import (
 	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/docker/docker/api/types/mount"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
@@ -51,7 +51,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, debug bool) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context) (*string, error) {
 	imageExists, err := images.Exists(ctx, image, nil)
 	if cache == false || imageExists == false {
 
@@ -95,12 +95,6 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 
 	s.Name = containerName
 	s.Env = env
-	if debug == true {
-		s.Env[c.GetConfig().DebugEnvironmentVariable] = "True"
-	}
-
-	// THIS WILL BE REMOVED WHEN GLOBAL ENV WILL BE INTRODUCED
-	s.Env["WAIT_DURATION"] = "1"
 
 	for k, v := range volumeMounts {
 		containerMount := specs.Mount{
@@ -321,9 +315,9 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 
 // common functions
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, debug bool) (*string, error) {
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
 	time.Sleep(2)
-	return scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, debug)
+	return scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
@@ -335,9 +329,9 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer,
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context, debug bool) {
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context) {
 	//TODO: add a getconfig method in scenarioOrchestrator
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx, debug)
+	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {

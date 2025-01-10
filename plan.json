@@ -1,38 +1,55 @@
 {
   "_comment": {
-    "_comment": "****DELETE THIS NODE**** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). Define dependencies between scenarios using the `depends_on` field, ensuring there are no cycles (including transitive ones) or self-references.Nodes not referenced will not be executed, Nodes without dependencies will run first, while nodes that share the same parent will execute in parallel. [CURRENT ROOT SCENARIO IS `node-cpu-hog-lachrymogenic`]"
+    "_comment": "**READ CAREFULLY** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). Define dependencies between scenarios using the `depends_on` field, ensuring there are no cycles (including transitive ones) or self-references.Nodes not referenced will not be executed, Nodes without dependencies will run first, while nodes that share the same parent will execute in parallel. [CURRENT ROOT SCENARIO IS `dummy-scenario-keraterpeton`]"
   },
-  "node-cpu-hog-arctogaeal": {
-    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
-    "name": "node-cpu-hog",
+  "dummy-scenario-keraterpeton": {
+    "_comment": "I'm the root Node!",
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
     "env": {
-      "NAMESPACE": "default",
-      "NODE_CPU_CORE": "2",
-      "NODE_CPU_PERCENTAGE": "50",
-      "TOTAL_CHAOS_DURATION": "5"
-    },
-    "depends_on": "node-cpu-hog-lachrymogenic"
-  },
-  "node-cpu-hog-lachrymogenic": {
-    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
-    "name": "node-cpu-hog",
-    "env": {
-      "NAMESPACE": "default",
-      "NODE_CPU_CORE": "2",
-      "NODE_CPU_PERCENTAGE": "50",
-      "TOTAL_CHAOS_DURATION": "5"
+      "ALERTS_PATH": "config/alerts.yaml",
+      "CAPTURE_METRICS": "False",
+      "CERBERUS_ENABLED": "False",
+      "CERBERUS_URL": "http://0.0.0.0:8080",
+      "CHECK_CRITICAL_ALERTS": "False",
+      "DAEMON_MODE": "False",
+      "DISTRIBUTION": "openshift",
+      "ENABLE_ALERTS": "False",
+      "ENABLE_ES": "False",
+      "END": "10",
+      "ES_ALERTS_INDEX": "krkn-alerts",
+      "ES_COLLECT_ALERTS": "False",
+      "ES_COLLECT_METRICS": "False",
+      "ES_METRICS_INDEX": "krkn-metrics",
+      "ES_PASSWORD": "",
+      "ES_PORT": "443",
+      "ES_SERVER": "http://0.0.0.0",
+      "ES_TELEMETRY_INDEX": "krkn-telemetry",
+      "ES_USERNAME": "elastic",
+      "ES_VERIFY_CERTS": "False",
+      "EXIT_STATUS": "0",
+      "ITERATIONS": "1",
+      "KRKN_DEBUG": "False",
+      "KRKN_KUBE_CONFIG": "/home/krkn/.kube/config",
+      "TELEMETRY_API_URL": "https://ulnmf9xv7j.execute-api.us-west-2.amazonaws.com/production",
+      "TELEMETRY_ARCHIVE_PATH": "/tmp",
+      "TELEMETRY_ARCHIVE_SIZE": "1000",
+      "TELEMETRY_BACKUP_THREADS": "5",
+      "TELEMETRY_CLI_PATH": "",
+      "TELEMETRY_ENABLED": "False",
+      "TELEMETRY_EVENTS_BACKUP": "True",
+      "TELEMETRY_FILTER_PATTERN": "[\"(\\\\w{3}\\\\s\\\\d{1,2}\\\\s\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d+).+\",\"kinit (\\\\d+/\\\\d+/\\\\d+\\\\s\\\\d{2}:\\\\d{2}:\\\\d{2})\\\\s+\",\"(\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d+Z).+\"]",
+      "TELEMETRY_FULL_PROMETHEUS_BACKUP": "False",
+      "TELEMETRY_GROUP": "default",
+      "TELEMETRY_LOGS_BACKUP": "False",
+      "TELEMETRY_MAX_RETRIES": "0",
+      "TELEMETRY_PASSWORD": "",
+      "TELEMETRY_PROMETHEUS_BACKUP": "True",
+      "TELEMETRY_RUN_TAG": "chaos",
+      "TELEMETRY_USERNAME": "redhat-chaos",
+      "UUID": "",
+      "WAIT_DURATION": "1"
     }
-  },
-  "node-cpu-hog-tutelo": {
-    "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
-    "name": "node-cpu-hog",
-    "env": {
-      "NAMESPACE": "default",
-      "NODE_CPU_CORE": "2",
-      "NODE_CPU_PERCENTAGE": "50",
-      "TOTAL_CHAOS_DURATION": "5"
-    },
-    "depends_on": "node-cpu-hog-lachrymogenic"
   }
 }
 

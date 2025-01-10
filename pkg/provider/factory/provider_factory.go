@@ -1,7 +1,7 @@
 package factory
 
 import (
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/offline"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"

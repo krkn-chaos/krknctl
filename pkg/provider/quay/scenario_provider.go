@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
@@ -23,7 +23,7 @@ type ScenarioProvider struct {
 	Config *config.Config
 }
 
-func (p *ScenarioProvider) GetRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
 	tagBaseUrl, err := url.Parse(dataSource + "/tag")
 	if err != nil {
 		return nil, err
@@ -65,6 +65,19 @@ func (p *ScenarioProvider) GetRegistryImages(dataSource string) (*[]models.Scena
 	return &scenarioTags, deferErr
 }
 
+func (p *ScenarioProvider) GetRegistryImages() (*[]models.ScenarioTag, error) {
+	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
+	if err != nil {
+		return nil, err
+	}
+
+	scenarioTags, err := p.getRegistryImages(dataSource)
+	if err != nil {
+		return nil, err
+	}
+	return scenarioTags, nil
+}
+
 func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.ScenarioNode {
 	node := models2.ScenarioNode{}
 	node.Comment = fmt.Sprintf("**READ CAREFULLY** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). "+
@@ -74,7 +87,7 @@ func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.S
 	return node
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource string) (*string, error) {
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error) {
 	var scenarioDetails []models.ScenarioDetail
 
 	// handles babble panic when american word dictionary is not installed
@@ -87,7 +100,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 	babbler := babble.NewBabbler()
 	babbler.Count = 1
 	for _, scenarioName := range scenarios {
-		scenarioDetail, err := p.GetScenarioDetail(scenarioName, dataSource)
+		scenarioDetail, err := p.GetScenarioDetail(scenarioName)
 
 		if err != nil {
 			return nil, err
@@ -99,7 +112,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 
 		scenarioDetails = append(scenarioDetails, *scenarioDetail)
 	}
-	// builds all the indexes for the json upfront so I can suggest the root node in the _comment
+	// builds all the indexes for the json upfront, so I can suggest the root node in the _comment
 	var indexes []string
 	for _, scenario := range scenarios {
 		indexes = append(indexes, fmt.Sprintf("%s-%s", scenario, strings.ToLower(babbler.Babble())))
@@ -144,6 +157,18 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 			}
 
 		}
+
+		if includeGlobalEnv == true {
+			globalDetail, err := p.GetGlobalEnvironment()
+			if err != nil {
+				return nil, err
+			}
+
+			for _, field := range globalDetail.Fields {
+				scenarioNode.Env[*field.Variable] = *field.Default
+
+			}
+		}
 		scenarioNodes[indexes[i]] = scenarioNode
 	}
 
@@ -159,22 +184,8 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, dataSource stri
 	return &jsonBuf, nil
 }
 
-func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string) (*models.ScenarioDetail, error) {
-	scenarios, err := p.GetRegistryImages(dataSource)
-	if err != nil {
-		return nil, err
-	}
-	var foundScenario *models.ScenarioTag = nil
-	for _, scenarioTag := range *scenarios {
-		if scenarioTag.Name == scenario {
-			foundScenario = &scenarioTag
-		}
-	}
-	if foundScenario == nil {
-		return nil, nil
-	}
-
-	baseURL, err := url.Parse(dataSource + "/manifest/" + foundScenario.Digest)
+func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag) (*models.ScenarioDetail, error) {
+	baseURL, err := url.Parse(dataSource + "/manifest/" + (*foundScenario).Digest)
 	if err != nil {
 		return nil, err
 	}
@@ -237,6 +248,62 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, dataSource string)
 	scenarioDetail.Description = *parsedDescription
 	scenarioDetail.Fields = parsedInputFields
 	return &scenarioDetail, deferErr
+}
+
+func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioDetail, error) {
+	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
+	if err != nil {
+		return nil, err
+	}
+	scenarios, err := p.GetRegistryImages()
+	if err != nil {
+		return nil, err
+	}
+	var foundScenario *models.ScenarioTag = nil
+	for _, scenarioTag := range *scenarios {
+		if scenarioTag.Name == scenario {
+			foundScenario = &scenarioTag
+		}
+	}
+	if foundScenario == nil {
+		return nil, nil
+	}
+
+	scenarioDetail, err := p.getScenarioDetail(dataSource, foundScenario)
+	if err != nil {
+		return nil, err
+	}
+	return scenarioDetail, nil
+}
+
+func (p *ScenarioProvider) GetGlobalEnvironment() (*models.ScenarioDetail, error) {
+	dataSource, err := p.Config.GetQuayEnvironmentApiUri()
+	if err != nil {
+		return nil, err
+	}
+	var foundScenario *models.ScenarioTag = nil
+	scenarios, err := p.getRegistryImages(dataSource)
+	if err != nil {
+		return nil, err
+	}
+	if scenarios == nil {
+		return nil, fmt.Errorf("no tags found in registry %s", dataSource)
+	}
+	for _, scenarioTag := range *scenarios {
+		if scenarioTag.Name == p.Config.QuayBaseImageTag {
+			foundScenario = &scenarioTag
+		}
+	}
+	if foundScenario == nil {
+		return nil, nil
+	}
+
+	globalEnvDetail, err := p.getScenarioDetail(dataSource, foundScenario)
+	if err != nil {
+		return nil, err
+	}
+	return globalEnvDetail, nil
+
 }
 
 func (p *ScenarioProvider) parseTitle(s string) (*string, error) {

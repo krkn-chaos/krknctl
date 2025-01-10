@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	krknctlconfig "github.com/krkn-chaos/krknctl/internal/config"
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/stretchr/testify/assert"
 	"io/fs"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	dockercontainer "github.com/docker/docker/api/types/container"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/test"
 	"github.com/stretchr/testify/assert"

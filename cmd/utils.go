@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/briandowns/spinner"
-	"github.com/krkn-chaos/krknctl/internal/config"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -39,8 +43,8 @@ func GetProvider(offline bool, providerFactory *factory.ProviderFactory) provide
 	return dataProvider
 }
 
-func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (*[]string, error) {
-	scenarios, err := provider.GetRegistryImages(dataSource)
+func FetchScenarios(provider provider.ScenarioDataProvider) (*[]string, error) {
+	scenarios, err := provider.GetRegistryImages()
 	if err != nil {
 		return nil, err
 	}
@@ -51,27 +55,46 @@ func FetchScenarios(provider provider.ScenarioDataProvider, dataSource string) (
 	return &foundScenarios, nil
 }
 
-func BuildDataSource(config config.Config, offline bool, offlineSource *string) (string, error) {
-	var dataSource = ""
-	if offline == true {
-		if offlineSource != nil {
-			dataSource = *offlineSource
-		} else {
-			dataSource = ""
-		}
-	} else {
-		var err error
-		dataSource, err = config.GetQuayRepositoryApiUri()
-		if err != nil {
-			return "", err
-		}
-	}
-	return dataSource, nil
-}
-
 func CheckFileExists(filePath string) bool {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return false
 	}
 	return true
+}
+
+func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
+	environment := make(map[string]string)
+	volumes := make(map[string]string)
+	for k := range scenarioCollectedFlags {
+		field := scenarioDetail.GetFieldByName(k)
+		if field == nil {
+			return nil, nil, fmt.Errorf("field %s not found", k)
+		}
+		var foundArg *string = nil
+		for i, a := range args {
+			if a == fmt.Sprintf("--%s", k) {
+				if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
+					return nil, nil, fmt.Errorf("%s has no value", args[i])
+				}
+				foundArg = &args[i+1]
+			}
+		}
+		var value *string = nil
+		if foundArg != nil || skipDefault == false {
+			value, err = field.Validate(foundArg)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		if value != nil && field.Type != typing.File {
+			environment[*field.Variable] = *value
+		} else if value != nil && field.Type == typing.File {
+			fileSrcDst := strings.Split(*value, ":")
+			volumes[fileSrcDst[0]] = fileSrcDst[1]
+		}
+
+	}
+
+	return &environment, &volumes, nil
 }

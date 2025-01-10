@@ -10,8 +10,10 @@ type Config struct {
 	Version                    string `json:"version"`
 	QuayHost                   string `json:"quay_host"`
 	QuayOrg                    string `json:"quay_org"`
-	QuayRegistry               string `json:"quay_registry"`
-	QuayRepositoryApi          string `json:"quay_repositoryApi"`
+	QuayScenarioRegistry       string `json:"quay_scenario_registry"`
+	QuayBaseImageRegistry      string `json:"quay_base_image_registry"`
+	QuayBaseImageTag           string `json:"quay_base_image_tag"`
+	QuayRepositoryApi          string `json:"quay_repository_api"`
 	ContainerPrefix            string `json:"container_prefix"`
 	KubeconfigPrefix           string `json:"kubeconfig_prefix"`
 	PodmanDarwinSocketTemplate string `json:"podman_darwin_socket_template"`
@@ -30,7 +32,6 @@ type Config struct {
 	LabelTitleRegex            string `json:"label_title_regex"`
 	LabelDescriptionRegex      string `json:"label_description_regex"`
 	LabelInputFieldsRegex      string `json:"label_input_fields_regex"`
-	DebugEnvironmentVariable   string `json:"debug_environment_variable"`
 }
 
 //go:embed config.json
@@ -46,16 +47,25 @@ func LoadConfig() (Config, error) {
 }
 
 func (c *Config) GetQuayImageUri() (string, error) {
-	imageUri, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayRegistry)
+	imageUri, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
 	return imageUri, nil
 }
 
-func (c *Config) GetQuayRepositoryApiUri() (string, error) {
+func (c *Config) GetQuayScenarioRepositoryApiUri() (string, error) {
 	baseHost := "https://" + c.QuayHost
-	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayRegistry)
+	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayScenarioRegistry)
+	if err != nil {
+		return "", err
+	}
+	return repositoryUri, nil
+}
+
+func (c *Config) GetQuayEnvironmentApiUri() (string, error) {
+	baseHost := "https://" + c.QuayHost
+	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayBaseImageRegistry)
 	if err != nil {
 		return "", err
 	}
