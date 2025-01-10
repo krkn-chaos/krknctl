@@ -25,7 +25,7 @@ jobs:
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' internal/config/config.json) > internal/config/config.json 
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json 
 
     - name: build linux amd64
       env:
