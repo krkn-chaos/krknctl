@@ -7,31 +7,37 @@ import (
 )
 
 type Config struct {
-	Version                    string `json:"version"`
-	QuayHost                   string `json:"quay_host"`
-	QuayOrg                    string `json:"quay_org"`
-	QuayScenarioRegistry       string `json:"quay_scenario_registry"`
-	QuayBaseImageRegistry      string `json:"quay_base_image_registry"`
-	QuayBaseImageTag           string `json:"quay_base_image_tag"`
-	QuayRepositoryApi          string `json:"quay_repository_api"`
-	ContainerPrefix            string `json:"container_prefix"`
-	KubeconfigPrefix           string `json:"kubeconfig_prefix"`
-	PodmanDarwinSocketTemplate string `json:"podman_darwin_socket_template"`
-	PodmanLinuxSocketTemplate  string `json:"podman_linux_socket_template"`
-	PodmanSocketRoot           string `json:"podman_socket_root_linux"`
-	PodmanRunningState         string `json:"podman_running_state"`
-	DockerSocketRoot           string `json:"docker_socket_root"`
-	DockerRunningState         string `json:"docker_running_state"`
-	DefaultContainerPlatform   string `json:"default_container_platform"`
-	MetricsProfilePath         string `json:"metrics_profile_path"`
-	AlertsProfilePath          string `json:"alerts_profile_path"`
-	KubeconfigPath             string `json:"kubeconfig_path"`
-	LabelTitle                 string `json:"label_title"`
-	LabelDescription           string `json:"label_description"`
-	LabelInputFields           string `json:"label_input_fields"`
-	LabelTitleRegex            string `json:"label_title_regex"`
-	LabelDescriptionRegex      string `json:"label_description_regex"`
-	LabelInputFieldsRegex      string `json:"label_input_fields_regex"`
+	Version                     string `json:"version"`
+	QuayHost                    string `json:"quay_host"`
+	QuayOrg                     string `json:"quay_org"`
+	QuayScenarioRegistry        string `json:"quay_scenario_registry"`
+	QuayBaseImageRegistry       string `json:"quay_base_image_registry"`
+	QuayBaseImageTag            string `json:"quay_base_image_tag"`
+	QuayRepositoryApi           string `json:"quay_repository_api"`
+	ContainerPrefix             string `json:"container_prefix"`
+	KubeconfigPrefix            string `json:"kubeconfig_prefix"`
+	PodmanDarwinSocketTemplate  string `json:"podman_darwin_socket_template"`
+	PodmanLinuxSocketTemplate   string `json:"podman_linux_socket_template"`
+	PodmanSocketRoot            string `json:"podman_socket_root_linux"`
+	PodmanRunningState          string `json:"podman_running_state"`
+	DockerSocketRoot            string `json:"docker_socket_root"`
+	DockerRunningState          string `json:"docker_running_state"`
+	DefaultContainerPlatform    string `json:"default_container_platform"`
+	MetricsProfilePath          string `json:"metrics_profile_path"`
+	AlertsProfilePath           string `json:"alerts_profile_path"`
+	KubeconfigPath              string `json:"kubeconfig_path"`
+	LabelTitle                  string `json:"label_title"`
+	LabelDescription            string `json:"label_description"`
+	LabelInputFields            string `json:"label_input_fields"`
+	LabelTitleGlobal            string `json:"label_title_global"`
+	LabelDescriptionGlobal      string `json:"label_description_global"`
+	LabelInputFieldsGlobal      string `json:"label_input_fields_global"`
+	LabelTitleRegex             string `json:"label_title_regex"`
+	LabelDescriptionRegex       string `json:"label_description_regex"`
+	LabelInputFieldsRegex       string `json:"label_input_fields_regex"`
+	LabelTitleRegexGlobal       string `json:"label_title_regex_global"`
+	LabelDescriptionRegexGlobal string `json:"label_description_regex_global"`
+	LabelInputFieldsRegexGlobal string `json:"label_input_fields_regex_global"`
 }
 
 //go:embed config.json

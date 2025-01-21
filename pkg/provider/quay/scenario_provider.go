@@ -184,7 +184,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 	return &jsonBuf, nil
 }
 
-func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag) (*models.ScenarioDetail, error) {
+func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
 	baseURL, err := url.Parse(dataSource + "/manifest/" + (*foundScenario).Digest)
 	if err != nil {
 		return nil, err
@@ -215,10 +215,18 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,
 	}
-
-	titleLabel := manifest.GetKrknctlLabel(p.Config.LabelTitle)
-	descriptionLabel := manifest.GetKrknctlLabel(p.Config.LabelDescription)
-	inputFieldsLabel := manifest.GetKrknctlLabel(p.Config.LabelInputFields)
+	var titleLabel *string = nil
+	var descriptionLabel *string = nil
+	var inputFieldsLabel *string = nil
+	if isGlobalEnvironment == true {
+		titleLabel = manifest.GetKrknctlLabel(p.Config.LabelTitleGlobal)
+		descriptionLabel = manifest.GetKrknctlLabel(p.Config.LabelDescriptionGlobal)
+		inputFieldsLabel = manifest.GetKrknctlLabel(p.Config.LabelInputFieldsGlobal)
+	} else {
+		titleLabel = manifest.GetKrknctlLabel(p.Config.LabelTitle)
+		descriptionLabel = manifest.GetKrknctlLabel(p.Config.LabelDescription)
+		inputFieldsLabel = manifest.GetKrknctlLabel(p.Config.LabelInputFields)
+	}
 
 	if titleLabel == nil {
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelTitle, foundScenario.Name, foundScenario.Digest)
@@ -230,16 +238,16 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelInputFields, foundScenario.Name, foundScenario.Digest)
 	}
 
-	parsedTitle, err := p.parseTitle(*titleLabel)
+	parsedTitle, err := p.parseTitle(*titleLabel, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
-	parsedDescription, err := p.parseDescription(*descriptionLabel)
+	parsedDescription, err := p.parseDescription(*descriptionLabel, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedInputFields, err := p.parseInputFields(*inputFieldsLabel)
+	parsedInputFields, err := p.parseInputFields(*inputFieldsLabel, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +277,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioD
 		return nil, nil
 	}
 
-	scenarioDetail, err := p.getScenarioDetail(dataSource, foundScenario)
+	scenarioDetail, err := p.getScenarioDetail(dataSource, foundScenario, false)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +306,7 @@ func (p *ScenarioProvider) GetGlobalEnvironment() (*models.ScenarioDetail, error
 		return nil, nil
 	}
 
-	globalEnvDetail, err := p.getScenarioDetail(dataSource, foundScenario)
+	globalEnvDetail, err := p.getScenarioDetail(dataSource, foundScenario, true)
 	if err != nil {
 		return nil, err
 	}
@@ -306,8 +314,14 @@ func (p *ScenarioProvider) GetGlobalEnvironment() (*models.ScenarioDetail, error
 
 }
 
-func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
-	reDoubleQuotes, err := regexp.Compile(p.Config.LabelTitleRegex)
+func (p *ScenarioProvider) parseTitle(s string, isGlobalEnvironment bool) (*string, error) {
+	var regex string = ""
+	if isGlobalEnvironment == true {
+		regex = p.Config.LabelTitleRegexGlobal
+	} else {
+		regex = p.Config.LabelTitleRegex
+	}
+	reDoubleQuotes, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
 	}
@@ -318,8 +332,14 @@ func (p *ScenarioProvider) parseTitle(s string) (*string, error) {
 	return &matches[1], nil
 }
 
-func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
-	re, err := regexp.Compile(p.Config.LabelDescriptionRegex)
+func (p *ScenarioProvider) parseDescription(s string, isGlobalEnvironment bool) (*string, error) {
+	var regex string = ""
+	if isGlobalEnvironment == true {
+		regex = p.Config.LabelDescriptionRegexGlobal
+	} else {
+		regex = p.Config.LabelDescriptionRegex
+	}
+	re, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
 	}
@@ -330,8 +350,14 @@ func (p *ScenarioProvider) parseDescription(s string) (*string, error) {
 	return &matches[1], nil
 }
 
-func (p *ScenarioProvider) parseInputFields(s string) ([]typing.InputField, error) {
-	re, err := regexp.Compile(p.Config.LabelInputFieldsRegex)
+func (p *ScenarioProvider) parseInputFields(s string, isGlobalEnvironment bool) ([]typing.InputField, error) {
+	var regex string = ""
+	if isGlobalEnvironment == true {
+		regex = p.Config.LabelInputFieldsRegexGlobal
+	} else {
+		regex = p.Config.LabelInputFieldsRegex
+	}
+	re, err := regexp.Compile(regex)
 	if err != nil {
 		return nil, err
 	}

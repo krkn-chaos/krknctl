@@ -103,7 +103,7 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	config := getConfig(t)
 	provider := ScenarioProvider{Config: &config}
-
+	config.QuayBaseImageRegistry = "krknctl-test"
 	baseImageScenario, err := provider.GetGlobalEnvironment()
 	assert.Nil(t, err)
 	assert.NotNil(t, baseImageScenario)
