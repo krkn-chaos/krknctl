@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
@@ -11,7 +10,7 @@ import (
 	"log"
 )
 
-func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) *cobra.Command {
+func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "describe",
 		Short: "describes a scenario",
