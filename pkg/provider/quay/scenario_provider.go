@@ -215,39 +215,44 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,
 	}
-	var titleLabel *string = nil
-	var descriptionLabel *string = nil
-	var inputFieldsLabel *string = nil
+	var titleLabel = ""
+	var descriptionLabel = ""
+	var inputFieldsLabel = ""
 	if isGlobalEnvironment == true {
-		titleLabel = manifest.GetKrknctlLabel(p.Config.LabelTitleGlobal)
-		descriptionLabel = manifest.GetKrknctlLabel(p.Config.LabelDescriptionGlobal)
-		inputFieldsLabel = manifest.GetKrknctlLabel(p.Config.LabelInputFieldsGlobal)
+		titleLabel = p.Config.LabelTitleGlobal
+		descriptionLabel = p.Config.LabelDescriptionGlobal
+		inputFieldsLabel = p.Config.LabelInputFieldsGlobal
+
 	} else {
-		titleLabel = manifest.GetKrknctlLabel(p.Config.LabelTitle)
-		descriptionLabel = manifest.GetKrknctlLabel(p.Config.LabelDescription)
-		inputFieldsLabel = manifest.GetKrknctlLabel(p.Config.LabelInputFields)
+		titleLabel = p.Config.LabelTitle
+		descriptionLabel = p.Config.LabelDescription
+		inputFieldsLabel = p.Config.LabelInputFields
 	}
 
-	if titleLabel == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelTitle, foundScenario.Name, foundScenario.Digest)
+	foundTitle := manifest.GetKrknctlLabel(titleLabel)
+	foundDescription := manifest.GetKrknctlLabel(descriptionLabel)
+	foundInputFields := manifest.GetKrknctlLabel(inputFieldsLabel)
+
+	if foundTitle == nil {
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
 	}
-	if descriptionLabel == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelDescription, foundScenario.Name, foundScenario.Digest)
+	if foundDescription == nil {
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
 	}
-	if inputFieldsLabel == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", p.Config.LabelInputFields, foundScenario.Name, foundScenario.Digest)
+	if foundInputFields == nil {
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
 	}
 
-	parsedTitle, err := p.parseTitle(*titleLabel, isGlobalEnvironment)
+	parsedTitle, err := p.parseTitle(*foundTitle, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
-	parsedDescription, err := p.parseDescription(*descriptionLabel, isGlobalEnvironment)
+	parsedDescription, err := p.parseDescription(*foundDescription, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedInputFields, err := p.parseInputFields(*inputFieldsLabel, isGlobalEnvironment)
+	parsedInputFields, err := p.parseInputFields(*foundInputFields, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
