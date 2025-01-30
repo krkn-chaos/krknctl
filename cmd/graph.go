@@ -194,7 +194,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			name *string
 			err  error
 		}{name: &n.Name, err: nil}
-		scenarioDetail, err := provider.GetScenarioDetail(n.Name)
+		scenarioDetail, err := provider.GetScenarioDetail(n.Name, nil)
 
 		if err != nil {
 			scenarioNameChannel <- &struct {
@@ -212,7 +212,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			return
 		}
 
-		globalDetail, err := provider.GetGlobalEnvironment()
+		globalDetail, err := provider.GetGlobalEnvironment(nil)
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -292,7 +292,7 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv)
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, nil)
 			if err != nil {
 				return err
 			}

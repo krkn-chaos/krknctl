@@ -56,16 +56,16 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 	for _, tag := range quayPage.Tags {
 		scenarioTags = append(scenarioTags, models.ScenarioTag{
 			Name:         tag.Name,
-			LastModified: tag.LastModified,
-			Size:         tag.Size,
-			Digest:       tag.ManifestDigest,
+			LastModified: &tag.LastModified,
+			Size:         &tag.Size,
+			Digest:       &tag.ManifestDigest,
 		})
 	}
 
 	return &scenarioTags, deferErr
 }
 
-func (p *ScenarioProvider) GetRegistryImages() (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
 	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (p *ScenarioProvider) getInstructionScenario(rootNodeName string) models2.S
 	return node
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error) {
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error) {
 	var scenarioDetails []models.ScenarioDetail
 
 	// handles babble panic when american word dictionary is not installed
@@ -100,7 +100,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 	babbler := babble.NewBabbler()
 	babbler.Count = 1
 	for _, scenarioName := range scenarios {
-		scenarioDetail, err := p.GetScenarioDetail(scenarioName)
+		scenarioDetail, err := p.GetScenarioDetail(scenarioName, nil)
 
 		if err != nil {
 			return nil, err
@@ -159,7 +159,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 		}
 
 		if includeGlobalEnv == true {
-			globalDetail, err := p.GetGlobalEnvironment()
+			globalDetail, err := p.GetGlobalEnvironment(nil)
 			if err != nil {
 				return nil, err
 			}
@@ -185,7 +185,11 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 }
 
 func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
-	baseURL, err := url.Parse(dataSource + "/manifest/" + (*foundScenario).Digest)
+	scenarioDigest := ""
+	if ((*foundScenario).Digest) != nil {
+		scenarioDigest = *((*foundScenario).Digest)
+	}
+	baseURL, err := url.Parse(dataSource + "/manifest/" + scenarioDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -234,13 +238,13 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	foundInputFields := manifest.GetKrknctlLabel(inputFieldsLabel)
 
 	if foundTitle == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
 	}
 	if foundDescription == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
 	}
 	if foundInputFields == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
 	}
 
 	parsedTitle, err := p.parseTitle(*foundTitle, isGlobalEnvironment)
@@ -263,12 +267,12 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	return &scenarioDetail, deferErr
 }
 
-func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioDetail, error) {
+func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
 	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
 	if err != nil {
 		return nil, err
 	}
-	scenarios, err := p.GetRegistryImages()
+	scenarios, err := p.GetRegistryImages(nil)
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +293,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string) (*models.ScenarioD
 	return scenarioDetail, nil
 }
 
-func (p *ScenarioProvider) GetGlobalEnvironment() (*models.ScenarioDetail, error) {
+func (p *ScenarioProvider) GetGlobalEnvironment(*models.RegistryV2) (*models.ScenarioDetail, error) {
 	dataSource, err := p.Config.GetQuayEnvironmentApiUri()
 	if err != nil {
 		return nil, err

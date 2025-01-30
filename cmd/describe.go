@@ -32,7 +32,7 @@ func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0])
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
 			if err != nil {
 				return err
 			}

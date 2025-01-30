@@ -10,8 +10,8 @@ const (
 )
 
 type ScenarioDataProvider interface {
-	GetRegistryImages() (*[]models.ScenarioTag, error)
-	GetGlobalEnvironment() (*models.ScenarioDetail, error)
-	GetScenarioDetail(scenario string) (*models.ScenarioDetail, error)
-	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool) (*string, error)
+	GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error)
+	GetGlobalEnvironment(registry *models.RegistryV2) (*models.ScenarioDetail, error)
+	GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error)
+	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error)
 }

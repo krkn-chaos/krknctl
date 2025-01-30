@@ -153,10 +153,6 @@ func (s Setting) Valid() error {
 		if s.Val < 16384 || s.Val > 1<<24-1 {
 			return ConnectionError(ErrCodeProtocol)
 		}
-	case SettingEnableConnectProtocol:
-		if s.Val != 1 && s.Val != 0 {
-			return ConnectionError(ErrCodeProtocol)
-		}
 	}
 	return nil
 }
@@ -166,23 +162,21 @@ func (s Setting) Valid() error {
 type SettingID uint16
 
 const (
-	SettingHeaderTableSize       SettingID = 0x1
-	SettingEnablePush            SettingID = 0x2
-	SettingMaxConcurrentStreams  SettingID = 0x3
-	SettingInitialWindowSize     SettingID = 0x4
-	SettingMaxFrameSize          SettingID = 0x5
-	SettingMaxHeaderListSize     SettingID = 0x6
-	SettingEnableConnectProtocol SettingID = 0x8
+	SettingHeaderTableSize      SettingID = 0x1
+	SettingEnablePush           SettingID = 0x2
+	SettingMaxConcurrentStreams SettingID = 0x3
+	SettingInitialWindowSize    SettingID = 0x4
+	SettingMaxFrameSize         SettingID = 0x5
+	SettingMaxHeaderListSize    SettingID = 0x6
 )
 
 var settingName = map[SettingID]string{
-	SettingHeaderTableSize:       "HEADER_TABLE_SIZE",
-	SettingEnablePush:            "ENABLE_PUSH",
-	SettingMaxConcurrentStreams:  "MAX_CONCURRENT_STREAMS",
-	SettingInitialWindowSize:     "INITIAL_WINDOW_SIZE",
-	SettingMaxFrameSize:          "MAX_FRAME_SIZE",
-	SettingMaxHeaderListSize:     "MAX_HEADER_LIST_SIZE",
-	SettingEnableConnectProtocol: "ENABLE_CONNECT_PROTOCOL",
+	SettingHeaderTableSize:      "HEADER_TABLE_SIZE",
+	SettingEnablePush:           "ENABLE_PUSH",
+	SettingMaxConcurrentStreams: "MAX_CONCURRENT_STREAMS",
+	SettingInitialWindowSize:    "INITIAL_WINDOW_SIZE",
+	SettingMaxFrameSize:         "MAX_FRAME_SIZE",
+	SettingMaxHeaderListSize:    "MAX_HEADER_LIST_SIZE",
 }
 
 func (s SettingID) String() string {

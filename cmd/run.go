@@ -40,11 +40,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0])
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
 			if err != nil {
 				return err
 			}
-			globalEnvDetail, err := provider.GetGlobalEnvironment()
+			globalEnvDetail, err := provider.GetGlobalEnvironment(nil)
 			if err != nil {
 				return err
 			}
@@ -105,11 +105,11 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			runDetached := false
 
 			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0])
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
 			if err != nil {
 				return err
 			}
-			globalDetail, err := provider.GetGlobalEnvironment()
+			globalDetail, err := provider.GetGlobalEnvironment(nil)
 			if err != nil {
 				return err
 			}

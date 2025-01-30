@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
+	"sync"
 )
 
 type ScenarioOrchestrator struct {
@@ -127,7 +127,10 @@ func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os
 
 	errorChannel := make(chan error, 1)
 	finishChannel := make(chan bool, 1)
+	var mu sync.Mutex
 	go func() {
+		mu.Lock()
+		defer mu.Unlock()
 		err := containers.Attach(ctx, *containerId, nil, stdout, stderr, nil, options)
 		if err != nil {
 			errorChannel <- err
@@ -246,7 +249,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 		return nil, fmt.Errorf("container %s has no config", container.Id)
 	}
 	scenarioDetail := providermodels.ScenarioDetail{}
-	scenarioDetail.Digest = inspectData.ImageDigest
+	scenarioDetail.Digest = &inspectData.ImageDigest
 	imageAndTag := strings.Split(inspectData.ImageName, ":")
 	if len(imageAndTag) == 2 {
 		scenarioDetail.Name = imageAndTag[1]
@@ -316,7 +319,6 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 // common functions
 
 func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
-	time.Sleep(2)
 	return scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx)
 }
 

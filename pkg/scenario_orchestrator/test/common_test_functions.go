@@ -44,7 +44,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -88,7 +88,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	quayProvider := quay.ScenarioProvider{Config: &conf}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("failing-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -225,7 +225,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{Config: &config}
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, config)
@@ -379,7 +379,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	quayProvider := quay.ScenarioProvider{Config: &conf}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
-	scenario, err := quayProvider.GetScenarioDetail("failing-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -430,7 +430,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orch
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -496,7 +496,7 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
@@ -560,7 +560,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
-	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario")
+	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)

@@ -343,7 +343,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	container.ExitStatus = int32(inspectData.State.ExitCode)
 
 	scenarioDetail := providermodels.ScenarioDetail{}
-	scenarioDetail.Digest = inspectData.ContainerJSONBase.Image
+	scenarioDetail.Digest = &inspectData.ContainerJSONBase.Image
 	imageAndTag := strings.Split(inspectData.Config.Image, ":")
 	if len(imageAndTag) == 2 {
 		scenarioDetail.Name = imageAndTag[1]
