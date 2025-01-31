@@ -2,6 +2,7 @@ package quay
 
 import (
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
+	provider2 "github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -28,7 +29,11 @@ func getWrongConfig(t *testing.T) krknctlconfig.Config {
 
 func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	config := getTestConfig(t)
-	provider := ScenarioProvider{Config: &config}
+	provider := ScenarioProvider{
+		provider2.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	scenarios, err := provider.GetRegistryImages(nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
@@ -41,7 +46,11 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	}
 
 	wrongConfig := getWrongConfig(t)
-	wrongProvider := ScenarioProvider{Config: &wrongConfig}
+	wrongProvider := ScenarioProvider{
+		provider2.BaseScenarioProvider{
+			Config: wrongConfig,
+		},
+	}
 	_, err = wrongProvider.GetRegistryImages(nil)
 	assert.Error(t, err)
 
@@ -49,7 +58,11 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig(t)
-	provider := ScenarioProvider{Config: &config}
+	provider := ScenarioProvider{
+		provider2.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	scenario, err := provider.GetScenarioDetail("cpu-hog", nil)
 
 	assert.Nil(t, err)
@@ -79,7 +92,11 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 
 func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	config := getConfig(t)
-	provider := ScenarioProvider{Config: &config}
+	provider := ScenarioProvider{
+		provider2.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 
 	scenarios, err := provider.GetRegistryImages(nil)
 	assert.Nil(t, err)
@@ -102,7 +119,11 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 
 func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	config := getConfig(t)
-	provider := ScenarioProvider{Config: &config}
+	provider := ScenarioProvider{
+		provider2.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	config.QuayBaseImageRegistry = "krknctl-test"
 	baseImageScenario, err := provider.GetGlobalEnvironment(nil)
 	assert.Nil(t, err)

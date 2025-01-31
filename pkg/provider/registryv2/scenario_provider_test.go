@@ -1,14 +1,27 @@
 package registryv2
 
 import (
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
 
+func getConfig(t *testing.T) krknctlconfig.Config {
+	conf, err := krknctlconfig.LoadConfig()
+	assert.Nil(t, err)
+	return conf
+}
+
 func TestScenarioProvider_GetRegistryImages_PublicRegistry(t *testing.T) {
-	p := ScenarioProvider{}
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	r := models.RegistryV2{
 		RegistryUrl:         "quay.io",
 		ScenarioRepository:  "krkn-chaos/krkn-hub",
@@ -33,12 +46,17 @@ curl -X GET \
 */
 
 func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
-	p := ScenarioProvider{}
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := models.RegistryV2{
 		RegistryUrl:         "quay.io",
 		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn",
+		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
 		Token:               &quayToken,
 		UseTLS:              true,
 	}
@@ -55,7 +73,7 @@ func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
 	pr = models.RegistryV2{
 		RegistryUrl:         "quay.io",
 		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn",
+		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
 		Token:               &quayToken,
 		UseTLS:              true,
 	}
@@ -88,8 +106,12 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 	basicAuthUsername := "testuser"
 	basicAuthPassword := "testpassword"
 
-	p := ScenarioProvider{}
-
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
 	pr := models.RegistryV2{
 		RegistryUrl:         "localhost:5001",
 		ScenarioRepository:  "krkn-chaos/krkn-hub",
@@ -119,5 +141,34 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 	}
 	_, err = p.GetRegistryImages(&pr)
 	assert.NotNil(t, err)
+
+}
+
+func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
+	quayToken := os.Getenv("QUAY_TOKEN")
+	pr := models.RegistryV2{
+		RegistryUrl:         "quay.io",
+		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
+		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
+		Token:               &quayToken,
+		UseTLS:              true,
+	}
+
+	res, err := p.GetScenarioDetail("dummy-scenario", &pr)
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, res.Name, "dummy-scenario")
+	assert.Equal(t, res.Title, "Dummy Scenario")
+	assert.Equal(t, len(res.Fields), 2)
+	assert.NotNil(t, res.ScenarioTag.Name)
+	assert.Nil(t, res.ScenarioTag.Size)
+	assert.Nil(t, res.ScenarioTag.LastModified)
+	assert.Nil(t, res.ScenarioTag.Digest)
 
 }

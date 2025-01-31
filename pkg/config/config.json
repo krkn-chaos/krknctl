@@ -25,10 +25,10 @@
   "label_title_global": "krknctl.title.global=",
   "label_description_global": "krknctl.description.global=",
   "label_input_fields_global": "krknctl.input_fields.global=",
-  "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
+  "label_title_regex": "LABEL krknctl\\.title=\\\"?([^\"]+)\\\"?",
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?",
-  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?(.*)\\\"?",
+  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?[^\"]+\\\"?",
   "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?(.*)\\\"?",
   "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?"
 }

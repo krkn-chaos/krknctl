@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
@@ -15,12 +15,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
 type ScenarioProvider struct {
-	Config *config.Config
+	provider.BaseScenarioProvider
 }
 
 func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
@@ -232,10 +231,13 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		descriptionLabel = p.Config.LabelDescription
 		inputFieldsLabel = p.Config.LabelInputFields
 	}
-
-	foundTitle := manifest.GetKrknctlLabel(titleLabel)
-	foundDescription := manifest.GetKrknctlLabel(descriptionLabel)
-	foundInputFields := manifest.GetKrknctlLabel(inputFieldsLabel)
+	var layers []provider.ContainerLayer
+	for _, l := range manifest.Layers {
+		layers = append(layers, l)
+	}
+	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
+	foundDescription := provider.GetKrknctlLabel(descriptionLabel, layers)
+	foundInputFields := provider.GetKrknctlLabel(inputFieldsLabel, layers)
 
 	if foundTitle == nil {
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
@@ -247,16 +249,16 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
 	}
 
-	parsedTitle, err := p.parseTitle(*foundTitle, isGlobalEnvironment)
+	parsedTitle, err := p.BaseScenarioProvider.ParseTitle(*foundTitle, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
-	parsedDescription, err := p.parseDescription(*foundDescription, isGlobalEnvironment)
+	parsedDescription, err := p.ParseDescription(*foundDescription, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedInputFields, err := p.parseInputFields(*foundInputFields, isGlobalEnvironment)
+	parsedInputFields, err := p.ParseInputFields(*foundInputFields, isGlobalEnvironment)
 	if err != nil {
 		return nil, err
 	}
@@ -321,63 +323,4 @@ func (p *ScenarioProvider) GetGlobalEnvironment(*models.RegistryV2) (*models.Sce
 	}
 	return globalEnvDetail, nil
 
-}
-
-func (p *ScenarioProvider) parseTitle(s string, isGlobalEnvironment bool) (*string, error) {
-	var regex string = ""
-	if isGlobalEnvironment == true {
-		regex = p.Config.LabelTitleRegexGlobal
-	} else {
-		regex = p.Config.LabelTitleRegex
-	}
-	reDoubleQuotes, err := regexp.Compile(regex)
-	if err != nil {
-		return nil, err
-	}
-	matches := reDoubleQuotes.FindStringSubmatch(s)
-	if matches == nil {
-		return nil, errors.New("title not found in image manifest")
-	}
-	return &matches[1], nil
-}
-
-func (p *ScenarioProvider) parseDescription(s string, isGlobalEnvironment bool) (*string, error) {
-	var regex string = ""
-	if isGlobalEnvironment == true {
-		regex = p.Config.LabelDescriptionRegexGlobal
-	} else {
-		regex = p.Config.LabelDescriptionRegex
-	}
-	re, err := regexp.Compile(regex)
-	if err != nil {
-		return nil, err
-	}
-	matches := re.FindStringSubmatch(s)
-	if matches == nil {
-		return nil, errors.New("description not found in image manifest")
-	}
-	return &matches[1], nil
-}
-
-func (p *ScenarioProvider) parseInputFields(s string, isGlobalEnvironment bool) ([]typing.InputField, error) {
-	var regex string = ""
-	if isGlobalEnvironment == true {
-		regex = p.Config.LabelInputFieldsRegexGlobal
-	} else {
-		regex = p.Config.LabelInputFieldsRegex
-	}
-	re, err := regexp.Compile(regex)
-	if err != nil {
-		return nil, err
-	}
-	var fields []typing.InputField
-	matches := re.FindStringSubmatch(s)
-	if matches == nil {
-		return nil, errors.New("input_fields not found in image manifest")
-	}
-	err = json.Unmarshal([]byte(matches[1]), &fields)
-	if err != nil {
-		return nil, err
-	}
-	return fields, nil
 }

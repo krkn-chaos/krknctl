@@ -28,6 +28,17 @@ func (r *RegistryV2) GetV2ScenarioRepositoryApiUri() (string, error) {
 	}
 	return url.String(), nil
 }
+func (r *RegistryV2) GetV2ScenarioDetailApiUri(scenario string) (string, error) {
+	prefix := "http://"
+	if r.UseTLS {
+		prefix = "https://"
+	}
+	url, err := url.Parse(fmt.Sprintf("%s/v2/%s/manifests/%s", prefix+r.RegistryUrl, r.ScenarioRepository, scenario))
+	if err != nil {
+		return "", err
+	}
+	return url.String(), nil
+}
 
 type ScenarioTag struct {
 	Name         string     `json:"name"`
