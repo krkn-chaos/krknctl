@@ -6,6 +6,7 @@ import (
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
@@ -40,7 +41,10 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
@@ -85,7 +89,10 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
@@ -224,7 +231,10 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &config}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: config,
+		}}
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
@@ -376,7 +386,10 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
@@ -426,7 +439,10 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orch
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
@@ -492,7 +508,10 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 
@@ -556,7 +575,10 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	currentUser, err := user.Current()
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
-	quayProvider := quay.ScenarioProvider{Config: &conf}
+	quayProvider := quay.ScenarioProvider{
+		BaseScenarioProvider: provider.BaseScenarioProvider{
+			Config: conf,
+		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
 

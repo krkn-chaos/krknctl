@@ -172,3 +172,73 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.Nil(t, res.ScenarioTag.Digest)
 
 }
+
+func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
+
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
+	quayToken := os.Getenv("QUAY_TOKEN")
+	pr := models.RegistryV2{
+		RegistryUrl:         "quay.io",
+		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
+		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
+		Token:               &quayToken,
+		UseTLS:              true,
+	}
+	res, err := p.GetGlobalEnvironment(&pr)
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, res.Title, "Krkn Base Image")
+	assert.Equal(t, res.Description, "This is the krkn base image.")
+	assert.True(t, len(res.Fields) > 0)
+
+	pr = models.RegistryV2{
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		// does not contain any latest tag, error expected
+		BaseImageRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:               &quayToken,
+		UseTLS:              true,
+	}
+	res, err = p.GetGlobalEnvironment(&pr)
+	assert.NotNil(t, err)
+	assert.Nil(t, res)
+}
+
+func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+		},
+	}
+	quayToken := os.Getenv("QUAY_TOKEN")
+	pr := models.RegistryV2{
+		RegistryUrl:         "quay.io",
+		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
+		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
+		Token:               &quayToken,
+		UseTLS:              true,
+	}
+
+	scenarios, err := p.GetRegistryImages(&pr)
+	assert.Nil(t, err)
+	assert.NotNil(t, scenarios)
+	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
+
+	json, err := p.ScaffoldScenarios(scenarioNames, false, &pr)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+
+	json, err = p.ScaffoldScenarios(scenarioNames, true, &pr)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+
+	json, err = p.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, &pr)
+	assert.Nil(t, json)
+	assert.NotNil(t, err)
+}

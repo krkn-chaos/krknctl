@@ -17,6 +17,10 @@ type ScenarioProvider struct {
 }
 
 func (s *ScenarioProvider) GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error) {
+	return s.getRegistryImages(registry, false)
+}
+
+func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2, isGlobalEnvironment bool) (*[]models.ScenarioTag, error) {
 	//TODO implement me
 	if registry == nil {
 		return nil, errors.New("registry cannot be nil in V2 scenario provider")
@@ -25,6 +29,12 @@ func (s *ScenarioProvider) GetRegistryImages(registry *models.RegistryV2) (*[]mo
 	registryUri, err := registry.GetV2ScenarioRepositoryApiUri()
 	if err != nil {
 		return nil, err
+	}
+	if isGlobalEnvironment {
+		registryUri, err = registry.GetV2BaseImageRepositoryApiUri()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	body, err := s.queryRegistry(registryUri, registry.Username, registry.Password, registry.Token, "GET")
@@ -52,7 +62,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	//req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	if token != nil {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *token))
 	}
@@ -91,8 +101,33 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 }
 
 func (s *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2) (*models.ScenarioDetail, error) {
-	//TODO implement me
-	panic("implement me")
+	if registry == nil {
+		return nil, errors.New("registry cannot be nil in V2 scenario provider")
+	}
+
+	scenarioTags, err := s.getRegistryImages(registry, true)
+	if err != nil {
+		return nil, err
+	}
+	var foundScenario *models.ScenarioTag = nil
+	for _, tag := range *scenarioTags {
+		if tag.Name == s.Config.PrivateRegistryBaseImageTag {
+			foundScenario = &tag
+		}
+	}
+	if foundScenario == nil {
+		return nil, fmt.Errorf("%s base image tag not found in repository %s", s.Config.PrivateRegistryBaseImageTag, registry.BaseImageRepository)
+	}
+	baseImageRegistryUri, err := registry.GetV2BaseImageScenarioDetailApiUri(foundScenario.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	scenarioDetail, err := s.getScenarioDetail(baseImageRegistryUri, foundScenario, true, registry)
+	if err != nil {
+		return nil, err
+	}
+	return scenarioDetail, nil
 }
 
 func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
@@ -127,8 +162,7 @@ func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 }
 
 func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error) {
-	//TODO implement me
-	panic("implement me")
+	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s)
 }
 
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
@@ -137,7 +171,6 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		return nil, err
 	}
 	manifestV2 := ManifestV2{}
-
 	if err = json.Unmarshal(*body, &manifestV2); err != nil {
 		return nil, err
 	}

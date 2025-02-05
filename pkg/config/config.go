@@ -14,6 +14,7 @@ type Config struct {
 	QuayBaseImageRegistry       string `json:"quay_base_image_registry"`
 	QuayBaseImageTag            string `json:"quay_base_image_tag"`
 	QuayRepositoryApi           string `json:"quay_repository_api"`
+	PrivateRegistryBaseImageTag string `json:"private_registry_base_image_tag"`
 	ContainerPrefix             string `json:"container_prefix"`
 	KubeconfigPrefix            string `json:"kubeconfig_prefix"`
 	PodmanDarwinSocketTemplate  string `json:"podman_darwin_socket_template"`
@@ -69,7 +70,7 @@ func (c *Config) GetQuayScenarioRepositoryApiUri() (string, error) {
 	return repositoryUri, nil
 }
 
-func (c *Config) GetQuayEnvironmentApiUri() (string, error) {
+func (c *Config) GetQuayBaseImageRepositoryApiUri() (string, error) {
 	baseHost := "https://" + c.QuayHost
 	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayBaseImageRegistry)
 	if err != nil {

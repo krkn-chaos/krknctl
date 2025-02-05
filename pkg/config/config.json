@@ -6,6 +6,7 @@
   "quay_base_image_registry" : "krkn",
   "quay_base_image_tag" : "latest",
   "quay_repository_api": "api/v1/repository",
+  "private_registry_base_image_tag": "latest",
   "container_prefix": "krknctl",
   "kubeconfig_prefix": "krknctl-kubeconfig",
   "krknctl_logs": "krknct-log",
@@ -28,7 +29,7 @@
   "label_title_regex": "LABEL krknctl\\.title=\\\"?([^\"]+)\\\"?",
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?",
-  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?[^\"]+\\\"?",
+  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?([^\"]+)\\\"?",
   "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?(.*)\\\"?",
   "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?"
 }

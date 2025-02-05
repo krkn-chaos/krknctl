@@ -3,12 +3,10 @@ package provider
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"regexp"
-	"strings"
 )
 
 type Mode int64
@@ -35,6 +33,9 @@ func (p *BaseScenarioProvider) ParseTitle(s string, isGlobalEnvironment bool) (*
 	}
 	matches := reDoubleQuotes.FindStringSubmatch(s)
 	if matches == nil {
+		return nil, errors.New("title not found in image manifest")
+	}
+	if len(matches) < 2 {
 		return nil, errors.New("title not found in image manifest")
 	}
 	return &matches[1], nil
@@ -90,16 +91,4 @@ type ScenarioDataProvider interface {
 
 type ContainerLayer interface {
 	GetCommands() []string
-}
-
-func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
-	for _, v := range layers {
-		commands := v.GetCommands()
-		for _, c := range commands {
-			if strings.Contains(c, fmt.Sprintf("LABEL %s", label)) {
-				return &c
-			}
-		}
-	}
-	return nil
 }
