@@ -30,7 +30,7 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		return nil, err
 	}
 	if cache == false || exists == false {
-		err := pullImage(ctx, cli, image, commChan)
+		err := pullImage(ctx, cli, image, commChan, registry)
 		if err != nil {
 			return nil, err
 		}
@@ -234,8 +234,16 @@ func ImageExists(ctx context.Context, cli *client.Client, imageName, expectedDig
 	return false, nil
 }
 
-func pullImage(ctx context.Context, cli *client.Client, imageName string, commChan *chan *string) error {
-	reader, err := cli.ImagePull(ctx, imageName, images.PullOptions{})
+func pullImage(ctx context.Context, cli *client.Client, imageName string, commChan *chan *string, registry *providermodels.RegistryV2) error {
+	pullOptions := images.PullOptions{}
+	if registry != nil {
+		registryAuth, err := registry.ToDockerV2AuthString()
+		if err != nil {
+			return err
+		}
+		pullOptions.RegistryAuth = *registryAuth
+	}
+	reader, err := cli.ImagePull(ctx, imageName, pullOptions)
 	if err != nil {
 		return err
 	}
@@ -431,13 +439,13 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer,
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context) (*string, error) {
-	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx)
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
 	return containerId, err
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context) {
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx)
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context, registry *providermodels.RegistryV2) {
+	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx, registry)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {

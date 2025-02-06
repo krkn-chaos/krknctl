@@ -1,7 +1,10 @@
 package models
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/docker/docker/api/types/registry"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"net/url"
 	"time"
@@ -62,6 +65,32 @@ func (r *RegistryV2) GetV2BaseImageScenarioDetailApiUri(tag string) (string, err
 		return "", err
 	}
 	return url.String(), nil
+}
+
+func (r *RegistryV2) GetPrivateRegistryUri() string {
+	return fmt.Sprintf("%s/%s", r.RegistryUrl, r.ScenarioRepository)
+}
+
+func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
+	authConfig := registry.AuthConfig{}
+	if r.Token != nil {
+		authConfig.RegistryToken = *r.Token
+	} else {
+		if r.Username != nil {
+			authConfig.Username = *r.Username
+			authConfig.Password = *r.Password
+		} else {
+			return nil, nil
+		}
+	}
+
+	encodedJSON, err := json.Marshal(authConfig)
+	if err != nil {
+		return nil, err
+	}
+	authStr := base64.URLEncoding.EncodeToString(encodedJSON)
+	return &authStr, nil
+
 }
 
 type ScenarioTag struct {
