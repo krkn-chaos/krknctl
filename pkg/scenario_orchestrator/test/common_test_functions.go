@@ -86,7 +86,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
 		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
 		Token:               &quayToken,
-		UseTLS:              true,
+		SkipTls:             true,
 	}
 
 	timestamp = time.Now().Unix()
@@ -110,7 +110,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 		BaseImageRepository: "krkn-chaos/krkn",
 		Username:            &basicAuthUsername,
 		Password:            &basicAuthPassword,
-		UseTLS:              false,
+		SkipTls:             false,
 	}
 
 	timestamp = time.Now().Unix()

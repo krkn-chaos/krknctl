@@ -30,16 +30,24 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 		Long:  `list available krkn-hub scenarios`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			provider := GetProvider(false, factory)
-			s := NewSpinnerWithSuffix("fetching scenarios...")
+			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			if err != nil {
+				return err
+			}
+			privateRegistry := false
+			if registrySettings != nil {
+				privateRegistry = true
+			}
+			provider := GetProvider(privateRegistry, factory)
+			s := NewSpinnerWithSuffix("fetching scenarios...", registrySettings)
 			s.Start()
-			scenarios, err := provider.GetRegistryImages(nil)
+			scenarios, err := provider.GetRegistryImages(registrySettings)
 			if err != nil {
 				s.Stop()
 				log.Fatalf("failed to fetch scenarios: %v", err)
 			}
 			s.Stop()
-			scenarioTable := NewScenarioTable(scenarios)
+			scenarioTable := NewScenarioTable(scenarios, privateRegistry)
 			scenarioTable.Print()
 			fmt.Print("\n")
 			return nil

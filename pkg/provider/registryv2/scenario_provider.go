@@ -85,7 +85,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("URI %s not found, is the registry V2", uri)
+		return nil, fmt.Errorf("image not found %s not found", uri)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -111,12 +111,12 @@ func (s *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2) (*m
 	}
 	var foundScenario *models.ScenarioTag = nil
 	for _, tag := range *scenarioTags {
-		if tag.Name == s.Config.PrivateRegistryBaseImageTag {
+		if tag.Name == s.Config.QuayBaseImageTag {
 			foundScenario = &tag
 		}
 	}
 	if foundScenario == nil {
-		return nil, fmt.Errorf("%s base image tag not found in repository %s", s.Config.PrivateRegistryBaseImageTag, registry.BaseImageRepository)
+		return nil, fmt.Errorf("%s base image tag not found in repository %s", s.Config.QuayBaseImageTag, registry.BaseImageRepository)
 	}
 	baseImageRegistryUri, err := registry.GetV2BaseImageScenarioDetailApiUri(foundScenario.Name)
 	if err != nil {

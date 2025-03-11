@@ -17,7 +17,7 @@ func TestProviderFactory_NewInstance(t *testing.T) {
 	factory := NewProviderFactory(&conf)
 	assert.NotNil(t, factory)
 
-	factoryQuay := factory.NewInstance(provider.Online)
+	factoryQuay := factory.NewInstance(provider.Quay)
 	assert.NotNil(t, factoryQuay)
 	assert.IsType(t, factoryQuay, typeScenarioQuay)
 

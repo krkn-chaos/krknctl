@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+// mimmmo
+
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	scenarioCollectedFlags := make(map[string]*string)
 	globalCollectedFlags := make(map[string]*string)
@@ -28,8 +30,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		DisableFlagParsing: false,
 		Args:               cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			provider := GetProvider(false, factory)
-			scenarios, err := FetchScenarios(provider)
+			registrySettings, err := parsePrivateRepoArgs(cmd, &args)
+			if err != nil {
+				log.Fatalf("Error fetching scenarios: %v", err)
+				return nil, cobra.ShellCompDirectiveError
+			}
+			provider := GetProvider(registrySettings != nil, factory)
+			scenarios, err := FetchScenarios(provider, registrySettings)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -39,12 +46,22 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
+			registrySettings, err := parsePrivateRepoArgs(cmd, &args)
 			if err != nil {
 				return err
 			}
-			globalEnvDetail, err := provider.GetGlobalEnvironment(nil)
+			scenarioName, err := parseScenarioName(args)
+			if err != nil {
+				return err
+			}
+
+			provider := GetProvider(registrySettings != nil, factory)
+
+			scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
+			if err != nil {
+				return err
+			}
+			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings)
 			if err != nil {
 				return err
 			}
@@ -53,7 +70,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			scenarioFlags := pflag.NewFlagSet("scenario", pflag.ExitOnError)
 
 			if scenarioDetail == nil {
-				return fmt.Errorf("%s scenario not found", args[0])
+				return fmt.Errorf("%s scenario not found", scenarioName)
 			}
 
 			for _, field := range scenarioDetail.Fields {
@@ -96,20 +113,28 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			(*scenarioOrchestrator).PrintContainerRuntime()
-			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
+			registrySettings, err := parsePrivateRepoArgs(cmd, &args)
+			if err != nil {
+				return err
+			}
 
-			// Starts validating input message
+			scenarioName, err := parseScenarioName(args)
+			if err != nil {
+				return err
+			}
+
+			(*scenarioOrchestrator).PrintContainerRuntime()
+			spinner := NewSpinnerWithSuffix("fetching scenario metadata...", registrySettings)
 			spinner.Start()
 
 			runDetached := false
 
-			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
+			provider := GetProvider(registrySettings != nil, factory)
+			scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
 			if err != nil {
 				return err
 			}
-			globalDetail, err := provider.GetGlobalEnvironment(nil)
+			globalDetail, err := provider.GetGlobalEnvironment(registrySettings)
 			if err != nil {
 				return err
 			}
@@ -238,7 +263,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -249,7 +274,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				scenarioDuration := time.Since(startTime)
 				fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
 			} else {
-				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, nil)
+				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings)
 				if err != nil {
 					return err
 				}
@@ -289,4 +314,21 @@ func printHelp(scenario models.ScenarioDetail) {
 
 		fmt.Printf("\t--%s %s: %s [%s]%s\n", *f.Name, boldWhite(enum), *f.Description, boldWhite(f.Type.String()), def)
 	}
+}
+
+func parseScenarioName(args []string) (string, error) {
+	if strings.HasPrefix(args[0], "--") == false {
+		return args[0], nil
+	}
+
+	if strings.HasPrefix(args[len(args)-1], "--") == false {
+		return args[len(args)-1], nil
+	}
+
+	if len(args)-2 >= 0 {
+		return args[len(args)-2], nil
+	}
+
+	return "", errors.New("please enter a scenario name")
+
 }

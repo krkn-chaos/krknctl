@@ -17,9 +17,17 @@ func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
 		Long:  `describes a scenario`,
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			provider := GetProvider(false, factory)
-
-			scenarios, err := FetchScenarios(provider)
+			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			if err != nil {
+				log.Fatalf("Error fetching scenarios: %v", err)
+				return []string{}, cobra.ShellCompDirectiveError
+			}
+			privateRegistry := false
+			if registrySettings != nil {
+				privateRegistry = true
+			}
+			provider := GetProvider(privateRegistry, factory)
+			scenarios, err := FetchScenarios(provider, registrySettings)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -29,10 +37,15 @@ func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			spinner := NewSpinnerWithSuffix("fetching scenario details...")
+			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			spinner := NewSpinnerWithSuffix("fetching scenario details...", registrySettings)
 			spinner.Start()
-			provider := GetProvider(false, factory)
-			scenarioDetail, err := provider.GetScenarioDetail(args[0], nil)
+
+			if err != nil {
+				return err
+			}
+			provider := GetProvider(registrySettings != nil, factory)
+			scenarioDetail, err := provider.GetScenarioDetail(args[0], registrySettings)
 			if err != nil {
 				return err
 			}

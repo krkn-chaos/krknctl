@@ -12,8 +12,8 @@ import (
 type Mode int64
 
 const (
-	Online = iota
-	Offline
+	Quay = iota
+	Private
 )
 
 type BaseScenarioProvider struct {
