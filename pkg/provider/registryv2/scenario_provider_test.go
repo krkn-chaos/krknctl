@@ -118,7 +118,7 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 		BaseImageRepository: "krkn-chaos/krkn",
 		Username:            &basicAuthUsername,
 		Password:            &basicAuthPassword,
-		SkipTls:             false,
+		SkipTls:             true,
 	}
 
 	tags, err := p.GetRegistryImages(&pr)

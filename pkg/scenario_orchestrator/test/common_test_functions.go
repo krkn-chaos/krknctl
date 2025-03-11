@@ -12,7 +12,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
-	"github.com/letsencrypt/boulder/core"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"os/user"
@@ -93,6 +92,9 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	containerName = fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
 	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		assert.Nil(t, err)
 		assert.NotNil(t, containerId)
 	} else {
@@ -110,12 +112,15 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 		BaseImageRepository: "krkn-chaos/krkn",
 		Username:            &basicAuthUsername,
 		Password:            &basicAuthPassword,
-		SkipTls:             false,
+		SkipTls:             true,
 	}
 
 	timestamp = time.Now().Unix()
 	containerName = fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
 	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	assert.Nil(t, err)
 	assert.NotNil(t, containerId)
 
@@ -406,7 +411,7 @@ func CommonAttachWait(t *testing.T, so scenario_orchestrator.ScenarioOrchestrato
 	ctx, err := so.Connect(*socket)
 	assert.Nil(t, err)
 	assert.NotNil(t, ctx)
-	testFilename := fmt.Sprintf("krknctl-attachwait-%s-%d", core.RandomString(5), time.Now().Unix())
+	testFilename := fmt.Sprintf("krknctl-attachwait-%d", time.Now().Unix())
 	fmt.Println("FILE_NAME -> ", testFilename)
 	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	assert.Nil(t, err)
