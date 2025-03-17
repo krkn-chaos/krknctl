@@ -30,7 +30,7 @@
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?",
   "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?([^\"]+)\\\"?",
-  "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?(.*)\\\"?",
+  "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?([^\"]+)\\\"?",
   "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?",
   "env_private_registry": "KRKNCTL_PRIVATE_REGISTRY",
   "env_private_registry_username": "KRKNCTL_PRIVATE_REGISTRY_USERNAME",

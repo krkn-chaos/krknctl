@@ -189,7 +189,7 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 		Token:               &quayToken,
 		SkipTls:             false,
 	}
-	res, err := p.GetGlobalEnvironment(&pr, "node-cpu-hog")
+	res, err := p.GetGlobalEnvironment(&pr, "dummy-scenario")
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, res.Title, "Krkn Base Image")
