@@ -46,10 +46,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			registrySettings, err := parsePrivateRepoArgs(cmd, &args)
+			registrySettings, err := models.NewRegistryV2FromEnv(config)
 			if err != nil {
 				return err
 			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, &args)
+				if err != nil {
+					return err
+				}
+			}
+
 			scenarioName, err := parseScenarioName(args)
 			if err != nil {
 				return err
@@ -61,7 +68,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings)
+			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
 			if err != nil {
 				return err
 			}
@@ -113,7 +120,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			registrySettings, err := parsePrivateRepoArgs(cmd, &args)
+			registrySettings, err := models.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, &args)
+				if err != nil {
+					return err
+				}
+			}
+
 			if err != nil {
 				return err
 			}
@@ -134,7 +151,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-			globalDetail, err := provider.GetGlobalEnvironment(registrySettings)
+			globalDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
 			if err != nil {
 				return err
 			}

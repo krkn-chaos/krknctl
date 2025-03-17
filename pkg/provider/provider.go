@@ -84,7 +84,7 @@ func (p *BaseScenarioProvider) ParseInputFields(s string, isGlobalEnvironment bo
 
 type ScenarioDataProvider interface {
 	GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error)
-	GetGlobalEnvironment(registry *models.RegistryV2) (*models.ScenarioDetail, error)
+	GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error)
 	GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error)
 	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error)
 }

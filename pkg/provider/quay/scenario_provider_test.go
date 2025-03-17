@@ -125,7 +125,7 @@ func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 		},
 	}
 	config.QuayBaseImageRegistry = "krknctl-test"
-	baseImageScenario, err := provider.GetGlobalEnvironment(nil)
+	baseImageScenario, err := provider.GetGlobalEnvironment(nil, "node-cpu-hog")
 	assert.Nil(t, err)
 	assert.NotNil(t, baseImageScenario)
 	assert.Greater(t, len(baseImageScenario.Fields), 0)

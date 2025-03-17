@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/docker/docker/api/types/registry"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"net/url"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -18,6 +21,43 @@ type RegistryV2 struct {
 	ScenarioRepository  string  `form:"scenario_repository"`
 	BaseImageRepository string  `form:"base_image_repository"`
 	SkipTls             bool    `form:"skip_tls"`
+}
+
+func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
+	var registryV2 = RegistryV2{}
+	registryUrl := os.Getenv(config.EnvPrivateRegistry)
+	if registryUrl == "" {
+		return nil, nil
+	}
+	registryV2.RegistryUrl = registryUrl
+
+	scenarioRepository := os.Getenv(config.EnvPrivateRegistryScenarios)
+	if scenarioRepository == "" {
+		return nil, fmt.Errorf("environment variable %s not set", config.EnvPrivateRegistryScenarios)
+	}
+	registryV2.ScenarioRepository = scenarioRepository
+
+	username := os.Getenv(config.EnvPrivateRegistryUsername)
+	password := os.Getenv(config.EnvPrivateRegistryPassword)
+	token := os.Getenv(config.EnvPrivateRegistryToken)
+
+	registryV2.Username = &username
+	registryV2.Password = &password
+	registryV2.Token = &token
+
+	skipTls := os.Getenv(config.EnvPrivateRegistrySkipTls)
+	if skipTls == "" {
+		registryV2.SkipTls = false
+	} else {
+		skip, err := strconv.ParseBool(skipTls)
+		if err != nil {
+			return nil, fmt.Errorf("wrong %s format can be `true` or `false`,  `%s` found instead", config.EnvPrivateRegistrySkipTls, skipTls)
+		}
+		registryV2.SkipTls = skip
+	}
+	fmt.Println("found private registry settings on ENV")
+	return &registryV2, nil
+
 }
 
 func (r *RegistryV2) GetV2ScenarioRepositoryApiUri() (string, error) {

@@ -38,7 +38,16 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 		Long:  `Runs graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return err
+				}
+			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			spinner := NewSpinnerWithSuffix("running graph based chaos plan...", registrySettings)
 			volumes := make(map[string]string)
@@ -225,7 +234,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider,
 			return
 		}
 
-		globalDetail, err := provider.GetGlobalEnvironment(registrySettings)
+		globalDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -288,7 +297,16 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 		Long:  `Scaffolds a dependency graph based run`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return nil, cobra.ShellCompDirectiveError
+				}
+			}
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return nil, cobra.ShellCompDirectiveError
@@ -303,7 +321,16 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return err
+				}
+			}
 			if err != nil {
 				return err
 			}

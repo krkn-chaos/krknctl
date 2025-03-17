@@ -188,8 +188,8 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 	return scenarioDetail, nil
 }
 
-func (p *ScenarioProvider) GetGlobalEnvironment(*models.RegistryV2) (*models.ScenarioDetail, error) {
-	dataSource, err := p.Config.GetQuayBaseImageRepositoryApiUri()
+func (p *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error) {
+	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (p *ScenarioProvider) GetGlobalEnvironment(*models.RegistryV2) (*models.Sce
 		return nil, fmt.Errorf("no tags found in registry %s", dataSource)
 	}
 	for _, scenarioTag := range *scenarios {
-		if scenarioTag.Name == p.Config.QuayBaseImageTag {
+		if scenarioTag.Name == scenario {
 			foundScenario = &scenarioTag
 		}
 	}

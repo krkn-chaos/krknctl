@@ -52,7 +52,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	listCmd.AddCommand(listRunningCmd)
 	rootCmd.AddCommand(listCmd)
 
-	describeCmd := NewDescribeCommand(providerFactory)
+	describeCmd := NewDescribeCommand(providerFactory, config)
 	rootCmd.AddCommand(describeCmd)
 
 	runCmd := NewRunCommand(providerFactory, scenarioOrchestrator, config)

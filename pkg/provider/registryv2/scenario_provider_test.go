@@ -187,9 +187,9 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
 		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
 		Token:               &quayToken,
-		SkipTls:             true,
+		SkipTls:             false,
 	}
-	res, err := p.GetGlobalEnvironment(&pr)
+	res, err := p.GetGlobalEnvironment(&pr, "node-cpu-hog")
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, res.Title, "Krkn Base Image")
@@ -204,7 +204,7 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 		Token:               &quayToken,
 		SkipTls:             true,
 	}
-	res, err = p.GetGlobalEnvironment(&pr)
+	res, err = p.GetGlobalEnvironment(&pr, "")
 	assert.NotNil(t, err)
 	assert.Nil(t, res)
 }

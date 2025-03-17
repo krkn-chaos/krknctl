@@ -39,6 +39,12 @@ type Config struct {
 	LabelTitleRegexGlobal       string `json:"label_title_regex_global"`
 	LabelDescriptionRegexGlobal string `json:"label_description_regex_global"`
 	LabelInputFieldsRegexGlobal string `json:"label_input_fields_regex_global"`
+	EnvPrivateRegistry          string `json:"env_private_registry"`
+	EnvPrivateRegistryUsername  string `json:"env_private_registry_username"`
+	EnvPrivateRegistryPassword  string `json:"env_private_registry_password"`
+	EnvPrivateRegistrySkipTls   string `json:"env_private_registry_skip_tls"`
+	EnvPrivateRegistryToken     string `json:"env_private_registry_token"`
+	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
 }
 
 //go:embed config.json

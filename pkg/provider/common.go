@@ -97,7 +97,7 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		}
 
 		if includeGlobalEnv == true {
-			globalDetail, err := p.GetGlobalEnvironment(registry)
+			globalDetail, err := p.GetGlobalEnvironment(registry, "")
 			if err != nil {
 				return nil, err
 			}

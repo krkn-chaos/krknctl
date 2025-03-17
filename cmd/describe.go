@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
@@ -10,14 +11,23 @@ import (
 	"log"
 )
 
-func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
+func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "describe",
 		Short: "describes a scenario",
 		Long:  `describes a scenario`,
 		Args:  cobra.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			registrySettings, err := models.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return []string{}, cobra.ShellCompDirectiveError
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return []string{}, cobra.ShellCompDirectiveError
+				}
+			}
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -37,7 +47,16 @@ func NewDescribeCommand(factory *factory.ProviderFactory) *cobra.Command {
 
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			registrySettings, err := parsePrivateRepoArgs(cmd, nil)
+			registrySettings, err := models.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return err
+				}
+			}
 			spinner := NewSpinnerWithSuffix("fetching scenario details...", registrySettings)
 			spinner.Start()
 
