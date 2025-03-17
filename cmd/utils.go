@@ -110,11 +110,13 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 	var registrySettings *models.RegistryV2 = nil
 	if cmd.DisableFlagParsing == false {
 		var f *pflag.Flag = nil
-		f = cmd.Flags().Lookup("private-registry")
-		if f != nil {
+		var privateRegistryFlag *pflag.Flag = nil
+		privateRegistryFlag = cmd.Flags().Lookup("private-registry")
+		if privateRegistryFlag != nil && privateRegistryFlag.Changed {
 			registrySettings = &models.RegistryV2{}
 			registrySettings.SkipTls = false
-			registrySettings.RegistryUrl = f.Value.String()
+			registrySettings.RegistryUrl = privateRegistryFlag.Value.String()
+
 		}
 
 		f = cmd.Flags().Lookup("private-registry-username")
@@ -147,7 +149,7 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 		}
 
 		f = cmd.Flags().Lookup("private-registry-scenarios")
-		if registrySettings != nil && f != nil {
+		if registrySettings != nil {
 			registrySettings.ScenarioRepository = f.Value.String()
 			if registrySettings.ScenarioRepository == "" {
 				return nil, errors.New("`private-registry-scenarios` must be set in private registry mode")
