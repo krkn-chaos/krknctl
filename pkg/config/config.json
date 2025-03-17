@@ -6,6 +6,7 @@
   "quay_base_image_registry" : "krkn",
   "quay_base_image_tag" : "latest",
   "quay_repository_api": "api/v1/repository",
+  "private_registry_base_image_tag": "latest",
   "container_prefix": "krknctl",
   "kubeconfig_prefix": "krknctl-kubeconfig",
   "krknctl_logs": "krknct-log",
@@ -25,10 +26,16 @@
   "label_title_global": "krknctl.title.global=",
   "label_description_global": "krknctl.description.global=",
   "label_input_fields_global": "krknctl.input_fields.global=",
-  "label_title_regex": "LABEL krknctl\\.title=\\\"?(.*)\\\"?",
+  "label_title_regex": "LABEL krknctl\\.title=\\\"?([^\"]+)\\\"?",
   "label_description_regex": "LABEL krknctl\\.description=\\\"?(.*)\\\"?",
   "label_input_fields_regex": "LABEL krknctl\\.input_fields=\\'?(\\[.*\\])\\'?",
-  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?(.*)\\\"?",
-  "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?(.*)\\\"?",
-  "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?"
+  "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?([^\"]+)\\\"?",
+  "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?([^\"]+)\\\"?",
+  "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?",
+  "env_private_registry": "KRKNCTL_PRIVATE_REGISTRY",
+  "env_private_registry_username": "KRKNCTL_PRIVATE_REGISTRY_USERNAME",
+  "env_private_registry_password" : "KRKNCTL_PRIVATE_REGISTRY_PASSWORD",
+  "env_private_registry_skip_tls" : "KRKNCTL_PRIVATE_REGISTRY_SKIP_TLS",
+  "env_private_registry_token" : "KRKNCTL_PRIVATE_REGISTRY_TOKEN",
+  "env_private_registry_scenarios" : "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS"
 }

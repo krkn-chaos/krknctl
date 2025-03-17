@@ -2,10 +2,19 @@ package models
 
 import (
 	"encoding/json"
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"strconv"
 	"testing"
 )
+
+func getConfig(t *testing.T) krknctlconfig.Config {
+	conf, err := krknctlconfig.LoadConfig()
+	assert.Nil(t, err)
+	return conf
+}
 
 func getScenarioDetail(t *testing.T) ScenarioDetail {
 	data := `
@@ -103,4 +112,57 @@ func TestScenarioDetail_GetFileFieldByMountPath(t *testing.T) {
 
 	nofield := scenarioDetail.GetFieldByName("/mnt/notfound")
 	assert.Nil(t, nofield)
+}
+
+func TestNewRegistryV2FromEnv(t *testing.T) {
+	registry := "testregistry.io"
+	username := "username"
+	password := "password"
+	skipTls := true
+	token := "abcdefghilmnopqrstuvz123456790"
+	scenarios := "krkn-chaos/krkn-hub"
+	config := getConfig(t)
+	err := os.Setenv(config.EnvPrivateRegistry, registry)
+	assert.Nil(t, err)
+	err = os.Setenv(config.EnvPrivateRegistryUsername, username)
+	assert.Nil(t, err)
+	err = os.Setenv(config.EnvPrivateRegistryPassword, password)
+	assert.Nil(t, err)
+	err = os.Setenv(config.EnvPrivateRegistryToken, token)
+	assert.Nil(t, err)
+	err = os.Setenv(config.EnvPrivateRegistrySkipTls, strconv.FormatBool(skipTls))
+	assert.Nil(t, err)
+	err = os.Setenv(config.EnvPrivateRegistryScenarios, scenarios)
+	assert.Nil(t, err)
+
+	registryv2, err := NewRegistryV2FromEnv(config)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, registryv2)
+
+	assert.Equal(t, registryv2.RegistryUrl, registry)
+	assert.Equal(t, *registryv2.Username, username)
+	assert.Equal(t, *registryv2.Password, password)
+	assert.Equal(t, registryv2.SkipTls, skipTls)
+	assert.Equal(t, *registryv2.Token, token)
+	assert.Equal(t, registryv2.ScenarioRepository, scenarios)
+
+	err = os.Unsetenv(config.EnvPrivateRegistryScenarios)
+	assert.Nil(t, err)
+	registryv2, err = NewRegistryV2FromEnv(config)
+	assert.NotNil(t, err)
+
+	// must be true false
+	err = os.Setenv(config.EnvPrivateRegistrySkipTls, "True")
+	assert.Nil(t, err)
+	registryv2, err = NewRegistryV2FromEnv(config)
+	assert.NotNil(t, err)
+
+	err = os.Unsetenv(config.EnvPrivateRegistry)
+	assert.Nil(t, err)
+
+	registryv2, err = NewRegistryV2FromEnv(config)
+	assert.Nil(t, err)
+	assert.Nil(t, registryv2)
+
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -9,13 +10,18 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"os"
 	"strings"
 	"time"
 )
 
-func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
-	s := spinner.New(spinner.CharSets[39], 100*time.Millisecond)
+func NewSpinnerWithSuffix(suffix string, registrySettings *models.RegistryV2) *spinner.Spinner {
+	var s *spinner.Spinner = nil
+	if registrySettings != nil {
+		suffix = fmt.Sprintf("[🔐%s] %s", registrySettings.RegistryUrl, suffix)
+	}
+	s = spinner.New(spinner.CharSets[39], 100*time.Millisecond)
 	s.Suffix = suffix
 	return s
 }
@@ -33,18 +39,18 @@ func NewRootCommand(krknctlConfig config.Config) *cobra.Command {
 	return rootCmd
 }
 
-func GetProvider(offline bool, providerFactory *factory.ProviderFactory) provider.ScenarioDataProvider {
+func GetProvider(private bool, providerFactory *factory.ProviderFactory) provider.ScenarioDataProvider {
 	var dataProvider provider.ScenarioDataProvider
-	if offline {
-		dataProvider = providerFactory.NewInstance(provider.Offline)
+	if private {
+		dataProvider = providerFactory.NewInstance(provider.Private)
 	} else {
-		dataProvider = providerFactory.NewInstance(provider.Online)
+		dataProvider = providerFactory.NewInstance(provider.Quay)
 	}
 	return dataProvider
 }
 
-func FetchScenarios(provider provider.ScenarioDataProvider) (*[]string, error) {
-	scenarios, err := provider.GetRegistryImages()
+func FetchScenarios(provider provider.ScenarioDataProvider, registrySettings *models.RegistryV2) (*[]string, error) {
+	scenarios, err := provider.GetRegistryImages(registrySettings)
 	if err != nil {
 		return nil, err
 	}
@@ -97,4 +103,111 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 	}
 
 	return &environment, &volumes, nil
+}
+
+func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV2, error) {
+
+	var registrySettings *models.RegistryV2 = nil
+	if cmd.DisableFlagParsing == false {
+		var f *pflag.Flag = nil
+		var privateRegistryFlag *pflag.Flag = nil
+		privateRegistryFlag = cmd.Flags().Lookup("private-registry")
+		if privateRegistryFlag != nil && privateRegistryFlag.Changed {
+			registrySettings = &models.RegistryV2{}
+			registrySettings.SkipTls = false
+			registrySettings.RegistryUrl = privateRegistryFlag.Value.String()
+
+		}
+
+		f = cmd.Flags().Lookup("private-registry-username")
+		if registrySettings != nil && f != nil {
+			s := f.Value.String()
+			if s != "" {
+				registrySettings.Username = &s
+			}
+		}
+
+		f = cmd.Flags().Lookup("private-registry-password")
+		if registrySettings != nil && f != nil {
+			s := f.Value.String()
+			if s != "" {
+				registrySettings.Password = &s
+			}
+		}
+
+		f = cmd.Flags().Lookup("private-registry-skip-tls")
+		if registrySettings != nil && f != nil {
+			registrySettings.SkipTls = true
+		}
+
+		f = cmd.Flags().Lookup("private-registry-token")
+		if registrySettings != nil && f != nil {
+			s := f.Value.String()
+			if s != "" {
+				registrySettings.Token = &s
+			}
+		}
+
+		f = cmd.Flags().Lookup("private-registry-scenarios")
+		if registrySettings != nil {
+			registrySettings.ScenarioRepository = f.Value.String()
+			if registrySettings.ScenarioRepository == "" {
+				return nil, errors.New("`private-registry-scenarios` must be set in private registry mode")
+			}
+		}
+	} else {
+		if args != nil {
+			for i, a := range *args {
+				if strings.HasPrefix(a, "--") {
+					if a == "--private-registry" {
+						registrySettings = &models.RegistryV2{}
+						registrySettings.SkipTls = false
+						if err := checkStringArgValue(*args, i); err != nil {
+							return nil, err
+						}
+						registrySettings.RegistryUrl = (*args)[i+1]
+					}
+					if registrySettings != nil && a == "--private-registry-username" {
+						if err := checkStringArgValue(*args, i); err != nil {
+							return nil, err
+						}
+						v := (*args)[i+1]
+						registrySettings.Username = &v
+					}
+					if registrySettings != nil && a == "--private-registry-password" {
+						if err := checkStringArgValue(*args, i); err != nil {
+							return nil, err
+						}
+						v := (*args)[i+1]
+						registrySettings.Password = &v
+					}
+					if registrySettings != nil && a == "--private-registry-skip-tls" {
+						registrySettings.SkipTls = true
+					}
+
+					if registrySettings != nil && a == "--private-registry-token" {
+						if err := checkStringArgValue(*args, i); err != nil {
+							return nil, err
+						}
+						v := (*args)[i+1]
+						registrySettings.Token = &v
+					}
+
+					if registrySettings != nil && a == "--private-registry-scenarios" {
+						registrySettings.SkipTls = false
+						if err := checkStringArgValue(*args, i); err != nil {
+							return nil, err
+						}
+						registrySettings.ScenarioRepository = (*args)[i+1]
+					}
+				}
+			}
+		}
+		if registrySettings != nil && registrySettings.ScenarioRepository == "" {
+			return nil, errors.New("`private-registry-scenarios` must be set in private registry mode")
+		}
+
+	}
+	return registrySettings, nil
+
 }

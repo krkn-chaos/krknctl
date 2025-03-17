@@ -3,8 +3,8 @@ package factory
 import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/offline"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
+	"github.com/krkn-chaos/krknctl/pkg/provider/registryv2"
 )
 
 type ProviderFactory struct {
@@ -17,10 +17,10 @@ func NewProviderFactory(config *config.Config) *ProviderFactory {
 
 func (p *ProviderFactory) NewInstance(mode provider.Mode) provider.ScenarioDataProvider {
 	switch mode {
-	case provider.Online:
-		return &quay.ScenarioProvider{Config: p.Config}
-	case provider.Offline:
-		return &offline.ScenarioProvider{}
+	case provider.Quay:
+		return &quay.ScenarioProvider{BaseScenarioProvider: provider.BaseScenarioProvider{Config: *p.Config}}
+	case provider.Private:
+		return &registryv2.ScenarioProvider{BaseScenarioProvider: provider.BaseScenarioProvider{Config: *p.Config}}
 	}
 	return nil
 }

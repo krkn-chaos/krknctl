@@ -14,11 +14,22 @@ import "github.com/rodaine/table"
 var headerFmt = color.New(color.FgGreen, color.Underline).SprintfFunc()
 var columnFmt = color.New(color.FgYellow).SprintfFunc()
 
-func NewScenarioTable(scenarios *[]models.ScenarioTag) table.Table {
-	tbl := table.New("Name", "Size", "Digest", "Last Modified")
+func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table {
+	var tbl table.Table
+	if private {
+		tbl = table.New("Name")
+	} else {
+		tbl = table.New("Name", "Size", "Digest", "Last Modified")
+	}
+
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scenario := range *scenarios {
-		tbl.AddRow(scenario.Name, scenario.Size, scenario.Digest, scenario.LastModified)
+		if private {
+			tbl.AddRow(scenario.Name)
+		} else {
+			tbl.AddRow(scenario.Name, scenario.Size, scenario.Digest, scenario.LastModified)
+		}
+
 	}
 	return tbl
 }

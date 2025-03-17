@@ -12,6 +12,12 @@ import (
 func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(config)
+	rootCmd.PersistentFlags().String("private-registry", "", "private registry URI (eg. quay.io, without any protocol schema prefix)")
+	rootCmd.PersistentFlags().String("private-registry-username", "", "private registry username for basic authentication")
+	rootCmd.PersistentFlags().String("private-registry-password", "", "private registry password for basic authentication")
+	rootCmd.PersistentFlags().Bool("private-registry-skip-tls", false, "skip tls verification on private registry")
+	rootCmd.PersistentFlags().String("private-registry-token", "", "private registry identity token for token based authentication")
+	rootCmd.PersistentFlags().String("private-registry-scenarios", "", "private registry krkn scenarios image repository")
 	var completionCmd = &cobra.Command{
 		Use:       "completion [bash|zsh]",
 		Short:     "Genera script di completamento per bash o zsh",
@@ -45,7 +51,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	listCmd.AddCommand(listRunningCmd)
 	rootCmd.AddCommand(listCmd)
 
-	describeCmd := NewDescribeCommand(providerFactory)
+	describeCmd := NewDescribeCommand(providerFactory, config)
 	rootCmd.AddCommand(describeCmd)
 
 	runCmd := NewRunCommand(providerFactory, scenarioOrchestrator, config)

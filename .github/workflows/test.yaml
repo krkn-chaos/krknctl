@@ -27,6 +27,40 @@ jobs:
         run: |
           go install github.com/gotesttools/gotestfmt/v2/cmd/gotestfmt@latest
           go install github.com/ctrf-io/go-ctrf-json-reporter/cmd/go-ctrf-json-reporter@latest
+      - name: get quay token for private registry jwt unit tests
+        env:
+          QUAY_T_USERNAME: ${{secrets.QUAY_T_USERNAME}}
+          QUAY_T_PASSWORD: ${{secrets.QUAY_T_PASSWORD}}
+        run: |
+          export TOKEN=$(curl -s -X GET \
+            --user "$QUAY_T_USERNAME:$QUAY_T_PASSWORD" \
+            "https://quay.io/v2/auth?service=quay.io&scope=repository:rh_ee_tsebasti/krkn-private:pull,push&scope=repository:rh_ee_tsebasti/krkn-hub-private:pull,push" \
+            -k | jq -r '.token')
+          echo "QUAY_TOKEN=$TOKEN" >> $GITHUB_ENV
+      - name: run registry for private registry basic auth unit tests
+        run: |
+          mkdir auth
+          docker pull -q registry:2
+          docker pull -q httpd:2
+          docker run \
+            --entrypoint htpasswd \
+            httpd:2 -Bbn testuser testpassword > auth/htpasswd
+          docker run -d \
+            -p 5001:5000 \
+            --restart=always \
+            --name registry \
+            -v "$(pwd)"/auth:/auth \
+            -e "REGISTRY_AUTH=htpasswd" \
+            -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+            -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+            registry:2
+          docker pull -q quay.io/krkn-chaos/krkn-hub:dummy-scenario
+          docker pull -q quay.io/krkn-chaos/krkn:latest
+          docker login localhost:5001 -u testuser -p testpassword
+          docker tag quay.io/krkn-chaos/krkn-hub:dummy-scenario localhost:5001/krkn-chaos/krkn-hub:dummy-scenario
+          docker tag quay.io/krkn-chaos/krkn:latest localhost:5001/krkn-chaos/krkn:latest
+          docker push -q localhost:5001/krkn-chaos/krkn-hub:dummy-scenario
+          docker push -q localhost:5001/krkn-chaos/krkn:latest
       - name: run test suite
         run: |
          export USERID=$(id -u)

@@ -8,6 +8,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
@@ -37,8 +38,18 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 		Long:  `Runs graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return err
+				}
+			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
-			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
+			spinner := NewSpinnerWithSuffix("running graph based chaos plan...", registrySettings)
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
 			kubeconfig, err := cmd.Flags().GetString("kubeconfig")
@@ -92,14 +103,22 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			nodes := make(map[string]models.ScenarioNode)
 			err = json.Unmarshal(file, &nodes)
 
-			dataProvider := GetProvider(false, factory)
+			if err != nil {
+				return err
+			}
+			privateRegistry := false
+			if registrySettings != nil {
+				privateRegistry = true
+			}
+			dataProvider := GetProvider(privateRegistry, factory)
+
 			nameChannel := make(chan *struct {
 				name *string
 				err  error
 			})
 			spinner.Start()
 			go func() {
-				validateScenariosInput(dataProvider, nodes, nameChannel)
+				validateScenariosInput(dataProvider, nodes, nameChannel, registrySettings)
 			}()
 
 			for {
@@ -156,7 +175,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx, registrySettings)
 			}()
 
 			for {
@@ -181,10 +200,13 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 	return command
 }
 
-func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[string]models.ScenarioNode, scenarioNameChannel chan *struct {
-	name *string
-	err  error
-}) {
+func validateScenariosInput(provider provider.ScenarioDataProvider,
+	nodes map[string]models.ScenarioNode,
+	scenarioNameChannel chan *struct {
+		name *string
+		err  error
+	},
+	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
 		if n.Name == "" {
@@ -194,7 +216,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			name *string
 			err  error
 		}{name: &n.Name, err: nil}
-		scenarioDetail, err := provider.GetScenarioDetail(n.Name)
+		scenarioDetail, err := provider.GetScenarioDetail(n.Name, registrySettings)
 
 		if err != nil {
 			scenarioNameChannel <- &struct {
@@ -212,7 +234,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider, nodes map[st
 			return
 		}
 
-		globalDetail, err := provider.GetGlobalEnvironment()
+		globalDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
@@ -275,9 +297,22 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 		Long:  `Scaffolds a dependency graph based run`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			dataProvider := GetProvider(false, factory)
-
-			scenarios, err := FetchScenarios(dataProvider)
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return nil, cobra.ShellCompDirectiveError
+				}
+			}
+			if err != nil {
+				log.Fatalf("Error fetching scenarios: %v", err)
+				return nil, cobra.ShellCompDirectiveError
+			}
+			dataProvider := GetProvider(registrySettings != nil, factory)
+			scenarios, err := FetchScenarios(dataProvider, registrySettings)
 			if err != nil {
 				log.Fatalf("Error fetching scenarios: %v", err)
 				return []string{}, cobra.ShellCompDirectiveError
@@ -286,13 +321,26 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			dataProvider := GetProvider(false, factory)
+			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
+			if err != nil {
+				return err
+			}
+			if registrySettings == nil {
+				registrySettings, err = parsePrivateRepoArgs(cmd, nil)
+				if err != nil {
+					return err
+				}
+			}
+			if err != nil {
+				return err
+			}
+			dataProvider := GetProvider(registrySettings != nil, factory)
 			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
 			if err != nil {
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv)
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings)
 			if err != nil {
 				return err
 			}

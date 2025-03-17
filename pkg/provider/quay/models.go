@@ -78,6 +78,11 @@ type Layer struct {
 	CreatedDateTime time.Time `json:"created_datetime"`
 }
 
+func (l Layer) GetCommands() []string {
+
+	return l.Command
+}
+
 type layerAlias Layer
 
 func (l *Layer) UnmarshalJSON(bytes []byte) error {

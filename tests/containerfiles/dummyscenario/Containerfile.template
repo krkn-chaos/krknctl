@@ -2,6 +2,10 @@ FROM registry.access.redhat.com/ubi9-minimal:9.4-1227.1726694542
 RUN groupadd -g 1001 krkn && useradd -m -u 1001 -g krkn krkn
 COPY run.sh /home/krkn
 
+LABEL krknctl.title.global="Krkn Base Image"
+LABEL krknctl.description.global="This is the krkn base image."
+LABEL krknctl.input_fields.global='$KRKNCTL_GLOBAL_INPUT'
+
 LABEL krknctl.kubeconfig_path="/home/krkn/.kube/config"
 LABEL krknctl.title="Dummy Scenario"
 LABEL krknctl.description="The dummy scenario simply waits for a specified amount of time without introducing any chaos. It serves as a root node in a flat graph structure to run multiple scenarios in parallel or can be used for testing purposes."

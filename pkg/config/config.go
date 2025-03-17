@@ -14,6 +14,7 @@ type Config struct {
 	QuayBaseImageRegistry       string `json:"quay_base_image_registry"`
 	QuayBaseImageTag            string `json:"quay_base_image_tag"`
 	QuayRepositoryApi           string `json:"quay_repository_api"`
+	PrivateRegistryBaseImageTag string `json:"private_registry_base_image_tag"`
 	ContainerPrefix             string `json:"container_prefix"`
 	KubeconfigPrefix            string `json:"kubeconfig_prefix"`
 	PodmanDarwinSocketTemplate  string `json:"podman_darwin_socket_template"`
@@ -38,6 +39,12 @@ type Config struct {
 	LabelTitleRegexGlobal       string `json:"label_title_regex_global"`
 	LabelDescriptionRegexGlobal string `json:"label_description_regex_global"`
 	LabelInputFieldsRegexGlobal string `json:"label_input_fields_regex_global"`
+	EnvPrivateRegistry          string `json:"env_private_registry"`
+	EnvPrivateRegistryUsername  string `json:"env_private_registry_username"`
+	EnvPrivateRegistryPassword  string `json:"env_private_registry_password"`
+	EnvPrivateRegistrySkipTls   string `json:"env_private_registry_skip_tls"`
+	EnvPrivateRegistryToken     string `json:"env_private_registry_token"`
+	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
 }
 
 //go:embed config.json
@@ -69,7 +76,7 @@ func (c *Config) GetQuayScenarioRepositoryApiUri() (string, error) {
 	return repositoryUri, nil
 }
 
-func (c *Config) GetQuayEnvironmentApiUri() (string, error) {
+func (c *Config) GetQuayBaseImageRepositoryApiUri() (string, error) {
 	baseHost := "https://" + c.QuayHost
 	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayBaseImageRegistry)
 	if err != nil {
