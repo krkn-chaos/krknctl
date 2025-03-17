@@ -114,7 +114,7 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
 		Password:           &basicAuthPassword,
-		SkipTls:            true,
+		Insecure:           true,
 	}
 
 	tags, err := p.GetRegistryImages(&pr)
@@ -132,7 +132,7 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
 		Password:           &basicAuthPassword,
-		SkipTls:            false,
+		Insecure:           false,
 	}
 	_, err = p.GetRegistryImages(&pr)
 	assert.NotNil(t, err)
@@ -151,7 +151,7 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 		RegistryUrl:        "quay.io",
 		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
 		Token:              &quayToken,
-		SkipTls:            true,
+		SkipTls:            false,
 	}
 
 	res, err := p.GetScenarioDetail("dummy-scenario", &pr)
@@ -213,7 +213,7 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 		RegistryUrl:        "quay.io",
 		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
 		Token:              &quayToken,
-		SkipTls:            true,
+		SkipTls:            false,
 	}
 
 	scenarios, err := p.GetRegistryImages(&pr)
