@@ -67,9 +67,16 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		} else {
 			scenarioNode.Comment = "I'm the root Node!"
 		}
-		imageUri, err := config.GetQuayImageUri()
-		if err != nil {
-			return nil, err
+
+		var imageUri = ""
+		if registry == nil {
+			uri, err := config.GetQuayImageUri()
+			if err != nil {
+				return nil, err
+			}
+			imageUri = uri
+		} else {
+			imageUri = registry.GetPrivateRegistryUri()
 		}
 		scenarioNode.Image = imageUri + ":" + scenarioDetail.Name
 		scenarioNode.Name = scenarioDetail.Name
@@ -97,7 +104,7 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		}
 
 		if includeGlobalEnv == true {
-			globalDetail, err := p.GetGlobalEnvironment(registry, "")
+			globalDetail, err := p.GetGlobalEnvironment(registry, scenarios[0])
 			if err != nil {
 				return nil, err
 			}
