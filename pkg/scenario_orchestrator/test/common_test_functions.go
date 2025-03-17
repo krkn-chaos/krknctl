@@ -13,6 +13,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/stretchr/testify/assert"
+	"math/rand"
 	"os"
 	"os/user"
 	"strconv"
@@ -88,7 +89,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	}
 
 	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
+	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, rand.Int())
 	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
 		if err != nil {
@@ -114,7 +115,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	}
 
 	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
+	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, rand.Int())
 	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if err != nil {
 		fmt.Println(err.Error())
