@@ -365,6 +365,7 @@ github.com/felixge/httpsnoop
 # github.com/fsnotify/fsnotify v1.8.0
 ## explicit; go 1.17
 github.com/fsnotify/fsnotify
+github.com/fsnotify/fsnotify/internal
 # github.com/go-jose/go-jose/v4 v4.0.5
 ## explicit; go 1.21
 github.com/go-jose/go-jose/v4
@@ -658,8 +659,8 @@ github.com/stefanberger/go-pkcs11uri
 ## explicit; go 1.17
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/assert/yaml
-# github.com/sylabs/sif/v2 v2.18.0
-## explicit; go 1.21.0
+# github.com/sylabs/sif/v2 v2.19.1
+## explicit; go 1.22.5
 github.com/sylabs/sif/v2/pkg/sif
 # github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 ## explicit
@@ -762,7 +763,6 @@ golang.org/x/crypto/ssh/knownhosts
 # golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 ## explicit; go 1.22.0
 golang.org/x/exp/maps
-golang.org/x/exp/slices
 # golang.org/x/net v0.36.0
 ## explicit; go 1.23.0
 golang.org/x/net/http/httpguts

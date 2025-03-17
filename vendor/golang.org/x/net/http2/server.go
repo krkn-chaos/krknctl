@@ -307,7 +307,7 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 	if s.TLSNextProto == nil {
 		s.TLSNextProto = map[string]func(*http.Server, *tls.Conn, http.Handler){}
 	}
-	protoHandler := func(hs *http.Server, c *tls.Conn, h http.Handler) {
+	protoHandler := func(hs *http.Server, c net.Conn, h http.Handler, sawClientPreface bool) {
 		if testHookOnConn != nil {
 			testHookOnConn()
 		}
@@ -324,12 +324,31 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 			ctx = bc.BaseContext()
 		}
 		conf.ServeConn(c, &ServeConnOpts{
-			Context:    ctx,
-			Handler:    h,
-			BaseConfig: hs,
+			Context:          ctx,
+			Handler:          h,
+			BaseConfig:       hs,
+			SawClientPreface: sawClientPreface,
 		})
 	}
-	s.TLSNextProto[NextProtoTLS] = protoHandler
+	s.TLSNextProto[NextProtoTLS] = func(hs *http.Server, c *tls.Conn, h http.Handler) {
+		protoHandler(hs, c, h, false)
+	}
+	// The "unencrypted_http2" TLSNextProto key is used to pass off non-TLS HTTP/2 conns.
+	//
+	// A connection passed in this method has already had the HTTP/2 preface read from it.
+	s.TLSNextProto[nextProtoUnencryptedHTTP2] = func(hs *http.Server, c *tls.Conn, h http.Handler) {
+		nc, err := unencryptedNetConnFromTLSConn(c)
+		if err != nil {
+			if lg := hs.ErrorLog; lg != nil {
+				lg.Print(err)
+			} else {
+				log.Print(err)
+			}
+			go c.Close()
+			return
+		}
+		protoHandler(hs, nc, h, true)
+	}
 	return nil
 }
 
@@ -913,6 +932,16 @@ func (sc *serverConn) serve(conf http2Config) {
 		sc.vlogf("http2: server connection from %v on %p", sc.conn.RemoteAddr(), sc.hs)
 	}
 
+	settings := writeSettings{
+		{SettingMaxFrameSize, conf.MaxReadFrameSize},
+		{SettingMaxConcurrentStreams, sc.advMaxStreams},
+		{SettingMaxHeaderListSize, sc.maxHeaderListSize()},
+		{SettingHeaderTableSize, conf.MaxDecoderHeaderTableSize},
+		{SettingInitialWindowSize, uint32(sc.initialStreamRecvWindowSize)},
+	}
+	if !disableExtendedConnectProtocol {
+		settings = append(settings, Setting{SettingEnableConnectProtocol, 1})
+	}
 	sc.writeFrame(FrameWriteRequest{
 		write: settings,
 	})
@@ -1776,6 +1805,9 @@ func (sc *serverConn) processSetting(s Setting) error {
 		sc.maxFrameSize = int32(s.Val) // the maximum valid s.Val is < 2^31
 	case SettingMaxHeaderListSize:
 		sc.peerMaxHeaderListSize = s.Val
+	case SettingEnableConnectProtocol:
+		// Receipt of this parameter by a server does not
+		// have any impact
 	default:
 		// Unknown setting: "An endpoint that receives a SETTINGS
 		// frame with any unknown or unsupported identifier MUST
@@ -2836,6 +2868,11 @@ func (w *responseWriter) SetWriteDeadline(deadline time.Time) error {
 			st.writeDeadline.Reset(deadline.Sub(sc.srv.now()))
 		}
 	})
+	return nil
+}
+
+func (w *responseWriter) EnableFullDuplex() error {
+	// We always support full duplex responses, so this is a no-op.
 	return nil
 }
 
