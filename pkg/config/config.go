@@ -45,6 +45,7 @@ type Config struct {
 	EnvPrivateRegistrySkipTls   string `json:"env_private_registry_skip_tls"`
 	EnvPrivateRegistryToken     string `json:"env_private_registry_token"`
 	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
+	EnvPrivateRegistryInsecure  string `json:"env_private_registry_insecure"`
 }
 
 //go:embed config.json

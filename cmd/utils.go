@@ -136,8 +136,13 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 		}
 
 		f = cmd.Flags().Lookup("private-registry-skip-tls")
-		if registrySettings != nil && f != nil {
+		if registrySettings != nil && f != nil && f.Changed {
 			registrySettings.SkipTls = true
+		}
+
+		f = cmd.Flags().Lookup("private-registry-insecure")
+		if registrySettings != nil && f != nil && f.Changed {
+			registrySettings.Insecure = true
 		}
 
 		f = cmd.Flags().Lookup("private-registry-token")
@@ -183,6 +188,10 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 					}
 					if registrySettings != nil && a == "--private-registry-skip-tls" {
 						registrySettings.SkipTls = true
+					}
+
+					if registrySettings != nil && a == "--private-registry-insecure" {
+						registrySettings.Insecure = true
 					}
 
 					if registrySettings != nil && a == "--private-registry-token" {
