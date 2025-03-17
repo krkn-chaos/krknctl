@@ -17,7 +17,6 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	rootCmd.PersistentFlags().String("private-registry-password", "", "private registry password for basic authentication")
 	rootCmd.PersistentFlags().Bool("private-registry-skip-tls", false, "skip tls verification on private registry")
 	rootCmd.PersistentFlags().String("private-registry-token", "", "private registry identity token for token based authentication")
-	rootCmd.PersistentFlags().String("private-registry-baseimage", "", "private registry krkn base image repository")
 	rootCmd.PersistentFlags().String("private-registry-scenarios", "", "private registry krkn scenarios image repository")
 	var completionCmd = &cobra.Command{
 		Use:       "completion [bash|zsh]",

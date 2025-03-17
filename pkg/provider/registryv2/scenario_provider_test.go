@@ -23,10 +23,9 @@ func TestScenarioProvider_GetRegistryImages_PublicRegistry(t *testing.T) {
 		},
 	}
 	r := models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "krkn-chaos/krkn-hub",
-		BaseImageRepository: "krkn-chaos/krkn",
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "krkn-chaos/krkn-hub",
+		SkipTls:            true,
 	}
 	tags, err := p.GetRegistryImages(&r)
 	assert.Nil(t, err)
@@ -54,11 +53,10 @@ func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
 	}
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            true,
 	}
 
 	tags, err := p.GetRegistryImages(&pr)
@@ -71,11 +69,10 @@ func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
 
 	quayToken = "wrong"
 	pr = models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            true,
 	}
 
 	_, err = p.GetRegistryImages(&pr)
@@ -113,12 +110,11 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 		},
 	}
 	pr := models.RegistryV2{
-		RegistryUrl:         "localhost:5001",
-		ScenarioRepository:  "krkn-chaos/krkn-hub",
-		BaseImageRepository: "krkn-chaos/krkn",
-		Username:            &basicAuthUsername,
-		Password:            &basicAuthPassword,
-		SkipTls:             true,
+		RegistryUrl:        "localhost:5001",
+		ScenarioRepository: "krkn-chaos/krkn-hub",
+		Username:           &basicAuthUsername,
+		Password:           &basicAuthPassword,
+		SkipTls:            true,
 	}
 
 	tags, err := p.GetRegistryImages(&pr)
@@ -132,12 +128,11 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 	basicAuthUsername = "wrong"
 	basicAuthPassword = "wrong"
 	pr = models.RegistryV2{
-		RegistryUrl:         "localhost:5001",
-		ScenarioRepository:  "krkn-chaos/krkn-hub",
-		BaseImageRepository: "krkn-chaos/krkn",
-		Username:            &basicAuthUsername,
-		Password:            &basicAuthPassword,
-		SkipTls:             false,
+		RegistryUrl:        "localhost:5001",
+		ScenarioRepository: "krkn-chaos/krkn-hub",
+		Username:           &basicAuthUsername,
+		Password:           &basicAuthPassword,
+		SkipTls:            false,
 	}
 	_, err = p.GetRegistryImages(&pr)
 	assert.NotNil(t, err)
@@ -153,11 +148,10 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 	}
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            true,
 	}
 
 	res, err := p.GetScenarioDetail("dummy-scenario", &pr)
@@ -183,11 +177,10 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	}
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             false,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            false,
 	}
 	res, err := p.GetGlobalEnvironment(&pr, "dummy-scenario")
 	assert.Nil(t, err)
@@ -200,9 +193,8 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 		RegistryUrl:        "quay.io",
 		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
 		// does not contain any latest tag, error expected
-		BaseImageRepository: "rh_ee_tsebasti/krkn-hub-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		Token:   &quayToken,
+		SkipTls: true,
 	}
 	res, err = p.GetGlobalEnvironment(&pr, "")
 	assert.NotNil(t, err)
@@ -218,11 +210,10 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	}
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            true,
 	}
 
 	scenarios, err := p.GetRegistryImages(&pr)

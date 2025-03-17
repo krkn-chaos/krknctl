@@ -81,11 +81,10 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	//pulling image from private registry with token
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := provider_models.RegistryV2{
-		RegistryUrl:         "quay.io",
-		ScenarioRepository:  "rh_ee_tsebasti/krkn-hub-private",
-		BaseImageRepository: "rh_ee_tsebasti/krkn-private",
-		Token:               &quayToken,
-		SkipTls:             true,
+		RegistryUrl:        "quay.io",
+		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+		Token:              &quayToken,
+		SkipTls:            true,
 	}
 
 	timestamp = time.Now().Unix()
@@ -107,12 +106,11 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	basicAuthPassword := "testpassword"
 
 	pr = provider_models.RegistryV2{
-		RegistryUrl:         "localhost:5001",
-		ScenarioRepository:  "krkn-chaos/krkn-hub",
-		BaseImageRepository: "krkn-chaos/krkn",
-		Username:            &basicAuthUsername,
-		Password:            &basicAuthPassword,
-		SkipTls:             true,
+		RegistryUrl:        "localhost:5001",
+		ScenarioRepository: "krkn-chaos/krkn-hub",
+		Username:           &basicAuthUsername,
+		Password:           &basicAuthPassword,
+		SkipTls:            true,
 	}
 
 	timestamp = time.Now().Unix()

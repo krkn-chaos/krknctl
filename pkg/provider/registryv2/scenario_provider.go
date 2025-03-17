@@ -109,7 +109,7 @@ func (s *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, sce
 		}
 	}
 	if foundScenario == nil {
-		return nil, fmt.Errorf("%s base image tag not found in repository %s", s.Config.QuayBaseImageTag, registry.BaseImageRepository)
+		return nil, fmt.Errorf("%s scenario not found in registry %s", scenario, registry.RegistryUrl)
 	}
 	baseImageRegistryUri, err := registry.GetV2ScenarioDetailApiUri(foundScenario.Name)
 	if err != nil {

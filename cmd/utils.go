@@ -146,14 +146,6 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 			}
 		}
 
-		f = cmd.Flags().Lookup("private-registry-baseimage")
-		if registrySettings != nil && f != nil {
-			registrySettings.BaseImageRepository = f.Value.String()
-			if registrySettings.BaseImageRepository == "" {
-				return nil, errors.New("`private-registry-baseimage` must be set in private registry mode")
-			}
-		}
-
 		f = cmd.Flags().Lookup("private-registry-scenarios")
 		if registrySettings != nil && f != nil {
 			registrySettings.ScenarioRepository = f.Value.String()
@@ -199,13 +191,6 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 						registrySettings.Token = &v
 					}
 
-					if registrySettings != nil && a == "--private-registry-baseimage" {
-						registrySettings.SkipTls = false
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						registrySettings.BaseImageRepository = (*args)[i+1]
-					}
 					if registrySettings != nil && a == "--private-registry-scenarios" {
 						registrySettings.SkipTls = false
 						if err := checkStringArgValue(*args, i); err != nil {
@@ -218,9 +203,6 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 		}
 		if registrySettings != nil && registrySettings.ScenarioRepository == "" {
 			return nil, errors.New("`private-registry-scenarios` must be set in private registry mode")
-		}
-		if registrySettings != nil && registrySettings.BaseImageRepository == "" {
-			return nil, errors.New("`private-registry-baseimage` must be set in private registry mode")
 		}
 
 	}

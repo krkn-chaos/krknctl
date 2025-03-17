@@ -14,13 +14,12 @@ import (
 )
 
 type RegistryV2 struct {
-	Username            *string `form:"username"`
-	Password            *string `form:"password"`
-	Token               *string `form:"token"`
-	RegistryUrl         string  `form:"registry_url"`
-	ScenarioRepository  string  `form:"scenario_repository"`
-	BaseImageRepository string  `form:"base_image_repository"`
-	SkipTls             bool    `form:"skip_tls"`
+	Username           *string `form:"username"`
+	Password           *string `form:"password"`
+	Token              *string `form:"token"`
+	RegistryUrl        string  `form:"registry_url"`
+	ScenarioRepository string  `form:"scenario_repository"`
+	SkipTls            bool    `form:"skip_tls"`
 }
 
 func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
@@ -72,35 +71,12 @@ func (r *RegistryV2) GetV2ScenarioRepositoryApiUri() (string, error) {
 	return registryUrl.String(), nil
 }
 
-func (r *RegistryV2) GetV2BaseImageRepositoryApiUri() (string, error) {
-	prefix := "http://"
-	if r.SkipTls == false {
-		prefix = "https://"
-	}
-	registryUrl, err := url.Parse(fmt.Sprintf("%s/v2/%s/tags/list", prefix+r.RegistryUrl, r.BaseImageRepository))
-	if err != nil {
-		return "", err
-	}
-	return registryUrl.String(), nil
-}
 func (r *RegistryV2) GetV2ScenarioDetailApiUri(scenario string) (string, error) {
 	prefix := "http://"
 	if r.SkipTls == false {
 		prefix = "https://"
 	}
 	registryUrl, err := url.Parse(fmt.Sprintf("%s/v2/%s/manifests/%s", prefix+r.RegistryUrl, r.ScenarioRepository, scenario))
-	if err != nil {
-		return "", err
-	}
-	return registryUrl.String(), nil
-}
-
-func (r *RegistryV2) GetV2BaseImageScenarioDetailApiUri(tag string) (string, error) {
-	prefix := "http://"
-	if r.SkipTls == false {
-		prefix = "https://"
-	}
-	registryUrl, err := url.Parse(fmt.Sprintf("%s/v2/%s/manifests/%s", prefix+r.RegistryUrl, r.BaseImageRepository, tag))
 	if err != nil {
 		return "", err
 	}
