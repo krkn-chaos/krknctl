@@ -37,5 +37,6 @@
   "env_private_registry_password" : "KRKNCTL_PRIVATE_REGISTRY_PASSWORD",
   "env_private_registry_skip_tls" : "KRKNCTL_PRIVATE_REGISTRY_SKIP_TLS",
   "env_private_registry_token" : "KRKNCTL_PRIVATE_REGISTRY_TOKEN",
-  "env_private_registry_scenarios" : "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS"
+  "env_private_registry_scenarios" : "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS",
+  "env_private_registry_insecure" : "KRKNCTL_PRIVATE_REGISTRY_INSECURE"
 }

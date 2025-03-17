@@ -1,6 +1,7 @@
 package registryv2
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,7 +31,7 @@ func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2) (*[]mo
 		return nil, err
 	}
 
-	body, err := s.queryRegistry(registryUri, registry.Username, registry.Password, registry.Token, "GET")
+	body, err := s.queryRegistry(registryUri, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTls)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +50,15 @@ func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2) (*[]mo
 	return &tags, nil
 }
 
-func (s *ScenarioProvider) queryRegistry(uri string, username *string, password *string, token *string, method string) (*[]byte, error) {
+func (s *ScenarioProvider) queryRegistry(uri string, username *string, password *string, token *string, method string, skipTls bool) (*[]byte, error) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: skipTls,
+		},
+	}
+
 	client := &http.Client{}
+	client.Transport = tr
 	req, err := http.NewRequest(method, uri, nil)
 	if err != nil {
 		return nil, err
@@ -159,7 +167,7 @@ func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 }
 
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
-	body, err := s.queryRegistry(dataSource, registry.Username, registry.Password, registry.Token, "GET")
+	body, err := s.queryRegistry(dataSource, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTls)
 	if err != nil {
 		return nil, err
 	}

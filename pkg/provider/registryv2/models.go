@@ -29,24 +29,3 @@ func (l LayerV1Compat) GetCommands() []string {
 	}
 	return []string{}
 }
-
-/*
-{
-  "id" : "4f3b435feb9336170b53414b0332e5ee35e41a0f20c65a31baf48321ef17ba33",
-  "parent" : "daad2e9ade2243b50ba9af5b1e636ff343869b06189cfcfe0ecc28cca57e55e6",
-  "created" : "2024-09-18T21:29:42.817435026Z",
-  "throwaway" : true,
-  "container_config" : {
-    "Cmd" : [ "/bin/sh -c #(nop) LABEL com.redhat.license_terms=\"https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI\"" ]
-  },
-  "Size" : 32
-}
-*/
-
-/*
-  "tag" : "dummy-scenario",
-  "name" : "rh_ee_tsebasti/krkn-hub-private",
-  "architecture" : "amd64",
-  "schemaVersion" : 1,
-  "history" : [ {
-*/
