@@ -27,7 +27,7 @@ func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table
 		if private {
 			tbl.AddRow(scenario.Name)
 		} else {
-			tbl.AddRow(scenario.Name, scenario.Size, scenario.Digest, scenario.LastModified)
+			tbl.AddRow(scenario.Name, *scenario.Size, *scenario.Digest, *scenario.LastModified)
 		}
 
 	}

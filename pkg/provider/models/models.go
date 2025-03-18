@@ -58,7 +58,7 @@ func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
 
 	insecure := os.Getenv(config.EnvPrivateRegistryInsecure)
 	if insecure == "" {
-		registryV2.SkipTls = false
+		registryV2.Insecure = false
 	} else {
 		isInsecure, err := strconv.ParseBool(insecure)
 		if err != nil {
