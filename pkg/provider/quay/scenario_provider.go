@@ -167,7 +167,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 	if err != nil {
 		return nil, err
 	}
-	scenarios, err := p.GetRegistryImages(nil)
+	scenarios, err := p.GetRegistryImages(registry)
 	if err != nil {
 		return nil, err
 	}
