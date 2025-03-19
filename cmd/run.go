@@ -68,7 +68,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
+			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
 			if err != nil {
 				return err
 			}
@@ -151,7 +151,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
-			globalDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
+			globalDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
 			if err != nil {
 				return err
 			}
