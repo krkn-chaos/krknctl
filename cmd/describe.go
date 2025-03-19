@@ -61,11 +61,13 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			spinner.Start()
 
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 			provider := GetProvider(registrySettings != nil, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], registrySettings)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 			spinner.Stop()

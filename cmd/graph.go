@@ -234,7 +234,7 @@ func validateScenariosInput(provider provider.ScenarioDataProvider,
 			return
 		}
 
-		globalDetail, err := provider.GetGlobalEnvironment(registrySettings, "")
+		globalDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioDetail.Name)
 		if err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
