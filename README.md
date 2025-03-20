@@ -107,35 +107,36 @@ Commands are grouped by action and may include one or more subcommands to furthe
 
 ### `list <subcommand>`:
 
-#### `available`:
-Builds a list of all the available scenarios in krkn-hub
+- #### `available`:
+    Builds a list of all the available scenarios in krkn-hub
+
+    ```% krknctl list available ```
+
+    | Name | Size | Digest | Last Modified | 
+    | -------- | --- | ------- | --------- |
+    | network-chaos | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | service-disruption-scenarios | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | node-memory-hog | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | application-outages | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | node-cpu-hog| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | time-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | node-scenarios| ** |sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | service-hijacking| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | pvc-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | chaos-recommender| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | syn-flood | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+    | container-scenarios| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | pod-network-chaos| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | pod-scenarios | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | node-io-hog | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | power-outages | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | zone-outages| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+    | dummy-scenario | **  |  sha256:** |  2025-01-01 00:00:00+0000 +0000 |
 
 
-| Name | Size | Digest | Last Modified | 
-| -------- | --- | ------- | --------- |
-| network-chaos | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| service-disruption-scenarios | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| node-memory-hog | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| application-outages | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| node-cpu-hog| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| time-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| node-scenarios| ** |sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| service-hijacking| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| pvc-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| chaos-recommender| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| syn-flood | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
-| container-scenarios| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| pod-network-chaos| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| pod-scenarios | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| node-io-hog | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| power-outages | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| zone-outages| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
-| dummy-scenario | **  |  sha256:** |  2025-01-01 00:00:00+0000 +0000 |
 
-
-
-#### `running`:
-Builds a list of all the scenarios currently running in the system. The scenarios are filtered based on the tool's naming conventions.
+- #### `running`:
+    Builds a list of all the scenarios currently running in the system. The scenarios are filtered based on the tool's naming conventions.
 
 <br/>
 
