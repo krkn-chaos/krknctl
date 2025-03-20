@@ -29,26 +29,6 @@ This allows users to focus solely on implementing chaos engineering practices wi
 
 <br/>
 
-## Autocompletion:
-The first step to have the best experience with the tool is to install the autocompletion in the shell so that the tool
-will be able to suggest to the user the available command and the description simply hitting `tab` twice.
-
-### Bash (linux):
-```
-source <(./krknctl completion bash)
-```
-> [!TIP] 
-> To install autocompletion permanently add this command to `.bashrc` (setting the krknctl binary path correctly)
-### zsh (MacOS):
-```
-autoload -Uz compinit
-compinit
-source <(./krknctl completion zsh)
-```
-> [!TIP] 
-> To install autocompletion permanently add this command to `.zshrc` (setting the krknctl binary path correctly)
-
-<br/>
 
 ## Requirements:
 ### Running:
@@ -67,11 +47,32 @@ To build the only system package required is libbtrfs:
 #### MacOS:
 - **gpgme**: `brew install gpgme` 
 
-#### Build commands: 
+## Installation Build commands: 
 `go build -tags containers_image_openpgp -ldflags="-w -s" -o bin/ ./...`
 
 >[!NOTE]
 > To build for different operating systems/architectures refer to `GOOS` `GOARCH` [golang variables](https://pkg.go.dev/internal/platform)
+
+<br/>
+
+## Autocompletion:
+The first step to have the best experience with the tool is to install the autocompletion in the shell so that the tool
+will be able to suggest to the user the available command and the description simply hitting `tab` twice.
+
+### Bash (linux):
+```
+source <(./krknctl completion bash)
+```
+> [!TIP] 
+> To install autocompletion permanently add this command to `.bashrc` (setting the krknctl binary path correctly)
+### zsh (MacOS):
+```
+autoload -Uz compinit
+compinit
+source <(./krknctl completion zsh)
+```
+> [!TIP] 
+> To install autocompletion permanently add this command to `.zshrc` (setting the krknctl binary path correctly)
 
 <br/>
 
@@ -106,10 +107,34 @@ Commands are grouped by action and may include one or more subcommands to furthe
 
 ### `list <subcommand>`:
 
-- #### `available`:
+#### `available`:
 Builds a list of all the available scenarios in krkn-hub
 
-- #### `running`:
+
+| Name | Size | Digest | Last Modified | 
+| -------- | --- | ------- | --------- |
+| network-chaos | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| service-disruption-scenarios | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| node-memory-hog | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| application-outages | ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| node-cpu-hog| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| time-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| node-scenarios| ** |sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| service-hijacking| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| pvc-scenarios | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| chaos-recommender| ** | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| syn-flood | **  | sha256:** | 2025-01-01 00:00:00+0000 +0000 |
+| container-scenarios| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| pod-network-chaos| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| pod-scenarios | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| node-io-hog | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| power-outages | **  | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| zone-outages| ** | sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+| dummy-scenario | **  |  sha256:** |  2025-01-01 00:00:00+0000 +0000 |
+
+
+
+#### `running`:
 Builds a list of all the scenarios currently running in the system. The scenarios are filtered based on the tool's naming conventions.
 
 <br/>
