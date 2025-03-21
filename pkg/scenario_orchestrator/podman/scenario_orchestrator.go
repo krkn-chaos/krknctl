@@ -118,7 +118,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 			Destination: v,
 			Type:        string(mount.TypeBind),
 			Source:      k,
-			Options:     []string{"Z"},
+			Options:     []string{"z"},
 			UIDMappings: nil,
 			GIDMappings: nil,
 		}
