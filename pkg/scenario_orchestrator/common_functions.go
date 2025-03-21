@@ -17,20 +17,20 @@ import (
 )
 
 func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, ctx context.Context, registry *providermodels.RegistryV2) {
-	env := make(map[string]string)
-	volumes := make(map[string]string)
-
-	for k, v := range extraEnv {
-		env[k] = v
-	}
-
-	for k, v := range extraVolumeMounts {
-		volumes[k] = v
-	}
-
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scId := range s {
+			env := make(map[string]string)
+			volumes := make(map[string]string)
+
+			for k, v := range extraEnv {
+				env[k] = v
+			}
+
+			for k, v := range extraVolumeMounts {
+				volumes[k] = v
+			}
+
 			scenario := scenarios[scId]
 			for k, v := range scenario.Env {
 				env[k] = v
