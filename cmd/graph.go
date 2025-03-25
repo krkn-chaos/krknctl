@@ -49,7 +49,10 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				}
 			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
-			spinner := NewSpinnerWithSuffix("running graph based chaos plan...", registrySettings)
+			if registrySettings != nil {
+				logPrivateRegistry(registrySettings.RegistryUrl)
+			}
+			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
 			kubeconfig, err := cmd.Flags().GetString("kubeconfig")

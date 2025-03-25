@@ -41,6 +41,9 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 					return err
 				}
 			}
+			if registrySettings != nil {
+				logPrivateRegistry(registrySettings.RegistryUrl)
+			}
 
 			if err != nil {
 				return err
@@ -50,7 +53,7 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 				privateRegistry = true
 			}
 			provider := GetProvider(privateRegistry, factory)
-			s := NewSpinnerWithSuffix("fetching scenarios...", registrySettings)
+			s := NewSpinnerWithSuffix("fetching scenarios...")
 			s.Start()
 			scenarios, err := provider.GetRegistryImages(registrySettings)
 			if err != nil {

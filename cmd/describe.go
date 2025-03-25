@@ -36,6 +36,7 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			if registrySettings != nil {
 				privateRegistry = true
 			}
+
 			provider := GetProvider(privateRegistry, factory)
 			scenarios, err := FetchScenarios(provider, registrySettings)
 			if err != nil {
@@ -57,7 +58,10 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 					return err
 				}
 			}
-			spinner := NewSpinnerWithSuffix("fetching scenario details...", registrySettings)
+			if registrySettings != nil {
+				logPrivateRegistry(registrySettings.RegistryUrl)
+			}
+			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()
 
 			if err != nil {
