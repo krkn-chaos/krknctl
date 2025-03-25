@@ -16,11 +16,8 @@ import (
 	"time"
 )
 
-func NewSpinnerWithSuffix(suffix string, registrySettings *models.RegistryV2) *spinner.Spinner {
+func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
 	var s *spinner.Spinner = nil
-	if registrySettings != nil {
-		suffix = fmt.Sprintf("[🔐%s] %s", registrySettings.RegistryUrl, suffix)
-	}
 	s = spinner.New(spinner.CharSets[39], 100*time.Millisecond)
 	s.Suffix = suffix
 	return s
@@ -219,4 +216,9 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 	}
 	return registrySettings, nil
 
+}
+
+func logPrivateRegistry(registry string) {
+	log := fmt.Sprintf("[🔐 Private Registry] %s\n", registry)
+	fmt.Println(log)
 }

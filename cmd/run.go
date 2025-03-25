@@ -130,6 +130,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					return err
 				}
 			}
+			if registrySettings != nil {
+				logPrivateRegistry(registrySettings.RegistryUrl)
+			}
 
 			if err != nil {
 				return err
@@ -141,7 +144,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			(*scenarioOrchestrator).PrintContainerRuntime()
-			spinner := NewSpinnerWithSuffix("fetching scenario metadata...", registrySettings)
+			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
 			spinner.Start()
 
 			runDetached := false

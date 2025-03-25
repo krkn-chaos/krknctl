@@ -66,7 +66,7 @@ func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
 		}
 		registryV2.Insecure = isInsecure
 	}
-	fmt.Println("found private registry settings on ENV")
+
 	return &registryV2, nil
 
 }
