@@ -297,14 +297,6 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 		uid = &_uid
 		fmt.Println("USERID -> ", *uid)
 	}
-	socket, err := so.GetContainerRuntimeSocket(uid)
-	assert.Nil(t, err)
-	assert.NotNil(t, socket)
-	ctx, err := so.Connect(*socket)
-	assert.Nil(t, err)
-	assert.NotNil(t, ctx)
-
-	fmt.Println("CONTAINER SOCKET -> " + *socket)
 
 	nodes := make(map[string]models.ScenarioNode)
 	err = json.Unmarshal([]byte(data), &nodes)
@@ -327,7 +319,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
 	}()
 
 	for {
