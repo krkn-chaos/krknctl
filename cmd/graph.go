@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -178,8 +179,23 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					break
 				} else {
 					if c.Err != nil {
-						// interrupt all running scenarios
+						spinner.Stop()
+						var staterr *utils.ExitError
+						if errors.As(c.Err, &staterr) {
+							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
+								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
+									*c.ScenarioId,
+									*c.Layer,
+									staterr.ExitStatus,
+									*c.ScenarioLogFile))
+								if err != nil {
+									return err
+								}
+							}
+							os.Exit(staterr.ExitStatus)
+						}
 						return c.Err
+
 					}
 					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
 

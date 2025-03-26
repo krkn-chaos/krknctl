@@ -65,7 +65,11 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 
 			go func() {
 				defer wg.Done()
-				_, _ = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
+				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
+				if err != nil {
+					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioId: &scId, ScenarioLogFile: &filename, Err: err}
+					return
+				}
 			}()
 
 		}
