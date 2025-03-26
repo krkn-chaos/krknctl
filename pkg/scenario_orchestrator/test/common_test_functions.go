@@ -333,6 +333,90 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 
 	}
 
+	data = `
+{
+  "dummy-scenario-eoghanacht": {
+    "_comment": "I'm the root Node!",
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
+    "env": {
+      "END": "1",
+      "EXIT_STATUS": "0"
+    }
+  },
+  "dummy-scenario-ganglionic": {
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
+    "env": {
+      "END": "3",
+      "EXIT_STATUS": "0"
+    },
+    "depends_on": "dummy-scenario-eoghanacht"
+  },
+  "dummy-scenario-mirthsome": {
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
+    "env": {
+      "END": "1",
+      "EXIT_STATUS": "%d"
+    },
+    "depends_on": "dummy-scenario-eoghanacht"
+  },
+  "dummy-scenario-stanly": {
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
+    "env": {
+      "END": "1",
+      "EXIT_STATUS": "0"
+    },
+    "depends_on": "dummy-scenario-mirthsome"
+  }
+}`
+	exitStatus := 3
+	data = fmt.Sprintf(data, exitStatus)
+	nodes = make(map[string]models.ScenarioNode)
+	err = json.Unmarshal([]byte(data), &nodes)
+	assert.Nil(t, err)
+
+	convertedNodes = make(map[string]dependencygraph.ParentProvider, len(nodes))
+
+	// Populate the new map
+	for key, node := range nodes {
+		// Since ScenarioNode implements ParentProvider, this is valid
+		convertedNodes[key] = node
+	}
+
+	graph, err = dependencygraph.NewGraphFromNodes(convertedNodes)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, graph)
+	executionPlan = graph.TopoSortedLayers()
+	assert.NotNil(t, executionPlan)
+
+	commChannel = make(chan *models.GraphCommChannel)
+	go func() {
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
+	}()
+
+	for {
+		c := <-commChannel
+		if c == nil {
+			break
+		} else {
+			if (*c).Err != nil {
+				assert.NotNil(t, (*c).ScenarioId)
+				assert.NotNil(t, (*c).ScenarioLogFile)
+				assert.NotNil(t, (*c).Layer)
+				var staterr *utils.ExitError
+				assert.True(t, errors.As(c.Err, &staterr))
+				assert.NotNil(t, staterr)
+				assert.Equal(t, staterr.ExitStatus, exitStatus)
+			}
+
+		}
+
+	}
+
 }
 
 func CommonTestScenarioOrchestratorListRunningContainers(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, config krknctlconfig.Config) {
