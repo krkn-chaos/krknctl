@@ -16,10 +16,23 @@ import (
 	"syscall"
 )
 
-func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, ctx context.Context, registry *providermodels.RegistryV2) {
+func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *models.GraphCommChannel, orchestrator ScenarioOrchestrator, config config.Config, registry *providermodels.RegistryV2, userId *int) {
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scId := range s {
+
+			socket, err := orchestrator.GetContainerRuntimeSocket(userId)
+			if err != nil {
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				return
+			}
+
+			ctx, err := orchestrator.Connect(*socket)
+			if err != nil {
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				return
+			}
+
 			env := make(map[string]string)
 			volumes := make(map[string]string)
 

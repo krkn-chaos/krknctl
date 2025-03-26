@@ -167,18 +167,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			spinner.Start()
 
 			commChannel := make(chan *models.GraphCommChannel)
-			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
-			if err != nil {
-				return err
-			}
-
-			ctx, err := (*scenarioOrchestrator).Connect(*socket)
-			if err != nil {
-				return err
-			}
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, ctx, registrySettings)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
 			}()
 
 			for {

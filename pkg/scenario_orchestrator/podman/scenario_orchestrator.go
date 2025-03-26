@@ -348,9 +348,9 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer,
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, ctx context.Context, registry *providermodels.RegistryV2) {
+func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *providermodels.RegistryV2, userId *int) {
 	//TODO: add a getconfig method in scenarioOrchestrator
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, ctx, nil)
+	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userId)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
