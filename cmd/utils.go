@@ -8,6 +8,8 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -221,4 +223,94 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 func logPrivateRegistry(registry string) {
 	log := fmt.Sprintf("[🔐 Private Registry] %s\n", registry)
 	fmt.Println(log)
+}
+
+func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
+	nodes map[string]orchestratorModels.ScenarioNode,
+	scenarioNameChannel chan *struct {
+		name *string
+		err  error
+	},
+	registrySettings *providermodels.RegistryV2) {
+	for _, n := range nodes {
+		// skip _comment
+		if n.Name == "" {
+			continue
+		}
+		scenarioNameChannel <- &struct {
+			name *string
+			err  error
+		}{name: &n.Name, err: nil}
+		scenarioDetail, err := provider.GetScenarioDetail(n.Name, registrySettings)
+
+		if err != nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: err}
+			return
+		}
+
+		if scenarioDetail == nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: fmt.Errorf("scenario %s not found", n.Name)}
+			return
+		}
+
+		globalDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioDetail.Name)
+		if err != nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: err}
+			return
+		}
+
+		// adding the global env fields to the scenario fields so, if global env is
+		// added to the scenario the validation is available
+
+		scenarioDetail.Fields = append(scenarioDetail.Fields, globalDetail.Fields...)
+
+		for k, v := range n.Env {
+			field := scenarioDetail.GetFieldByEnvVar(k)
+			if field == nil {
+
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &n.Name, err: fmt.Errorf("environment variable %s not found", k)}
+				return
+			}
+			_, err := field.Validate(&v)
+			if err != nil {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &n.Name, err: err}
+				return
+			}
+		}
+
+		for k, v := range n.Volumes {
+			field := scenarioDetail.GetFileFieldByMountPath(v)
+			if field == nil {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &n.Name, err: fmt.Errorf("no file parameter found of type field for scenario %s with mountPath %s", n.Name, v)}
+				return
+			}
+			_, err := field.Validate(&k)
+			if err != nil {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &n.Name, err: err}
+				return
+			}
+		}
+	}
+	scenarioNameChannel <- nil
 }

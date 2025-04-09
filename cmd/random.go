@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/randomgraph"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
@@ -18,11 +18,11 @@ import (
 	"strings"
 )
 
-func NewGraphCommand() *cobra.Command {
+func NewRandomCommand() *cobra.Command {
 	var command = &cobra.Command{
-		Use:   "graph",
-		Short: "Runs or scaffolds a dependency graph based run",
-		Long:  `Runs or scaffolds a dependency graph based run`,
+		Use:   "random",
+		Short: "Runs or scaffolds a random chaos run based on a json test plan",
+		Long:  `Runs or scaffolds a random chaos run based on a json test plan`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
@@ -31,11 +31,11 @@ func NewGraphCommand() *cobra.Command {
 	return command
 }
 
-func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
-		Short: "Runs a dependency graph based run",
-		Long:  `Runs graph based run`,
+		Short: "Runs a random chaos run",
+		Long:  `Runs a random run based on a json test plan`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
@@ -52,7 +52,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if registrySettings != nil {
 				logPrivateRegistry(registrySettings.RegistryUrl)
 			}
-			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
+			spinner := NewSpinnerWithSuffix("running randomly generated chaos plan...")
 			volumes := make(map[string]string)
 			environment := make(map[string]string)
 			kubeconfig, err := cmd.Flags().GetString("kubeconfig")
@@ -75,6 +75,15 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 			if metricsProfile != "" && CheckFileExists(metricsProfile) == false {
 				return fmt.Errorf("file %s does not exist", metricsProfile)
+			}
+			maxParallel, err := cmd.Flags().GetInt("max-parallel")
+			if err != nil {
+				return err
+			}
+
+			numberOfScenarios, err := cmd.Flags().GetInt("number-of-scenarios")
+			if err != nil {
+				return err
 			}
 
 			if err != nil {
@@ -139,21 +148,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 
 			spinner.Stop()
 
-			convertedNodes := make(map[string]dependencygraph.ParentProvider, len(nodes))
-
-			// Populate the new map
-			for key, node := range nodes {
-				// Since ScenarioNode implements ParentProvider, this is valid
-				convertedNodes[key] = node
-			}
-			graph, err := dependencygraph.NewGraphFromNodes(convertedNodes)
-			if err != nil {
-				return err
-			}
-
-			executionPlan := graph.TopoSortedLayers()
+			executionPlan := randomgraph.NewRandomGraph(nodes, maxParallel, numberOfScenarios)
 			if len(executionPlan) == 0 {
-				_, err = color.New(color.FgYellow).Println("No scenario to execute; the graph file appears to be empty (single-node graphs are not supported).")
+				_, err = color.New(color.FgYellow).Println("No scenario to execute; the random graph file appears to be empty (single-node graphs are not supported).")
 				if err != nil {
 					return err
 				}
@@ -209,11 +206,11 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 	return command
 }
 
-func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {
+func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "scaffold",
-		Short: "Scaffolds a dependency graph based run",
-		Long:  `Scaffolds a dependency graph based run`,
+		Short: "Scaffolds a random chaos run",
+		Long:  `Scaffolds a random run based on a json test plan`,
 		Args:  cobra.MinimumNArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
@@ -259,7 +256,7 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, false)
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true)
 			if err != nil {
 				return err
 			}

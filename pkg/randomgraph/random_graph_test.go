@@ -1,26 +1,13 @@
-package dependencygraph
+package randomgraph
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/kendru/darwin/go/depgraph"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/stretchr/testify/assert"
-	"strings"
 	"testing"
 )
 
-type GenericNode struct {
-	Parent *string `json:"depends_on"`
-}
-
-func (g *GenericNode) GetParent() *string {
-	return g.Parent
-}
-
-type NodeList map[string]GenericNode
-
-func TestDependencyGraph(t *testing.T) {
-
+func TestNewRandomGraph(t *testing.T) {
 	data := `
 {
   "alectoropodous-retrogradely": {
@@ -36,7 +23,8 @@ func TestDependencyGraph(t *testing.T) {
       "TRAFFIC_TYPE": "[ingress,egress]",
       "WAIT_DURATION": "300"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "precedential-desiccative"
   },
   "bathysophical-hunh": {
     "image": "quay.io/krkn-chaos/krkn-hub:pod-scenarios",
@@ -62,7 +50,8 @@ func TestDependencyGraph(t *testing.T) {
       "OBJECT_NAME": "[]",
       "OBJECT_TYPE": "pod"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "alectoropodous-retrogradely"
   },
   "impassionment-unordinateness": {
     "image": "quay.io/krkn-chaos/krkn-hub:node-scenarios",
@@ -92,7 +81,8 @@ func TestDependencyGraph(t *testing.T) {
       "VSPHERE_PASSWORD": "<VSpere password>",
       "VSPHERE_USERNAME": "<VSpere IP Address>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "bathysophical-hunh"
   },
   "individualist-creatine": {
     "image": "quay.io/krkn-chaos/krkn-hub:node-io-hog",
@@ -105,7 +95,8 @@ func TestDependencyGraph(t *testing.T) {
       "NODE_SELECTORS": "<Node selectors where the scenario containers will be scheduled in the format \"<selector>=<value>\". NOTE: This value can be specified as a list of node selectors separated by \";\". Will be instantiated a container per each node selector with the same scenario options. This option is meant to run one or more stress scenarios simultaneously on different nodes, kubernetes will schedule the pods on the target node accordingly with the selector specified. Specifying the same selector multiple times will instantiate as many scenario container as the number of times the selector is specified on the same node>",
       "TOTAL_CHAOS_DURATION": "60"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "thinglike-temse"
   },
   "indivision-predetermination": {
     "image": "quay.io/krkn-chaos/krkn-hub:network-chaos",
@@ -123,7 +114,8 @@ func TestDependencyGraph(t *testing.T) {
       "TRAFFIC_TYPE": "<Selects the network chaos scenario type can be ingress or egress(required)>",
       "WAIT_DURATION": "300"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "metaphragmal-necropolis"
   },
   "mealymouthedly-coelogastrula": {
     "image": "quay.io/krkn-chaos/krkn-hub:container-scenarios",
@@ -136,7 +128,8 @@ func TestDependencyGraph(t *testing.T) {
       "LABEL_SELECTOR": "k8s-app=etcd",
       "NAMESPACE": "openshift-etcd"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "pharmacoendocrinology-slurp"
   },
   "metaphragmal-necropolis": {
     "image": "quay.io/krkn-chaos/krkn-hub:power-outages",
@@ -149,7 +142,8 @@ func TestDependencyGraph(t *testing.T) {
       "TIMEOUT": "600",
       "VSPHERE_PASSWORD": "<AWS Secret Access Key>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "shirallee-marikina"
   },
   "novelistic-straticulation": {
     "image": "quay.io/krkn-chaos/krkn-hub:pvc-scenarios",
@@ -161,7 +155,8 @@ func TestDependencyGraph(t *testing.T) {
       "POD_NAME": "<Targeted pod in the cluster (if null, PVC_NAME is required)>",
       "PVC_NAME": "<Targeted PersistentVolumeClaim in the cluster (if null, POD_NAME is required)>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "durant-trafficless"
   },
   "novemberish-loa": {
     "image": "quay.io/krkn-chaos/krkn-hub:node-cpu-hog",
@@ -173,7 +168,8 @@ func TestDependencyGraph(t *testing.T) {
       "NODE_SELECTORS": "<Node selectors where the scenario containers will be scheduled in the format \"<selector>=<value>\". NOTE: This value can be specified as a list of node selectors separated by \";\". Will be instantiated a container per each node selector with the same scenario options. This option is meant to run one or more stress scenarios simultaneously on different nodes, kubernetes will schedule the pods on the target node accordingly with the selector specified. Specifying the same selector multiple times will instantiate as many scenario container as the number of times the selector is specified on the same node>",
       "TOTAL_CHAOS_DURATION": "60"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "novelistic-straticulation"
   },
   "pharmacoendocrinology-slurp": {
     "image": "quay.io/krkn-chaos/krkn-hub:application-outages",
@@ -184,7 +180,8 @@ func TestDependencyGraph(t *testing.T) {
       "NAMESPACE": "<Namespace to target - all application routes will go inaccessible if pod selector is empty ( Required )(required)>",
       "POD_SELECTOR": "<Pods to target. For example \"{app: foo}\"(required)>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "individualist-creatine"
   },
   "precedential-desiccative": {
     "image": "quay.io/krkn-chaos/krkn-hub:zone-outages",
@@ -198,7 +195,8 @@ func TestDependencyGraph(t *testing.T) {
       "SUBNET_ID": "<subnet-id to deny both ingress and egress traffic ( REQUIRED ). Format: [subnet1, subnet2]>",
       "VPC_ID": "<cluster virtual private network to target(required)>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "impassionment-unordinateness"
   },
   "shirallee-marikina": {
     "image": "quay.io/krkn-chaos/krkn-hub:node-memory-hog",
@@ -210,7 +208,8 @@ func TestDependencyGraph(t *testing.T) {
       "NUMBER_OF_WORKERS": "1",
       "TOTAL_CHAOS_DURATION": "60"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "novemberish-loa"
   },
   "thinglike-temse": {
     "image": "quay.io/krkn-chaos/krkn-hub:service-disruption-scenarios",
@@ -221,7 +220,8 @@ func TestDependencyGraph(t *testing.T) {
       "NAMESPACE": "openshift-etcd",
       "RUNS": "1"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "unrefracting-hierophantic"
   },
   "unrefracting-hierophantic": {
     "image": "quay.io/krkn-chaos/krkn-hub:service-hijacking",
@@ -229,25 +229,27 @@ func TestDependencyGraph(t *testing.T) {
     "env": {
       "SCENARIO_BASE64": "<The absolute path of the scenario file compiled following the documentation(required)>"
     },
-    "volumes": {}
+    "volumes": {},
+    "depends_on": "indivision-predetermination"
   }
 }
 `
-	testStruct := make(NodeList)
-	graph := depgraph.New()
+
+	var testStruct map[string]models.ScenarioNode
 	err := json.Unmarshal([]byte(data), &testStruct)
 	assert.Nil(t, err)
-
-	for k, v := range testStruct {
-		if parent := v.GetParent(); parent != nil {
-			err := graph.DependOn(k, *parent)
-			assert.Nil(t, err)
-		}
-
+	//maxNumberOfScenarios := 4
+	randomGraph := NewRandomGraph(testStruct, 3, 0)
+	count := 0
+	for i := 0; i < len(randomGraph); i++ {
+		count += len(randomGraph[i])
 	}
-
-	for i, layer := range graph.TopoSortedLayers() {
-		fmt.Printf("%d: %s\n", i, strings.Join(layer, ", "))
+	assert.Equal(t, len(testStruct), count)
+	numberOfScenarios := 6
+	randomGraph = NewRandomGraph(testStruct, 3, numberOfScenarios)
+	count = 0
+	for i := 0; i < len(randomGraph); i++ {
+		count += len(randomGraph[i])
 	}
-
+	assert.Equal(t, numberOfScenarios, count)
 }

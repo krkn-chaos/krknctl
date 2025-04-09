@@ -25,7 +25,7 @@ func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
 	return nil
 }
 
-func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider) (*string, error) {
+func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider, random bool) (*string, error) {
 	var scenarioDetails []models.ScenarioDetail
 
 	// handles babble panic when american word dictionary is not installed
@@ -56,16 +56,19 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		indexes = append(indexes, fmt.Sprintf("%s-%s", scenario, strings.ToLower(babbler.Babble())))
 	}
 	var scenarioNodes = make(map[string]models2.ScenarioNode)
-
-	scenarioNodes["_comment"] = GetInstructionScenario(indexes[0])
+	if random == false {
+		scenarioNodes["_comment"] = GetInstructionScenario(indexes[0])
+	}
 	for i, scenarioDetail := range scenarioDetails {
 		indexes = append(indexes, strings.ToLower(babbler.Babble()))
 
 		scenarioNode := models2.ScenarioNode{}
-		if i > 0 {
-			scenarioNode.Parent = &indexes[i-1]
-		} else {
-			scenarioNode.Comment = "I'm the root Node!"
+		if random == false {
+			if i > 0 {
+				scenarioNode.Parent = &indexes[i-1]
+			} else {
+				scenarioNode.Comment = "I'm the root Node!"
+			}
 		}
 
 		var imageUri = ""

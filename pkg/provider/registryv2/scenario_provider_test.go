@@ -1,6 +1,7 @@
 package registryv2
 
 import (
+	json_parser "encoding/json"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -221,15 +222,27 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
 
-	json, err := p.ScaffoldScenarios(scenarioNames, false, &pr)
+	json, err := p.ScaffoldScenarios(scenarioNames, false, &pr, false)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = p.ScaffoldScenarios(scenarioNames, true, &pr)
+	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, true)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+	var parsedScenarios map[string]map[string]interface{}
+	err = json_parser.Unmarshal([]byte(*json), &parsedScenarios)
+	assert.Nil(t, err)
+	for el := range parsedScenarios {
+		assert.NotEqual(t, el, "comment")
+		_, ok := parsedScenarios[el]["depends_on"]
+		assert.False(t, ok)
+	}
+
+	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, false)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = p.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, &pr)
+	json, err = p.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, &pr, false)
 	assert.Nil(t, json)
 	assert.NotNil(t, err)
 }
