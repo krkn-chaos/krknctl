@@ -73,7 +73,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
-
+	graphRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
 	graphCmd.AddCommand(graphRunCmd)
@@ -88,6 +88,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
 	randomRunCmd.Flags().Int("max-parallel", 0, "maximum number of parallel scenarios")
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
+	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
