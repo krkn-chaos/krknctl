@@ -86,6 +86,11 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return err
 			}
 
+			exitOnerror, err := cmd.Flags().GetBool("exit-on-error")
+			if err != nil {
+				return err
+			}
+
 			if err != nil {
 				return err
 			}
@@ -188,9 +193,15 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 									return err
 								}
 							}
-							os.Exit(staterr.ExitStatus)
+							if exitOnerror {
+								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", staterr.ExitStatus))
+								if err != nil {
+									return err
+								}
+								os.Exit(staterr.ExitStatus)
+							}
+							spinner.Start()
 						}
-						return c.Err
 
 					}
 					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))

@@ -76,6 +76,10 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if metricsProfile != "" && CheckFileExists(metricsProfile) == false {
 				return fmt.Errorf("file %s does not exist", metricsProfile)
 			}
+			exitOnerror, err := cmd.Flags().GetBool("exit-on-error")
+			if err != nil {
+				return err
+			}
 
 			if err != nil {
 				return err
@@ -182,7 +186,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 						var staterr *utils.ExitError
 						if errors.As(c.Err, &staterr) {
 							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
-								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
+								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s.",
 									*c.ScenarioId,
 									*c.Layer,
 									staterr.ExitStatus,
@@ -191,10 +195,15 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 									return err
 								}
 							}
-							os.Exit(staterr.ExitStatus)
+							if exitOnerror {
+								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", staterr.ExitStatus))
+								if err != nil {
+									return err
+								}
+								os.Exit(staterr.ExitStatus)
+							}
+							spinner.Start()
 						}
-						return c.Err
-
 					}
 					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
 
