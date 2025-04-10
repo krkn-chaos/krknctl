@@ -86,7 +86,7 @@ type ScenarioDataProvider interface {
 	GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error)
 	GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error)
 	GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error)
-	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error)
+	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool) (*string, error)
 }
 
 type ContainerLayer interface {

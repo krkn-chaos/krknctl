@@ -72,8 +72,8 @@ func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.Scen
 	return scenarioTags, nil
 }
 
-func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error) {
-	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, p.Config, p)
+func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool) (*string, error) {
+	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, p.Config, p, random)
 }
 
 func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {

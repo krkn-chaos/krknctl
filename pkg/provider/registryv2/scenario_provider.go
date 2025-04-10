@@ -162,8 +162,8 @@ func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 	return scenarioDetail, nil
 }
 
-func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2) (*string, error) {
-	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s)
+func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool) (*string, error) {
+	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s, random)
 }
 
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {

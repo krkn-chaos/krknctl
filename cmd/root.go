@@ -80,6 +80,26 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphCmd.AddCommand(graphScaffoldCmd)
 	rootCmd.AddCommand(graphCmd)
 
+	// random subcommand
+	randomCmd := NewRandomCommand()
+	randomRunCmd := NewRandomRunCommand(providerFactory, scenarioOrchestrator, config)
+	randomRunCmd.Flags().String("kubeconfig", "", "kubeconfig path (if not set will default to ~/.kube/config)")
+	randomRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
+	randomRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
+	randomRunCmd.Flags().Int("max-parallel", 0, "maximum number of parallel scenarios")
+	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
+	err := randomRunCmd.MarkFlagRequired("max-parallel")
+	if err != nil {
+		fmt.Println("Error marking flag as required:", err)
+		os.Exit(1)
+	}
+
+	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
+	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
+	randomCmd.AddCommand(randomRunCmd)
+	randomCmd.AddCommand(randomScaffoldCmd)
+	rootCmd.AddCommand(randomCmd)
+
 	attachCmd := NewAttachCmd(scenarioOrchestrator)
 	rootCmd.AddCommand(attachCmd)
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator, config)
