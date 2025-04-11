@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/randomgraph"
@@ -21,8 +22,8 @@ import (
 func NewRandomCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "random",
-		Short: "Runs or scaffolds a random chaos run based on a json test plan",
-		Long:  `Runs or scaffolds a random chaos run based on a json test plan`,
+		Short: "runs or scaffolds a random chaos run based on a json test plan",
+		Long:  `runs or scaffolds a random chaos run based on a json test plan`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
@@ -34,8 +35,8 @@ func NewRandomCommand() *cobra.Command {
 func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
-		Short: "Runs a random chaos run",
-		Long:  `Runs a random run based on a json test plan`,
+		Short: "runs a random chaos run",
+		Long:  `runs a random run based on a json test plan`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
@@ -220,9 +221,9 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "scaffold",
-		Short: "Scaffolds a random chaos run",
-		Long:  `Scaffolds a random run based on a json test plan`,
-		Args:  cobra.MinimumNArgs(1),
+		Short: "scaffolds a random chaos run",
+		Long:  `scaffolds a random run based on a json test plan`,
+		Args:  cobra.MinimumNArgs(0),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
 			if err != nil {
@@ -248,6 +249,7 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var seed provider.ScaffoldSeed
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
 			if err != nil {
 				return err
@@ -263,11 +265,34 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			}
 			dataProvider := GetProvider(registrySettings != nil, factory)
 			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
+			seedFile, err := cmd.Flags().GetString("seed-file")
+			if err != nil {
+				return err
+			}
+			numberOfScenarios, err := cmd.Flags().GetInt("number-of-scenarios")
 			if err != nil {
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true)
+			if seedFile != "" {
+				if CheckFileExists(seedFile) == false {
+					return fmt.Errorf("file %s does not exist", seedFile)
+				}
+				seed = provider.ScaffoldSeed{
+					NumberOfScenarios: numberOfScenarios,
+					Path:              seedFile,
+				}
+			} else {
+				if len(args) == 0 {
+					return fmt.Errorf("please provide at least one scenario")
+				}
+			}
+
+			if err != nil {
+				return err
+			}
+
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, &seed)
 			if err != nil {
 				return err
 			}

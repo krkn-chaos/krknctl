@@ -222,11 +222,11 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
 
-	json, err := p.ScaffoldScenarios(scenarioNames, false, &pr, false)
+	json, err := p.ScaffoldScenarios(scenarioNames, false, &pr, false, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, true)
+	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, true, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 	var parsedScenarios map[string]map[string]interface{}
@@ -238,11 +238,11 @@ func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 		assert.False(t, ok)
 	}
 
-	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, false)
+	json, err = p.ScaffoldScenarios(scenarioNames, false, &pr, false, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = p.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, &pr, false)
+	json, err = p.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, &pr, false, nil)
 	assert.Nil(t, json)
 	assert.NotNil(t, err)
 }

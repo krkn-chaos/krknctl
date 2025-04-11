@@ -21,8 +21,8 @@ import (
 func NewGraphCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "graph",
-		Short: "Runs or scaffolds a dependency graph based run",
-		Long:  `Runs or scaffolds a dependency graph based run`,
+		Short: "runs or scaffolds a dependency graph based run",
+		Long:  `runs or scaffolds a dependency graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
@@ -34,8 +34,8 @@ func NewGraphCommand() *cobra.Command {
 func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
-		Short: "Runs a dependency graph based run",
-		Long:  `Runs graph based run`,
+		Short: "runs a dependency graph based run",
+		Long:  `runs graph based run`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
@@ -268,7 +268,7 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, false)
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, false, nil)
 			if err != nil {
 				return err
 			}

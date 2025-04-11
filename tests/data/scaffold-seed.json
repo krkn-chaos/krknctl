@@ -1,0 +1,40 @@
+{
+  "_comment": {
+    "_comment": "**READ CAREFULLY** To create your scenario run plan, assign an ID to each scenario definition (or keep the existing randomly assigned ones if preferred). Define dependencies between scenarios using the `depends_on` field, ensuring there are no cycles (including transitive ones) or self-references.Nodes not referenced will not be executed, Nodes without dependencies will run first, while nodes that share the same parent will execute in parallel. [CURRENT ROOT SCENARIO IS `dummy-scenario-somebodyll`]"
+  },
+  "application-outages-1-1": {
+    "image": "quay.io/krkn-chaos/krkn-hub:application-outages",
+    "name": "application-outages",
+    "env": {
+      "BLOCK_TRAFFIC_TYPE": "[Ingress, Egress]",
+      "DURATION": "30",
+      "NAMESPACE": "dittybopper",
+      "POD_SELECTOR": "{app: dittybopper}",
+      "WAIT_DURATION": "1",
+      "KRKN_DEBUG": "True"
+    },
+    "depends_on": "root-scenario"
+  },
+  "application-outages-1-2": {
+    "image": "quay.io/krkn-chaos/krkn-hub:application-outages",
+    "name": "application-outages",
+    "env": {
+      "BLOCK_TRAFFIC_TYPE": "[Ingress, Egress]",
+      "DURATION": "30",
+      "NAMESPACE": "default",
+      "POD_SELECTOR": "{app: nginx}",
+      "WAIT_DURATION": "1",
+      "KRKN_DEBUG": "True"
+    },
+    "depends_on": "root-scenario"
+  },
+  "root-scenario-1": {
+    "_comment": "I'm the root Node!",
+    "image": "quay.io/krkn-chaos/krkn-hub:dummy-scenario",
+    "name": "dummy-scenario",
+    "env": {
+      "END": "10",
+      "EXIT_STATUS": "0"
+    }
+  }
+}

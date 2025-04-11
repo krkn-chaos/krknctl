@@ -97,6 +97,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
 	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
+	randomScaffoldCmd.Flags().String("seed-file", "", "template file with already configured scenarios used to generate the random test plan")
+	randomScaffoldCmd.Flags().Int("number-of-scenarios", 0, "the number of scenarios that will be created from the template file")
+	randomScaffoldCmd.MarkFlagsRequiredTogether("seed-file", "number-of-scenarios")
 	randomCmd.AddCommand(randomRunCmd)
 	randomCmd.AddCommand(randomScaffoldCmd)
 	rootCmd.AddCommand(randomCmd)

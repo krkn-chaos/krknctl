@@ -1,8 +1,10 @@
 package quay
 
 import (
+	jsonparser "encoding/json"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
-	provider2 "github.com/krkn-chaos/krknctl/pkg/provider"
+	providerinterface "github.com/krkn-chaos/krknctl/pkg/provider"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -30,7 +32,7 @@ func getWrongConfig(t *testing.T) krknctlconfig.Config {
 func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	config := getTestConfig(t)
 	provider := ScenarioProvider{
-		provider2.BaseScenarioProvider{
+		providerinterface.BaseScenarioProvider{
 			Config: config,
 		},
 	}
@@ -47,7 +49,7 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 
 	wrongConfig := getWrongConfig(t)
 	wrongProvider := ScenarioProvider{
-		provider2.BaseScenarioProvider{
+		providerinterface.BaseScenarioProvider{
 			Config: wrongConfig,
 		},
 	}
@@ -59,7 +61,7 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig(t)
 	provider := ScenarioProvider{
-		provider2.BaseScenarioProvider{
+		providerinterface.BaseScenarioProvider{
 			Config: config,
 		},
 	}
@@ -93,7 +95,7 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	config := getConfig(t)
 	provider := ScenarioProvider{
-		provider2.BaseScenarioProvider{
+		providerinterface.BaseScenarioProvider{
 			Config: config,
 		},
 	}
@@ -103,15 +105,40 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	assert.NotNil(t, scenarios)
 	scenarioNames := []string{"node-cpu-hog", "node-memory-hog", "dummy-scenario"}
 
-	json, err := provider.ScaffoldScenarios(scenarioNames, false, nil, false)
+	json, err := provider.ScaffoldScenarios(scenarioNames, false, nil, false, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = provider.ScaffoldScenarios(scenarioNames, true, nil, false)
+	seed := providerinterface.ScaffoldSeed{
+		Path:              "tests/data/scaffold-seed.json",
+		NumberOfScenarios: 1000,
+	}
+
+	json, err = provider.ScaffoldScenarios([]string{}, false, nil, false, &seed)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+	var scenariodetails map[string]models.ScenarioDetail
+	err = jsonparser.Unmarshal([]byte(*json), &scenariodetails)
+	assert.Nil(t, err)
+	assert.Equal(t, len(scenariodetails), seed.NumberOfScenarios)
+
+	json, err = provider.ScaffoldScenarios(scenarioNames, false, nil, true, nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, json)
+	var parsedScenarios map[string]map[string]interface{}
+	err = jsonparser.Unmarshal([]byte(*json), &parsedScenarios)
+	assert.Nil(t, err)
+	for el := range parsedScenarios {
+		assert.NotEqual(t, el, "comment")
+		_, ok := parsedScenarios[el]["depends_on"]
+		assert.False(t, ok)
+	}
+
+	json, err = provider.ScaffoldScenarios(scenarioNames, true, nil, false, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
-	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, nil, false)
+	json, err = provider.ScaffoldScenarios([]string{"node-cpu-hog", "does-not-exist"}, false, nil, false, nil)
 	assert.Nil(t, json)
 	assert.NotNil(t, err)
 
@@ -120,7 +147,7 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	config := getConfig(t)
 	provider := ScenarioProvider{
-		provider2.BaseScenarioProvider{
+		providerinterface.BaseScenarioProvider{
 			Config: config,
 		},
 	}
