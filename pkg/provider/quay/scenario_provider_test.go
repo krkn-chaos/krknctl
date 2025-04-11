@@ -2,10 +2,13 @@ package quay
 
 import (
 	jsonparser "encoding/json"
+	"fmt"
+	"github.com/krkn-chaos/krknctl/pkg/cache"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	providerinterface "github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +37,7 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	provider := ScenarioProvider{
 		providerinterface.BaseScenarioProvider{
 			Config: config,
+			Cache:  cache.NewCache(),
 		},
 	}
 	scenarios, err := provider.GetRegistryImages(nil)
@@ -51,6 +55,7 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	wrongProvider := ScenarioProvider{
 		providerinterface.BaseScenarioProvider{
 			Config: wrongConfig,
+			Cache:  cache.NewCache(),
 		},
 	}
 	_, err = wrongProvider.GetRegistryImages(nil)
@@ -63,6 +68,7 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	provider := ScenarioProvider{
 		providerinterface.BaseScenarioProvider{
 			Config: config,
+			Cache:  cache.NewCache(),
 		},
 	}
 	scenario, err := provider.GetScenarioDetail("cpu-hog", nil)
@@ -97,6 +103,7 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	provider := ScenarioProvider{
 		providerinterface.BaseScenarioProvider{
 			Config: config,
+			Cache:  cache.NewCache(),
 		},
 	}
 
@@ -108,9 +115,9 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	json, err := provider.ScaffoldScenarios(scenarioNames, false, nil, false, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
-
+	fmt.Println(os.Getwd())
 	seed := providerinterface.ScaffoldSeed{
-		Path:              "tests/data/scaffold-seed.json",
+		Path:              "../../../tests/data/scaffold-seed.json",
 		NumberOfScenarios: 1000,
 	}
 
@@ -149,6 +156,7 @@ func TestQuayScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	provider := ScenarioProvider{
 		providerinterface.BaseScenarioProvider{
 			Config: config,
+			Cache:  cache.NewCache(),
 		},
 	}
 	config.QuayBaseImageRegistry = "krknctl-test"

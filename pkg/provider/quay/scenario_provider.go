@@ -22,29 +22,39 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 	if err != nil {
 		return nil, err
 	}
-	params := url.Values{}
-	params.Add("onlyActiveTags", "true")
-	params.Add("limit", "100")
-	// currently paging support is not needed
-	params.Add("page", "1")
-	tagBaseUrl.RawQuery = params.Encode()
-
-	resp, _ := http.Get(tagBaseUrl.String())
 	var deferErr error = nil
-	defer func() {
-		deferErr = resp.Body.Close()
-	}()
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to retrieve tags, " + tagBaseUrl.String() + " returned: " + resp.Status)
-	}
+	cacheKey := tagBaseUrl.String()
+	bodyBytes := p.Cache.Get(cacheKey)
+	if len(bodyBytes) == 0 {
+		params := url.Values{}
+		params.Add("onlyActiveTags", "true")
+		params.Add("limit", "100")
+		// currently paging support is not needed
+		params.Add("page", "1")
+		tagBaseUrl.RawQuery = params.Encode()
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
+		resp, _ := http.Get(tagBaseUrl.String())
+
+		defer func() {
+			deferErr = resp.Body.Close()
+		}()
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.New("failed to retrieve tags, " + tagBaseUrl.String() + " returned: " + resp.Status)
+		}
+
+		bodyBytes, err = io.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+			return nil, err
+		}
+		p.Cache.Set(tagBaseUrl.String(), bodyBytes)
+
 	}
 	var quayPage TagPage
 	err = json.Unmarshal(bodyBytes, &quayPage)
+	if err != nil {
+		return nil, err
+	}
 
 	var scenarioTags []models.ScenarioTag
 	for _, tag := range quayPage.Tags {
@@ -77,6 +87,7 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 }
 
 func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
+	var deferErr error = nil
 	scenarioDigest := ""
 	if ((*foundScenario).Digest) != nil {
 		scenarioDigest = *((*foundScenario).Digest)
@@ -85,23 +96,28 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Get(baseURL.String())
-	if err != nil {
-		return nil, err
+	bodyBytes := p.Cache.Get(baseURL.String())
+	if len(bodyBytes) == 0 {
+		resp, err := http.Get(baseURL.String())
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() {
+			deferErr = resp.Body.Close()
+		}()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.New("failed to retrieve scenario details, " + baseURL.String() + " returned: " + resp.Status)
+		}
+		bodyBytes, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		p.Cache.Set(baseURL.String(), bodyBytes)
+
 	}
 
-	var deferErr error = nil
-	defer func() {
-		deferErr = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to retrieve scenario details, " + baseURL.String() + " returned: " + resp.Status)
-	}
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
 	var manifest Manifest
 	err = json.Unmarshal(bodyBytes, &manifest)
 	if err != nil {

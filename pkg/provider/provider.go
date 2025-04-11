@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"github.com/krkn-chaos/krknctl/pkg/cache"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
@@ -18,6 +19,7 @@ const (
 
 type BaseScenarioProvider struct {
 	Config config.Config
+	Cache  cache.Cache
 }
 
 func (p *BaseScenarioProvider) ParseTitle(s string, isGlobalEnvironment bool) (*string, error) {

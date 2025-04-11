@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/krkn-chaos/krknctl/pkg/cache"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -45,6 +46,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
@@ -138,6 +140,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
@@ -280,6 +283,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: config,
+			Cache:  cache.NewCache(),
 		}}
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
@@ -511,6 +515,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
@@ -564,6 +569,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orch
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
@@ -633,6 +639,7 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)
@@ -700,6 +707,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	quayProvider := quay.ScenarioProvider{
 		BaseScenarioProvider: provider.BaseScenarioProvider{
 			Config: conf,
+			Cache:  cache.NewCache(),
 		}}
 	registryUri, err := conf.GetQuayImageUri()
 	assert.Nil(t, err)

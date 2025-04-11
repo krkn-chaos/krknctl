@@ -60,22 +60,43 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			if err != nil {
 				return err
 			}
-			if kubeconfig != "" && CheckFileExists(kubeconfig) == false {
-				return fmt.Errorf("file %s does not exist", kubeconfig)
+			if kubeconfig != "" {
+				expandedConfig, err := utils.ExpandFolder(kubeconfig, nil)
+				if err != nil {
+					return err
+				}
+				kubeconfig = *expandedConfig
+				if CheckFileExists(kubeconfig) == false {
+					return fmt.Errorf("file %s does not exist", kubeconfig)
+				}
 			}
 			alertsProfile, err := cmd.Flags().GetString("alerts-profile")
 			if err != nil {
 				return err
 			}
-			if alertsProfile != "" && CheckFileExists(alertsProfile) == false {
-				return fmt.Errorf("file %s does not exist", alertsProfile)
+			if alertsProfile != "" {
+				expandedProfile, err := utils.ExpandFolder(alertsProfile, nil)
+				if err != nil {
+					return err
+				}
+				alertsProfile = *expandedProfile
+				if CheckFileExists(alertsProfile) == false {
+					return fmt.Errorf("file %s does not exist", alertsProfile)
+				}
 			}
 			metricsProfile, err := cmd.Flags().GetString("metrics-profile")
 			if err != nil {
 				return err
 			}
-			if metricsProfile != "" && CheckFileExists(metricsProfile) == false {
-				return fmt.Errorf("file %s does not exist", metricsProfile)
+			if metricsProfile != "" {
+				expandedProfile, err := utils.ExpandFolder(metricsProfile, nil)
+				if err != nil {
+					return err
+				}
+				metricsProfile = *expandedProfile
+				if CheckFileExists(metricsProfile) == false {
+					return fmt.Errorf("file %s does not exist", metricsProfile)
+				}
 			}
 			maxParallel, err := cmd.Flags().GetInt("max-parallel")
 			if err != nil {
@@ -182,24 +203,24 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				} else {
 					if c.Err != nil {
 						spinner.Stop()
-						var staterr *utils.ExitError
-						if errors.As(c.Err, &staterr) {
+						var statErr *utils.ExitError
+						if errors.As(c.Err, &statErr) {
 							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
 									*c.ScenarioId,
 									*c.Layer,
-									staterr.ExitStatus,
+									statErr.ExitStatus,
 									*c.ScenarioLogFile))
 								if err != nil {
 									return err
 								}
 							}
 							if exitOnerror {
-								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", staterr.ExitStatus))
+								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", statErr.ExitStatus))
 								if err != nil {
 									return err
 								}
-								os.Exit(staterr.ExitStatus)
+								os.Exit(statErr.ExitStatus)
 							}
 							spinner.Start()
 						}
@@ -249,7 +270,7 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			return *scenarios, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var seed provider.ScaffoldSeed
+			var seed *provider.ScaffoldSeed
 			registrySettings, err := providermodels.NewRegistryV2FromEnv(config)
 			if err != nil {
 				return err
@@ -265,6 +286,9 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			}
 			dataProvider := GetProvider(registrySettings != nil, factory)
 			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
+			if err != nil {
+				return err
+			}
 			seedFile, err := cmd.Flags().GetString("seed-file")
 			if err != nil {
 				return err
@@ -275,12 +299,16 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			}
 
 			if seedFile != "" {
-				if CheckFileExists(seedFile) == false {
+				seedFilePath, err := utils.ExpandFolder(seedFile, nil)
+				if err != nil {
+					return err
+				}
+				if CheckFileExists(*seedFilePath) == false {
 					return fmt.Errorf("file %s does not exist", seedFile)
 				}
-				seed = provider.ScaffoldSeed{
+				seed = &provider.ScaffoldSeed{
 					NumberOfScenarios: numberOfScenarios,
-					Path:              seedFile,
+					Path:              *seedFilePath,
 				}
 			} else {
 				if len(args) == 0 {
@@ -292,7 +320,7 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 				return err
 			}
 
-			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, &seed)
+			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, seed)
 			if err != nil {
 				return err
 			}

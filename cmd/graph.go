@@ -59,22 +59,43 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
-			if kubeconfig != "" && CheckFileExists(kubeconfig) == false {
-				return fmt.Errorf("file %s does not exist", kubeconfig)
+			if kubeconfig != "" {
+				expandedConfig, err := utils.ExpandFolder(kubeconfig, nil)
+				if err != nil {
+					return err
+				}
+				kubeconfig = *expandedConfig
+				if CheckFileExists(kubeconfig) == false {
+					return fmt.Errorf("file %s does not exist", kubeconfig)
+				}
 			}
 			alertsProfile, err := cmd.Flags().GetString("alerts-profile")
 			if err != nil {
 				return err
 			}
-			if alertsProfile != "" && CheckFileExists(alertsProfile) == false {
-				return fmt.Errorf("file %s does not exist", alertsProfile)
+			if alertsProfile != "" {
+				expandedProfile, err := utils.ExpandFolder(alertsProfile, nil)
+				if err != nil {
+					return err
+				}
+				alertsProfile = *expandedProfile
+				if CheckFileExists(alertsProfile) == false {
+					return fmt.Errorf("file %s does not exist", alertsProfile)
+				}
 			}
 			metricsProfile, err := cmd.Flags().GetString("metrics-profile")
 			if err != nil {
 				return err
 			}
-			if metricsProfile != "" && CheckFileExists(metricsProfile) == false {
-				return fmt.Errorf("file %s does not exist", metricsProfile)
+			if metricsProfile != "" {
+				expandedProfile, err := utils.ExpandFolder(metricsProfile, nil)
+				if err != nil {
+					return err
+				}
+				metricsProfile = *expandedProfile
+				if CheckFileExists(metricsProfile) == false {
+					return fmt.Errorf("file %s does not exist", metricsProfile)
+				}
 			}
 			exitOnerror, err := cmd.Flags().GetBool("exit-on-error")
 			if err != nil {

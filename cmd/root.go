@@ -89,7 +89,13 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().Int("max-parallel", 0, "maximum number of parallel scenarios")
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
 	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
+	randomRunCmd.Flags().String("graph-dump", "", "specifies the name of the file where the randomly generated dependency graph will be persisted")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
+	if err != nil {
+		fmt.Println("Error marking flag as required:", err)
+		os.Exit(1)
+	}
+	err = randomRunCmd.MarkFlagRequired("graph-dump")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
 		os.Exit(1)
