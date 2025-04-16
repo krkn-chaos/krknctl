@@ -3,6 +3,10 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -13,9 +17,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
-	"strings"
-	"time"
 )
 
 func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
@@ -70,8 +71,10 @@ func CheckFileExists(filePath string) bool {
 func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
 	environment := make(map[string]string)
 	volumes := make(map[string]string)
+	fmt.Print("parse flags")
 	for k := range scenarioCollectedFlags {
 		field := scenarioDetail.GetFieldByName(k)
+		fmt.Printf("get field %v", field)
 		if field == nil {
 			return nil, nil, fmt.Errorf("field %s not found", k)
 		}
@@ -86,8 +89,11 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		}
 		var value *string = nil
 		if foundArg != nil || skipDefault == false {
+
 			value, err = field.Validate(foundArg)
+			fmt.Printf("field validate %v value", value)
 			if err != nil {
+				fmt.Printf("err in %v validation", err)
 				return nil, nil, err
 			}
 		}
@@ -95,10 +101,15 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		if value != nil && field.Type != typing.File {
 			environment[*field.Variable] = *value
 		} else if value != nil && field.Type == typing.File {
-			fileSrcDst := strings.Split(*value, ":")
-			volumes[fileSrcDst[0]] = fileSrcDst[1]
+			if field.MountPath != nil {
+				fmt.Printf("field value: %v", *value)
+				volumes[*field.MountPath] = *value
+				environment[*field.Variable] = *value
+			} else {
+				fileSrcDst := strings.Split(*value, ":")
+				volumes[fileSrcDst[0]] = fileSrcDst[1]
+			}
 		}
-
 	}
 
 	return &environment, &volumes, nil
