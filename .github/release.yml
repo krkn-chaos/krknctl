@@ -1,0 +1,24 @@
+changelog:
+  exclude:
+    labels: ["ignore-for-release"]
+  categories:
+    - title: "🚀 Features"
+      labels: ["feature", "enhancement"]
+    - title: "🐛 Bug Fixes"
+      labels: ["bug", "fix"]
+    - title: "🧰 Maintenance"
+      labels: ["chore"]
+    - title: "📝 Other Changes"
+      labels: ["*"]
+template: |
+  ## Release {VERSION}
+
+  ### Download Artifacts
+  - Linux (amd64): [krknctl-{VERSION}-linux-amd64.tar.gz](https://krkn-chaos.gateway.scarf.sh/krknctl-{VERSION}-linux-amd64.tar.gz)
+  - Linux (arm64): [krknctl-{VERSION}-linux-arm64.tar.gz](https://krkn-chaos.gateway.scarf.sh/krknctl-{VERSION}-linux-arm64.tar.gz)
+  - Windows (amd64): [krknctl-{VERSION}-windows-amd64.tar.gz](https://krkn-chaos.gateway.scarf.sh/krknctl-{VERSION}-windows-amd64.tar.gz)
+  - macOS (amd64): [krknctl-{VERSION}-darwin-amd64.tar.gz](https://krkn-chaos.gateway.scarf.sh/krknctl-{VERSION}-darwin-amd64.tar.gz)
+  - macOS (arm64): [krknctl-{VERSION}-darwin-arm64.tar.gz](https://krkn-chaos.gateway.scarf.sh/krknctl-{VERSION}-darwin-arm64.tar.gz)
+
+  ### Changes
+  {changes}
