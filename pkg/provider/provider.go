@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"github.com/krkn-chaos/krknctl/pkg/cache"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
@@ -18,6 +19,7 @@ const (
 
 type BaseScenarioProvider struct {
 	Config config.Config
+	Cache  cache.Cache
 }
 
 func (p *BaseScenarioProvider) ParseTitle(s string, isGlobalEnvironment bool) (*string, error) {
@@ -86,9 +88,14 @@ type ScenarioDataProvider interface {
 	GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error)
 	GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error)
 	GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error)
-	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool) (*string, error)
+	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool, seed *ScaffoldSeed) (*string, error)
 }
 
 type ContainerLayer interface {
 	GetCommands() []string
+}
+
+type ScaffoldSeed struct {
+	Path              string `json:"path"`
+	NumberOfScenarios int    `json:"number_of_scenarios"`
 }

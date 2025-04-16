@@ -18,8 +18,6 @@ import (
 	"time"
 )
 
-// mimmmo
-
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	scenarioCollectedFlags := make(map[string]*string)
 	globalCollectedFlags := make(map[string]*string)
@@ -162,8 +160,8 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			environment := make(map[string]string)
 			volumes := make(map[string]string)
 			var foundKubeconfig *string = nil
-			var alertsProfile *string = nil
-			var metricsProfile *string = nil
+			var foundAlertsProfile *string = nil
+			var foundMetricsProfile *string = nil
 			for i, a := range args {
 				if strings.HasPrefix(a, "--") {
 
@@ -173,28 +171,40 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						if CheckFileExists(args[i+1]) == false {
+						expandedConfig, err := utils.ExpandFolder(args[i+1], nil)
+						if err != nil {
+							return err
+						}
+						if CheckFileExists(*expandedConfig) == false {
 							return fmt.Errorf("file %s does not exist", args[i+1])
 						}
-						foundKubeconfig = &args[i+1]
+						foundKubeconfig = expandedConfig
 					}
 					if a == "--alerts-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						if CheckFileExists(args[i+1]) == false {
-							return fmt.Errorf("file %s does not exist", args[i+1])
+						expandedProfile, err := utils.ExpandFolder(args[i+1], nil)
+						if err != nil {
+							return err
 						}
-						alertsProfile = &args[i+1]
+						if CheckFileExists(*expandedProfile) == false {
+							return fmt.Errorf("file %s does not exist", *expandedProfile)
+						}
+						foundAlertsProfile = expandedProfile
 					}
 					if a == "--metrics-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						if CheckFileExists(args[i+1]) == false {
-							return fmt.Errorf("file %s does not exist", args[i+1])
+						expandedProfile, err := utils.ExpandFolder(args[i+1], nil)
+						if err != nil {
+							return err
 						}
-						metricsProfile = &args[i+1]
+						if CheckFileExists(*expandedProfile) == false {
+							return fmt.Errorf("file %s does not exist", *expandedProfile)
+						}
+						foundMetricsProfile = expandedProfile
 					}
 
 					if a == "--detached" {
@@ -203,7 +213,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 					if a == "--help" {
 						spinner.Stop()
-						cmd.Help()
+						if err := cmd.Help(); err != nil {
+							return err
+						}
 						return nil
 					}
 				}
@@ -217,12 +229,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				return fmt.Errorf("kubeconfig not found: %s", *foundKubeconfig)
 			}
 			volumes[*kubeconfigPath] = config.KubeconfigPath
-			if metricsProfile != nil {
-				volumes[*metricsProfile] = config.MetricsProfilePath
+			if foundMetricsProfile != nil {
+				volumes[*foundMetricsProfile] = config.MetricsProfilePath
 			}
 
-			if alertsProfile != nil {
-				volumes[*alertsProfile] = config.AlertsProfilePath
+			if foundAlertsProfile != nil {
+				volumes[*foundAlertsProfile] = config.AlertsProfilePath
 			}
 			spinner.Suffix = "validating input ..."
 			//dynamic flags parsing

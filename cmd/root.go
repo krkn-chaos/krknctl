@@ -89,7 +89,13 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().Int("max-parallel", 0, "maximum number of parallel scenarios")
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
 	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
+	randomRunCmd.Flags().String("graph-dump", "", "specifies the name of the file where the randomly generated dependency graph will be persisted")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
+	if err != nil {
+		fmt.Println("Error marking flag as required:", err)
+		os.Exit(1)
+	}
+	err = randomRunCmd.MarkFlagRequired("graph-dump")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
 		os.Exit(1)
@@ -97,6 +103,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
 	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
+	randomScaffoldCmd.Flags().String("seed-file", "", "template file with already configured scenarios used to generate the random test plan")
+	randomScaffoldCmd.Flags().Int("number-of-scenarios", 0, "the number of scenarios that will be created from the template file")
+	randomScaffoldCmd.MarkFlagsRequiredTogether("seed-file", "number-of-scenarios")
 	randomCmd.AddCommand(randomRunCmd)
 	randomCmd.AddCommand(randomScaffoldCmd)
 	rootCmd.AddCommand(randomCmd)

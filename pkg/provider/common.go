@@ -9,7 +9,10 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/letsencrypt/boulder/core"
 	"github.com/tjarratt/babble"
+	"math/rand"
+	"os"
 	"strings"
 )
 
@@ -25,9 +28,10 @@ func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
 	return nil
 }
 
-func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider, random bool) (*string, error) {
-	var scenarioDetails []models.ScenarioDetail
-
+func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider, random bool, seed *ScaffoldSeed) (*string, error) {
+	var scenarioNodes map[string]models2.ScenarioNode
+	var err error
+	babbler := babble.NewBabbler()
 	// handles babble panic when american word dictionary is not installed
 	defer func() {
 		if err := recover(); err != nil {
@@ -35,8 +39,30 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 				"please refer to the documentation on how to install this dependency https://github.com/krkn-chaos/krknctl#Requirements")
 		}
 	}()
-	babbler := babble.NewBabbler()
+
 	babbler.Count = 1
+	if seed == nil {
+		scenarioNodes, err = scaffoldScenarios(scenarios, includeGlobalEnv, registry, config, p, random, babbler)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		scenarioNodes, err = scaffoldSeededScenarios(seed)
+	}
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	err = encoder.Encode(scenarioNodes)
+	if err != nil {
+		return nil, err
+	}
+	jsonBuf := buf.String()
+	return &jsonBuf, nil
+}
+
+func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider, random bool, babbler babble.Babbler) (map[string]models2.ScenarioNode, error) {
+	var scenarioDetails []models.ScenarioDetail
 	for _, scenarioName := range scenarios {
 		scenarioDetail, err := p.GetScenarioDetail(scenarioName, registry)
 
@@ -56,6 +82,7 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		indexes = append(indexes, fmt.Sprintf("%s-%s", scenario, strings.ToLower(babbler.Babble())))
 	}
 	var scenarioNodes = make(map[string]models2.ScenarioNode)
+	// if random is set _comment is not set
 	if random == false {
 		scenarioNodes["_comment"] = GetInstructionScenario(indexes[0])
 	}
@@ -63,6 +90,8 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		indexes = append(indexes, strings.ToLower(babbler.Babble()))
 
 		scenarioNode := models2.ScenarioNode{}
+
+		// if random is not set dependencies will be set
 		if random == false {
 			if i > 0 {
 				scenarioNode.Parent = &indexes[i-1]
@@ -120,16 +149,69 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		scenarioNodes[indexes[i]] = scenarioNode
 	}
 
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-	err := encoder.Encode(scenarioNodes)
+	return scenarioNodes, nil
+}
+
+func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNode, error) {
+	var nodeMap map[string]models2.ScenarioNode
+	resultMap := make(map[string]models2.ScenarioNode)
+	var nodeSeed []models2.ScenarioNode
+	buf, err := os.ReadFile(seed.Path)
 	if err != nil {
 		return nil, err
 	}
-	jsonBuf := buf.String()
-	return &jsonBuf, nil
+	err = json.Unmarshal(buf, &nodeMap)
+	for key := range nodeMap {
+		if key == "_comment" {
+			delete(nodeMap, key)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	total := 100
+	seedNumber := len(nodeMap)
+	if seedNumber > total {
+		return nil, fmt.Errorf("seed file with more than %d nodes is not supported", total)
+	}
+
+	counter := 0
+	minimum := 1
+	percentage := 0
+	slot := (100 / seedNumber) + 10
+	var percentages []int
+	var keys []string
+	for key := range nodeMap {
+		keys = append(keys, key)
+		if counter == seedNumber-1 {
+			// the last round gets all the remaining percentage
+			// to ensure that the total will always be 100 even if
+			// the rest of the division is greater than 0
+			percentage = total
+		} else {
+			percentage = rand.Intn(slot-minimum+1) + minimum
+		}
+		nodeSeed = append(nodeSeed, nodeMap[key])
+		percentages = append(percentages, percentage)
+
+		total -= percentage
+		// this sets the minimum for the next round with the remainder of the current round
+		// to increase the probability that will be higher and the slot will be more filled
+		minimum = slot - percentage
+		counter++
+	}
+
+	for i := 0; i < len(percentages); i++ {
+		totalNodesPerKey := seed.NumberOfScenarios * percentages[i] / 100
+		for j := 0; j < totalNodesPerKey; j++ {
+			nodeName := keys[i] + "-" + core.RandomString(6)
+			resultMap[nodeName] = nodeMap[keys[i]]
+		}
+
+	}
+
+	return resultMap, nil
+
 }
 
 func GetInstructionScenario(rootNodeName string) models2.ScenarioNode {
