@@ -117,7 +117,6 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		selectedValue = value
 
 	}
-	fmt.Printf("selected value %v", *selectedValue)
 	if selectedValue != nil {
 		switch f.Type {
 		case String:
