@@ -1,9 +1,9 @@
 {
   "version": "0.0.1",
   "quay_host": "quay.io",
-  "quay_org": "prubenda",
-  "quay_scenario_registry": "kraken-hub",
-  "quay_base_image_registry": "kraken",
+  "quay_org": "krkn-chaos",
+  "quay_scenario_registry": "krkn-hub",
+  "quay_base_image_registry": "krkn",
   "quay_base_image_tag": "latest",
   "quay_repository_api": "api/v1/repository",
   "private_registry_base_image_tag": "latest",

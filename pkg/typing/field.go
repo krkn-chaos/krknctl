@@ -117,6 +117,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		selectedValue = value
 
 	}
+	fmt.Printf("selected value %v", *selectedValue)
 	if selectedValue != nil {
 		switch f.Type {
 		case String:
@@ -187,7 +188,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		case File:
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
-					*f.MountPath = *selectedValue
+					f.MountPath = selectedValue
 				} else {
 					*selectedValue = fmt.Sprintf(*f.MountPath)
 				}
@@ -198,5 +199,6 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			return nil, errors.New("impossible to validate object")
 		}
 	}
+	fmt.Print("return value\n")
 	return selectedValue, deferErr
 }
