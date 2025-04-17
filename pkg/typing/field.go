@@ -198,6 +198,5 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			return nil, errors.New("impossible to validate object")
 		}
 	}
-	fmt.Print("return value\n")
 	return selectedValue, deferErr
 }
