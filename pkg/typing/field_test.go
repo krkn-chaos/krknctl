@@ -3,10 +3,11 @@ package typing
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNumberField(t *testing.T) {
@@ -557,8 +558,10 @@ func TestFieldFile(t *testing.T) {
 	"type":"file"
 }
 `
-	err = json.Unmarshal([]byte(fileFieldNoMountPath), &field)
-	_, err = field.Validate(&fileName)
-	assert.NotNil(t, err)
+	json.Unmarshal([]byte(fileFieldNoMountPath), &field)
+	value, err = field.Validate(&fileName)
+	assert.Nil(t, err)
+	assert.NotNil(t, value)
+	assert.NotNil(t, field.MountPath)
 
 }
