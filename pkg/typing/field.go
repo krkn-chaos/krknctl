@@ -117,7 +117,6 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		selectedValue = value
 
 	}
-
 	if selectedValue != nil {
 		switch f.Type {
 		case String:
@@ -188,7 +187,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		case File:
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
-					return nil, errors.New("invalid schema: `mountPath` is required for `file` type")
+					*f.MountPath = *selectedValue
 				} else {
 					*selectedValue = fmt.Sprintf(*f.MountPath)
 				}
