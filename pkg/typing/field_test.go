@@ -547,8 +547,6 @@ func TestFieldFile(t *testing.T) {
 	_, err = field.Validate(&fileNameNotAccessible)
 	assert.NotNil(t, err)
 
-	field = InputField{}
-
 	fileFieldNoMountPath := `
 {
 	"name":"cores",
