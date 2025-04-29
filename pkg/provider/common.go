@@ -48,6 +48,9 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		}
 	} else {
 		scenarioNodes, err = scaffoldSeededScenarios(seed)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
