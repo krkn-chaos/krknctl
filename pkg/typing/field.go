@@ -188,12 +188,12 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		case File:
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
+					// if there is no mountpath the mountpath will be the
+					// same path of the original file
 					f.MountPath = selectedValue
-				} else {
-					*selectedValue = fmt.Sprintf(*f.MountPath)
 				}
 			} else {
-				return nil, errors.New("file `" + *selectedValue + "is not a file or is not accessible")
+				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 			}
 		default:
 			return nil, errors.New("impossible to validate object")

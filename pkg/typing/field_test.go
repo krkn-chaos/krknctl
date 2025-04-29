@@ -536,6 +536,8 @@ func TestFieldFile(t *testing.T) {
 	value, err = field.Validate(&fileName)
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
+	assert.NotNil(t, field.MountPath)
+	assert.Equal(t, "/test/mountpath", *field.MountPath)
 
 	// not existent file
 	fileNameDoNotExist := "/tmp/donotexist"
@@ -563,5 +565,6 @@ func TestFieldFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
 	assert.NotNil(t, field.MountPath)
+	assert.Equal(t, fileName, *field.MountPath)
 
 }
