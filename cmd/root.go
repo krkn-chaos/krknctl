@@ -95,11 +95,6 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 		fmt.Println("Error marking flag as required:", err)
 		os.Exit(1)
 	}
-	err = randomRunCmd.MarkFlagRequired("graph-dump")
-	if err != nil {
-		fmt.Println("Error marking flag as required:", err)
-		os.Exit(1)
-	}
 
 	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
 	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")

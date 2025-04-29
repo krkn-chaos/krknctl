@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -236,9 +237,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-		name *string
-		err  error
-	},
+	name *string
+	err  error
+},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -321,4 +322,34 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 		}
 	}
 	scenarioNameChannel <- nil
+}
+
+func RebuildDependencyGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][]string, rootNodeLabel string) map[string]orchestratorModels.ScenarioNode {
+	dependencyGraph := make(map[string]orchestratorModels.ScenarioNode)
+	for i, n := range graph {
+		for _, dep := range n {
+			node := nodes[dep]
+			if i == 0 {
+				node.Comment = rootNodeLabel
+			} else {
+				// the dependency will set to the first item
+				// of the previous layer
+				*node.Parent = graph[i-1][0]
+			}
+		}
+	}
+	return dependencyGraph
+}
+
+func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][]string, path string, rootNodeLabel string) error {
+	rebuiltGraph := RebuildDependencyGraph(nodes, graph, rootNodeLabel)
+	jsonData, err := json.MarshalIndent(rebuiltGraph, "", "  ") // Usa MarshalIndent per JSON formattato
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(path, jsonData, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }

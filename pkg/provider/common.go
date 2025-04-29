@@ -48,9 +48,6 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		}
 	} else {
 		scenarioNodes, err = scaffoldSeededScenarios(seed)
-		if err != nil {
-			return nil, err
-		}
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
@@ -99,7 +96,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 			if i > 0 {
 				scenarioNode.Parent = &indexes[i-1]
 			} else {
-				scenarioNode.Comment = "I'm the root Node!"
+				scenarioNode.Comment = config.LabelRootNode
 			}
 		}
 
