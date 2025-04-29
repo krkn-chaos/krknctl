@@ -188,9 +188,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		case File:
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
-					// if there is no mountpath the mountpath will be the
-					// same path of the original file
-					f.MountPath = selectedValue
+					return nil, errors.New("mount path not set in schema")
 				}
 			} else {
 				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")

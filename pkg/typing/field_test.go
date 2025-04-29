@@ -562,9 +562,6 @@ func TestFieldFile(t *testing.T) {
 `
 	json.Unmarshal([]byte(fileFieldNoMountPath), &field)
 	value, err = field.Validate(&fileName)
-	assert.Nil(t, err)
-	assert.NotNil(t, value)
-	assert.NotNil(t, field.MountPath)
-	assert.Equal(t, fileName, *field.MountPath)
+	assert.NotNil(t, err)
 
 }
