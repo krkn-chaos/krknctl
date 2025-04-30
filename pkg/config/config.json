@@ -20,7 +20,7 @@
   "metrics_profile_path": "/home/krkn/kraken/config/metrics-aggregated.yaml",
   "alerts_profile_path": "/home/krkn/kraken/config/alerts",
   "kubeconfig_path": "/home/krkn/.kube/config",
-  "random_graph_path": "random-graph.json",
+  "random_graph_path": "random-graph-%d.json",
   "label_title": "krknctl.title=",
   "label_description": "krknctl.description=",
   "label_input_fields": "krknctl.input_fields=",

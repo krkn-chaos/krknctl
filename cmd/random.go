@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 func NewRandomCommand() *cobra.Command {
@@ -119,7 +120,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			}
 
 			if randomGraphFile != "" {
-				randomGraphFile = config.RandomGraphPath
+				randomGraphFile = fmt.Sprintf(config.RandomGraphPath, time.Now().Unix())
 			}
 
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
