@@ -96,16 +96,9 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 			}
 		}
 		if value != nil {
-			if field.Type != typing.File {
-				environment[*field.Variable] = *value
-			} else if field.Type == typing.File {
-				if field.MountPath != nil {
-					volumes[*field.MountPath] = *value
-					environment[*field.Variable] = *value
-				} else {
-					fileSrcDst := strings.Split(*value, ":")
-					volumes[fileSrcDst[0]] = fileSrcDst[1]
-				}
+			environment[*field.Variable] = *value
+			if field.Type == typing.File {
+				volumes[*field.MountPath] = *value
 			}
 		}
 
@@ -329,13 +322,15 @@ func RebuildDependencyGraph(nodes map[string]orchestratorModels.ScenarioNode, gr
 	for i, n := range graph {
 		for _, dep := range n {
 			node := nodes[dep]
+
 			if i == 0 {
 				node.Comment = rootNodeLabel
 			} else {
 				// the dependency will set to the first item
 				// of the previous layer
-				*node.Parent = graph[i-1][0]
+				node.Parent = &graph[i-1][0]
 			}
+			dependencyGraph[dep] = node
 		}
 	}
 	return dependencyGraph
