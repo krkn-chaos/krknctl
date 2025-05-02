@@ -95,10 +95,17 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				return nil, nil, err
 			}
 		}
-		if value != nil {
-			environment[*field.Variable] = *value
-			if field.Type == typing.File {
-				volumes[*field.MountPath] = *value
+		if value != nil && *value != "" {
+			if field.Type != typing.File {
+				environment[*field.Variable] = *value
+			} else if field.Type == typing.File {
+				if field.MountPath != nil {
+					volumes[*value] = *field.MountPath
+					environment[*field.Variable] = *field.MountPath
+				} else {
+					fileSrcDst := strings.Split(*value, ":")
+					volumes[fileSrcDst[0]] = fileSrcDst[1]
+				}
 			}
 		}
 
@@ -230,9 +237,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
+		name *string
+		err  error
+	},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment

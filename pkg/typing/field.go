@@ -100,7 +100,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 
 	var selectedValue *string
 	// if the default value is not nil
-	if f.Default != nil &&
+	if f.Default != nil && // if the default value is not nil
 		// if the default value is not nil, the value is nil or emtpy and the type is NOT string,
 		(((value == nil || *value == "") && f.Type != String) ||
 			// or the value is nil and the type is string
