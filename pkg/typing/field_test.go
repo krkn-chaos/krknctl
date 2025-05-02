@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -517,7 +518,7 @@ func TestFieldFile(t *testing.T) {
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"file",
-	"mount_path":"/test/mountpath"
+	"mount_path":"./test/mountpath.json"
 }
 `
 
@@ -537,7 +538,9 @@ func TestFieldFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
 	assert.NotNil(t, field.MountPath)
-	assert.Equal(t, "/test/mountpath", *field.MountPath)
+	currentDirectory, err := os.Getwd()
+	path := filepath.Join(currentDirectory, "./test/mountpath.json")
+	assert.Equal(t, path, *field.MountPath)
 
 	// not existent file
 	fileNameDoNotExist := "/tmp/donotexist"
@@ -549,8 +552,7 @@ func TestFieldFile(t *testing.T) {
 	_, err = field.Validate(&fileNameNotAccessible)
 	assert.NotNil(t, err)
 
-	field = InputField{}
-
+	// no mount path
 	fileFieldNoMountPath := `
 {
 	"name":"cores",
@@ -561,7 +563,14 @@ func TestFieldFile(t *testing.T) {
 }
 `
 	json.Unmarshal([]byte(fileFieldNoMountPath), &field)
-	value, err = field.Validate(&fileName)
+	_, err = field.Validate(&fileFieldNoMountPath)
 	assert.NotNil(t, err)
 
+	var blankField InputField
+	// test blank value with no default for file Type
+	json.Unmarshal([]byte(fileField), &blankField)
+
+	value, err = blankField.Validate(nil)
+	assert.Nil(t, err)
+	assert.Nil(t, value)
 }

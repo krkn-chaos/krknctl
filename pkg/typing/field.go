@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 )
@@ -100,7 +101,10 @@ func (f *InputField) Validate(value *string) (*string, error) {
 
 	var selectedValue *string
 	// if the default value is not nil
-	if f.Default != nil &&
+	if f.Default == nil && (value == nil || *value == "") && f.Type == File {
+		// set no value if selected value isn't set
+		selectedValue = nil
+	} else if f.Default != nil && // if the default value is not nil
 		// if the default value is not nil, the value is nil or emtpy and the type is NOT string,
 		(((value == nil || *value == "") && f.Type != String) ||
 			// or the value is nil and the type is string
@@ -189,6 +193,41 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil {
 					return nil, errors.New("mount path not set in schema")
+				} else {
+					value_data, err := os.ReadFile(*selectedValue)
+					if err != nil {
+						fmt.Printf("cant reads select val %s", err)
+						return nil, err
+					}
+					var MountPath = *f.MountPath
+
+					currentDirectory, err := os.Getwd()
+
+					if err != nil {
+						return nil, fmt.Errorf("error getting current directory: %w", err)
+					}
+					path := filepath.Join(currentDirectory, MountPath)
+
+					dirPath := filepath.Dir(path)
+					// create sub directories if they don't exist
+					err = os.MkdirAll(dirPath, 0755)
+					if err != nil {
+						return nil, fmt.Errorf("error creating dir: %w", err)
+					}
+
+					// create file
+					var file, err2 = os.Create(path)
+					if err2 != nil {
+						return nil, fmt.Errorf("error creating file: %w", err2)
+					}
+
+					// write contents of value to mount path
+					_, err = file.Write(value_data)
+					if err != nil {
+						fmt.Printf("write file error %s\n", err)
+						return nil, err
+					}
+					*f.MountPath = path
 				}
 			} else {
 				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
