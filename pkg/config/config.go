@@ -27,6 +27,7 @@ type Config struct {
 	MetricsProfilePath          string `json:"metrics_profile_path"`
 	AlertsProfilePath           string `json:"alerts_profile_path"`
 	KubeconfigPath              string `json:"kubeconfig_path"`
+	RandomGraphPath             string `json:"random_graph_path"`
 	LabelTitle                  string `json:"label_title"`
 	LabelDescription            string `json:"label_description"`
 	LabelInputFields            string `json:"label_input_fields"`
@@ -39,6 +40,7 @@ type Config struct {
 	LabelTitleRegexGlobal       string `json:"label_title_regex_global"`
 	LabelDescriptionRegexGlobal string `json:"label_description_regex_global"`
 	LabelInputFieldsRegexGlobal string `json:"label_input_fields_regex_global"`
+	LabelRootNode               string `json:"label_root_node"`
 	EnvPrivateRegistry          string `json:"env_private_registry"`
 	EnvPrivateRegistryUsername  string `json:"env_private_registry_username"`
 	EnvPrivateRegistryPassword  string `json:"env_private_registry_password"`

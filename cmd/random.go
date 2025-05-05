@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 )
 
 func NewRandomCommand() *cobra.Command {
@@ -113,8 +114,13 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return err
 			}
 
+			randomGraphFile, err := cmd.Flags().GetString("graph-dump")
 			if err != nil {
 				return err
+			}
+
+			if randomGraphFile != "" {
+				randomGraphFile = fmt.Sprintf(config.RandomGraphPath, time.Now().Unix())
 			}
 
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
@@ -176,6 +182,9 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			spinner.Stop()
 
 			executionPlan := randomgraph.NewRandomGraph(nodes, maxParallel, numberOfScenarios)
+			if err = DumpRandomGraph(nodes, executionPlan, randomGraphFile, config.LabelRootNode); err != nil {
+				return err
+			}
 			if len(executionPlan) == 0 {
 				_, err = color.New(color.FgYellow).Println("No scenario to execute; the random graph file appears to be empty (single-node graphs are not supported).")
 				if err != nil {
