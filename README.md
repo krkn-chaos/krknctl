@@ -32,4 +32,4 @@ This allows users to focus solely on implementing chaos engineering practices wi
 
 ## Documentation:
 
-### The documentation about the tool can be found [here]()
+### The documentation about the tool can be found [here](https://krkn-chaos.dev/docs/getting-started/getting-started-krknctl/)
