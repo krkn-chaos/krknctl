@@ -32,4 +32,4 @@ This allows users to focus solely on implementing chaos engineering practices wi
 
 ## Documentation:
 
-#### Instructions on how to setup, configure and run Kraken can be found in the [documentation](https://krkn-chaos.dev/docs/krknctl/).
+Instructions on how to setup, configure and run Kraken can be found in the [documentation](https://krkn-chaos.dev/docs/krknctl/).
