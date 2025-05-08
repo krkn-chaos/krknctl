@@ -8,19 +8,28 @@
     "default": "10"
   },
   {
-    "name": "exit",
-    "short_description": "Exit Status",
-    "description": "Sets the exit status of the container",
-    "variable": "EXIT_STATUS",
-    "type": "number",
-    "default": "0"
+    "name":"exit",
+    "short_description":"Exit Status",
+    "description":"Sets the exit status of the container",
+    "variable":"EXIT_STATUS",
+    "type":"number",
+    "default":"0"
   },
   {
-    "name": "test-file",
-    "short_description": "Test File",
-    "description": "Test a file type of input",
-    "variable": "TEST_FILE",
-    "type": "file",
-    "mount_path": "/home/krkn/test"
+    "name":"mounted_file",
+    "short_description":"Example mounted file",
+    "description":"mounts the file in the container that will be printed",
+    "variable":"MOUNTED_FILE",
+    "type":"file",
+    "mount_path": "/var/home/mounted_file"
+  },
+  {
+    "name":"secret_string",
+    "short_description":"String that will be masked in the output",
+    "description":"String that will be masked in the output",
+    "variable":"SECRET_STRING",
+    "type":"string",
+    "required": "false",
+    "secret": "true"
   }
 ]
