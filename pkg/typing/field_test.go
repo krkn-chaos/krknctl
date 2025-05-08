@@ -137,6 +137,29 @@ func TestStringField(t *testing.T) {
 	value, err = field.Validate(&param)
 	assert.Nil(t, err)
 	assert.Equal(t, "", *value)
+	assert.False(t, field.Secret)
+
+	// test secret
+
+	stringFieldSecret := `
+{
+	"name":"cores",
+	"short_description":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"string",
+	"default":"default",
+	"secret":"true"
+}
+`
+	err = json.Unmarshal([]byte(stringFieldSecret), &field)
+	assert.Nil(t, err)
+	// empty string
+	param = ""
+	value, err = field.Validate(&param)
+	assert.Nil(t, err)
+	assert.Equal(t, "", *value)
+	assert.True(t, field.Secret)
 
 	// default string
 	value, err = field.Validate(nil)

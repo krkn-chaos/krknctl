@@ -28,6 +28,7 @@ type InputField struct {
 	MountPath        *string `json:"mount_path,omitempty"`
 	Requires         *string `json:"requires,omitempty"`
 	MutuallyExcludes *string `json:"mutually_excludes,omitempty"`
+	Secret           bool    `json:"secret,omitempty"`
 }
 
 type alias InputField
@@ -39,6 +40,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		Type     *string `json:"type"`
 		Variable *string `json:"variable"`
 		Required *string `json:"required"`
+		Secret   *string `json:"secret"`
 	}{alias: (*alias)(f)}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
@@ -84,6 +86,17 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 	} else {
 		f.Required = false
 	}
+
+	if fieldProperty, ok := temp["secret"]; ok {
+		isSecret, err := strconv.ParseBool(fieldProperty)
+		if err != nil {
+			return err
+		}
+		f.Secret = isSecret
+	} else {
+		f.Secret = false
+	}
+
 	return nil
 }
 
