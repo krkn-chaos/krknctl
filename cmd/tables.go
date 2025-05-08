@@ -47,11 +47,15 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 	return tbl
 }
 
-func NewEnvironmentTable(env map[string]string) table.Table {
+func NewEnvironmentTable(env map[string]ParsedFlag) table.Table {
 	tbl := table.New("Environment Value", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for k, v := range env {
-		tbl.AddRow(k, v)
+		if v.secret {
+			tbl.AddRow(k, MaskString(v.value))
+		} else {
+			tbl.AddRow(k, v.value)
+		}
 	}
 	return tbl
 

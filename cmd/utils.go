@@ -69,8 +69,8 @@ func CheckFileExists(filePath string) bool {
 	return true
 }
 
-func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
-	environment := make(map[string]string)
+func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (env *map[string]ParsedFlag, vol *map[string]string, err error) {
+	environment := make(map[string]ParsedFlag)
 	volumes := make(map[string]string)
 
 	for k := range scenarioCollectedFlags {
@@ -88,18 +88,20 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				foundArg = &args[i+1]
 			}
 		}
+		parsedFlag := ParsedFlag{}
 		var value *string = nil
 		if foundArg != nil || skipDefault == false {
 			value, err = field.Validate(foundArg)
 			if err != nil {
 				return nil, nil, err
 			}
+			parsedFlag.value = *value
+
 		}
-		if value != nil {
-			environment[*field.Variable] = *value
-			if field.Type == typing.File {
-				volumes[*field.MountPath] = *value
-			}
+
+		environment[*field.Variable] = parsedFlag
+		if field.Type == typing.File {
+			volumes[*field.MountPath] = parsedFlag.value
 		}
 
 	}
@@ -230,9 +232,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
+		name *string
+		err  error
+	},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -347,4 +349,11 @@ func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][
 		return err
 	}
 	return nil
+}
+
+func MaskString(s string) string {
+	if len(s) < 3 {
+		return s
+	}
+	return s[:3] + strings.Repeat("*", len(s)-3)
 }

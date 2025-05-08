@@ -158,6 +158,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			environment := make(map[string]string)
+			parsedFlags := make(map[string]ParsedFlag)
 			volumes := make(map[string]string)
 			var foundKubeconfig *string = nil
 			var foundAlertsProfile *string = nil
@@ -256,15 +257,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			for k, v := range *scenarioEnv {
-				environment[k] = v
+				parsedFlags[k] = v
+				environment[k] = v.value
 			}
 			for k, v := range *globalEnv {
-				environment[k] = v
+				parsedFlags[k] = v
+				environment[k] = v.value
 			}
 
 			spinner.Stop()
 
-			tbl := NewEnvironmentTable(environment)
+			tbl := NewEnvironmentTable(parsedFlags)
 			tbl.Print()
 			fmt.Print("\n")
 			// restarts the spinner to present image pull progress
