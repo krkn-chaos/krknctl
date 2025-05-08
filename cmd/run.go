@@ -10,6 +10,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"log"
@@ -171,7 +172,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						expandedConfig, err := utils.ExpandFolder(args[i+1], nil)
+						expandedConfig, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
 							return err
 						}
@@ -184,7 +185,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						expandedProfile, err := utils.ExpandFolder(args[i+1], nil)
+						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
 							return err
 						}
@@ -197,7 +198,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err := checkStringArgValue(args, i); err != nil {
 							return err
 						}
-						expandedProfile, err := utils.ExpandFolder(args[i+1], nil)
+						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
 							return err
 						}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"io"
 	"os"
 	"regexp"
@@ -186,6 +187,11 @@ func (f *InputField) Validate(value *string) (*string, error) {
 				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 			}
 		case File:
+			var err error
+			selectedValue, err = utils.ExpandFolder(*selectedValue, nil)
+			if err != nil {
+				return nil, err
+			}
 			if IsFile(*selectedValue) {
 				if f.MountPath == nil || *f.MountPath == "" {
 					return nil, errors.New("mount path not set in schema")
