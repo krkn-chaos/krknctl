@@ -1,18 +1,26 @@
 [
   {
-    "name":"duration",
-    "short_description":"Duration",
-    "description":"Sets the duration of the dummy scenario",
-    "variable":"END",
-    "type":"number",
-    "default":"10"
+    "name": "duration",
+    "short_description": "Duration",
+    "description": "Sets the duration of the dummy scenario",
+    "variable": "END",
+    "type": "number",
+    "default": "10"
   },
   {
-    "name":"exit",
-    "short_description":"Exit Status",
-    "description":"Sets the exit status of the container",
-    "variable":"EXIT_STATUS",
-    "type":"number",
-    "default":"0"
+    "name": "exit",
+    "short_description": "Exit Status",
+    "description": "Sets the exit status of the container",
+    "variable": "EXIT_STATUS",
+    "type": "number",
+    "default": "0"
+  },
+  {
+    "name": "test-file",
+    "short_description": "Test File",
+    "description": "Test a file type of input",
+    "variable": "TEST_FILE",
+    "type": "file",
+    "mount_path": "/home/krkn/test"
   }
 ]

@@ -4,6 +4,8 @@ if [[ $DEBUG == 'True' ]]; then
   echo "DEBUG MODE ON!"
 fi
 
+[ ! -z $TEST_FILE ] && cat $TEST_FILE 
+
 for i in $(seq 0 $END); do
   echo "Release the krkn $i"
   sleep 1
