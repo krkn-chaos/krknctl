@@ -549,6 +549,7 @@ func TestFieldFile(t *testing.T) {
 	_, err = field.Validate(&fileNameNotAccessible)
 	assert.NotNil(t, err)
 
+	// no mount path
 	field = InputField{}
 
 	fileFieldNoMountPath := `
@@ -561,7 +562,6 @@ func TestFieldFile(t *testing.T) {
 }
 `
 	json.Unmarshal([]byte(fileFieldNoMountPath), &field)
-	value, err = field.Validate(&fileName)
+	_, err = field.Validate(&fileFieldNoMountPath)
 	assert.NotNil(t, err)
-
 }

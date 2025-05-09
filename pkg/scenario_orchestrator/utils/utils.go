@@ -10,13 +10,13 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
+	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"io/fs"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	if kubeconfigPath == nil || *kubeconfigPath == "" {
 		configPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	} else {
-		path, err := ExpandFolder(*kubeconfigPath, nil)
+		path, err := commonutils.ExpandFolder(*kubeconfigPath, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -51,7 +51,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 
 	for clusterName, cluster := range kubeconfig.Clusters {
 		if cluster.CertificateAuthorityData == nil && cluster.CertificateAuthority != "" {
-			path, err := ExpandFolder(cluster.CertificateAuthority, &configFolder)
+			path, err := commonutils.ExpandFolder(cluster.CertificateAuthority, &configFolder)
 			if err != nil {
 				return nil, err
 			}
@@ -67,7 +67,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 
 	for authName, auth := range kubeconfig.AuthInfos {
 		if auth.ClientCertificateData == nil && auth.ClientCertificate != "" {
-			path, err := ExpandFolder(auth.ClientCertificate, &configFolder)
+			path, err := commonutils.ExpandFolder(auth.ClientCertificate, &configFolder)
 			if err != nil {
 				return nil, err
 			}
@@ -80,7 +80,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 		}
 
 		if auth.ClientKeyData == nil && auth.ClientKey != "" {
-			path, err := ExpandFolder(auth.ClientKey, &configFolder)
+			path, err := commonutils.ExpandFolder(auth.ClientKey, &configFolder)
 			if err != nil {
 				return nil, err
 			}
@@ -159,32 +159,6 @@ func CleanLogFiles(config config.Config) (*int, error) {
 		}
 	}
 	return &deletedFiles, nil
-}
-
-func ExpandFolder(folder string, basePath *string) (*string, error) {
-	if strings.HasPrefix(folder, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-		replacedHome := strings.Replace(folder, "~/", "", 1)
-		expandedPath := filepath.Join(home, replacedHome)
-		return &expandedPath, nil
-	}
-	if filepath.IsAbs(folder) == false {
-		if basePath != nil {
-			path := filepath.Join(*basePath, folder)
-			return &path, nil
-		} else {
-			path, err := filepath.Abs(folder)
-			if err != nil {
-				return nil, err
-			}
-			return &path, nil
-		}
-
-	}
-	return &folder, nil
 }
 
 func GetSocketByContainerEnvironment(environment orchestatormodels.ContainerRuntime, config config.Config, userId *int) (*string, error) {

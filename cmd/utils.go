@@ -95,10 +95,14 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				return nil, nil, err
 			}
 		}
-		if value != nil {
-			environment[*field.Variable] = *value
-			if field.Type == typing.File {
-				volumes[*field.MountPath] = *value
+		if value != nil && *value != "" {
+			if field.Type != typing.File {
+				environment[*field.Variable] = *value
+			} else if field.Type == typing.File {
+				if field.MountPath != nil {
+					volumes[*value] = *field.MountPath
+					environment[*field.Variable] = *field.MountPath
+				}
 			}
 		}
 

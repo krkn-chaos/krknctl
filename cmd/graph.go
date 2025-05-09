@@ -12,6 +12,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -60,7 +61,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 			if kubeconfig != "" {
-				expandedConfig, err := utils.ExpandFolder(kubeconfig, nil)
+				expandedConfig, err := commonutils.ExpandFolder(kubeconfig, nil)
 				if err != nil {
 					return err
 				}
@@ -74,7 +75,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 			if alertsProfile != "" {
-				expandedProfile, err := utils.ExpandFolder(alertsProfile, nil)
+				expandedProfile, err := commonutils.ExpandFolder(alertsProfile, nil)
 				if err != nil {
 					return err
 				}
@@ -88,7 +89,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 			if metricsProfile != "" {
-				expandedProfile, err := utils.ExpandFolder(metricsProfile, nil)
+				expandedProfile, err := commonutils.ExpandFolder(metricsProfile, nil)
 				if err != nil {
 					return err
 				}
