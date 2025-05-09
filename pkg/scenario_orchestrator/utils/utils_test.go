@@ -213,3 +213,12 @@ func TestEnvironmentFromString(t *testing.T) {
 	EnvironmentFromString("unknown")
 
 }
+
+func TestMaskString(t *testing.T) {
+	cleanStr := "str123456"
+	maskedStr := MaskString(cleanStr)
+	assert.Equal(t, maskedStr, "str******")
+	shortStr := "str"
+	maskedStr = MaskString(shortStr)
+	assert.Equal(t, maskedStr, shortStr)
+}

@@ -20,6 +20,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
+type ParsedField struct {
+	value  string
+	secret bool
+}
+
 func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
 	var s *spinner.Spinner = nil
 	s = spinner.New(spinner.CharSets[39], 100*time.Millisecond)
@@ -69,8 +74,8 @@ func CheckFileExists(filePath string) bool {
 	return true
 }
 
-func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (vol *map[string]string, env *map[string]string, err error) {
-	environment := make(map[string]string)
+func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (env *map[string]ParsedField, vol *map[string]string, err error) {
+	environment := make(map[string]ParsedField)
 	volumes := make(map[string]string)
 
 	for k := range scenarioCollectedFlags {
@@ -96,12 +101,13 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 			}
 		}
 		if value != nil && *value != "" {
+
 			if field.Type != typing.File {
-				environment[*field.Variable] = *value
+				environment[*field.Variable] = ParsedField{value: *value, secret: field.Secret}
 			} else if field.Type == typing.File {
 				if field.MountPath != nil {
 					volumes[*value] = *field.MountPath
-					environment[*field.Variable] = *field.MountPath
+					environment[*field.Variable] = ParsedField{value: *field.MountPath, secret: field.Secret}
 				}
 			}
 		}

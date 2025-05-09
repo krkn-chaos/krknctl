@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -250,4 +251,11 @@ func EnvironmentFromString(s string) orchestatormodels.ContainerRuntime {
 	default:
 		panic(fmt.Sprintf("unknown container environment: %q", s))
 	}
+}
+
+func MaskString(s string) string {
+	if len(s) < 3 {
+		return s
+	}
+	return s[:3] + strings.Repeat("*", len(s)-3)
 }
