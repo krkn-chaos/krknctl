@@ -48,6 +48,10 @@ type Config struct {
 	EnvPrivateRegistryToken     string `json:"env_private_registry_token"`
 	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
 	EnvPrivateRegistryInsecure  string `json:"env_private_registry_insecure"`
+	GithubLatestRelease         string `json:"github_latest_release"`
+	GithubLatestReleaseAPI      string `json:"github_latest_release_api"`
+	GithubReleaseAPI            string `json:"github_release_api"`
+	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 }
 
 //go:embed config.json
