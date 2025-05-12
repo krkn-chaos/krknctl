@@ -95,7 +95,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		}
 		f.Secret = secret
 	} else {
-		f.Required = false
+		f.Secret = false
 	}
 
 	return nil
