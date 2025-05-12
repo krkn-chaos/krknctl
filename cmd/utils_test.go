@@ -88,7 +88,7 @@ func TestGetLatest(t *testing.T) {
 	config.GithubLatestReleaseAPI = "https://httpstat.us/404"
 	latest, err = GetLatest(config)
 	assert.NotNil(t, err)
-	assert.Nil(t, err)
+	assert.Nil(t, latest)
 }
 
 func TestIsDeprecated(t *testing.T) {

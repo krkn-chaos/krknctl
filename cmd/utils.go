@@ -248,9 +248,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
+		name *string
+		err  error
+	},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -380,12 +380,10 @@ func queryGithubRelease(url string) ([]byte, error) {
 	}
 
 	resp, err := client.Do(req)
+	// if any http error is happening the checks are skipped
+	// to avoid errors in disconnected environments
 	if err != nil {
-		if timeoutErr, ok := err.(interface{ Timeout() bool }); ok && timeoutErr.Timeout() {
-			return nil, nil
-		} else {
-			return nil, err
-		}
+		return nil, nil
 	}
 	defer func() {
 		deferErr = resp.Body.Close()
@@ -423,11 +421,11 @@ func GetLatest(config config.Config) (*string, error) {
 }
 
 func IsDeprecated(config config.Config) (*bool, error) {
-	url, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
+	githubApiUrl, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
 	if err != nil {
 		return nil, err
 	}
-	body, err := queryGithubRelease(url)
+	body, err := queryGithubRelease(githubApiUrl)
 	if err != nil {
 		return nil, err
 	}
