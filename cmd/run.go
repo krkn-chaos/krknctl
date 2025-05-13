@@ -285,7 +285,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
-			quayImageUri, err := config.GetQuayImageUri()
+			quayImageUri, err := config.GetCustomDomainImageUri()
 			if err != nil {
 				return err
 			}
