@@ -65,7 +65,7 @@ jobs:
         run: |
          export USERID=$(id -u)
          go test -tags containers_image_openpgp -race -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
-         cat /tmp/gotest.log | go-ctrf-json-reporter -output ctrf-report.json
+         cat /tmp/gotest.log | go-ctrf-json-reporter -output ctrf-report.json > /dev/null
       - name: generate test report
         run: npx github-actions-ctrf ctrf-report.json
       - name: generate coverage report
