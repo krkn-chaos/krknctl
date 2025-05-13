@@ -101,6 +101,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				foundArg = &args[i+1]
 			}
 		}
+
 		var value *string = nil
 		if foundArg != nil || skipDefault == false {
 			value, err = field.Validate(foundArg)
@@ -108,6 +109,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				return nil, nil, err
 			}
 		}
+
 		if value != nil && *value != "" {
 
 			if field.Type != typing.File {
@@ -180,55 +182,58 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 			}
 		}
 	} else {
-		if args != nil {
-			for i, a := range *args {
-				if strings.HasPrefix(a, "--") {
-					if a == "--private-registry" {
-						registrySettings = &models.RegistryV2{}
-						registrySettings.SkipTls = false
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						registrySettings.RegistryUrl = (*args)[i+1]
-					}
-					if registrySettings != nil && a == "--private-registry-username" {
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						v := (*args)[i+1]
-						registrySettings.Username = &v
-					}
-					if registrySettings != nil && a == "--private-registry-password" {
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						v := (*args)[i+1]
-						registrySettings.Password = &v
-					}
-					if registrySettings != nil && a == "--private-registry-skip-tls" {
-						registrySettings.SkipTls = true
-					}
+		if args == nil {
+			return nil, errors.New("args cannot be nil")
+		}
 
-					if registrySettings != nil && a == "--private-registry-insecure" {
-						registrySettings.Insecure = true
+		for i, a := range *args {
+			if strings.HasPrefix(a, "--") {
+				if a == "--private-registry" {
+					registrySettings = &models.RegistryV2{}
+					registrySettings.SkipTls = false
+					if err := checkStringArgValue(*args, i); err != nil {
+						return nil, err
 					}
-
-					if registrySettings != nil && a == "--private-registry-token" {
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						v := (*args)[i+1]
-						registrySettings.Token = &v
-					}
-
-					if registrySettings != nil && a == "--private-registry-scenarios" {
-						registrySettings.SkipTls = false
-						if err := checkStringArgValue(*args, i); err != nil {
-							return nil, err
-						}
-						registrySettings.ScenarioRepository = (*args)[i+1]
-					}
+					registrySettings.RegistryUrl = (*args)[i+1]
 				}
+				if registrySettings != nil && a == "--private-registry-username" {
+					if err := checkStringArgValue(*args, i); err != nil {
+						return nil, err
+					}
+					v := (*args)[i+1]
+					registrySettings.Username = &v
+				}
+				if registrySettings != nil && a == "--private-registry-password" {
+					if err := checkStringArgValue(*args, i); err != nil {
+						return nil, err
+					}
+					v := (*args)[i+1]
+					registrySettings.Password = &v
+				}
+				if registrySettings != nil && a == "--private-registry-skip-tls" {
+					registrySettings.SkipTls = true
+				}
+
+				if registrySettings != nil && a == "--private-registry-insecure" {
+					registrySettings.Insecure = true
+				}
+
+				if registrySettings != nil && a == "--private-registry-token" {
+					if err := checkStringArgValue(*args, i); err != nil {
+						return nil, err
+					}
+					v := (*args)[i+1]
+					registrySettings.Token = &v
+				}
+
+				if registrySettings != nil && a == "--private-registry-scenarios" {
+					registrySettings.SkipTls = false
+					if err := checkStringArgValue(*args, i); err != nil {
+						return nil, err
+					}
+					registrySettings.ScenarioRepository = (*args)[i+1]
+				}
+
 			}
 		}
 		if registrySettings != nil && registrySettings.ScenarioRepository == "" {
