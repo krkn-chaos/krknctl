@@ -102,7 +102,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 
 		var imageUri = ""
 		if registry == nil {
-			uri, err := config.GetQuayImageUri()
+			uri, err := config.GetCustomDomainImageUri()
 			if err != nil {
 				return nil, err
 			}

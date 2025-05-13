@@ -130,11 +130,8 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	}
 
 	if latestVersion != nil && *latestVersion != config.Version {
-		_, err = color.New(color.FgHiYellow).Println(fmt.Sprintf("📣📦 a newer version of krknctl, %s, is currently available, check it out! %s", *latestVersion, config.GithubLatestRelease))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		// prints to stderr to not pollute output redirection on scaffold
+		println(color.YellowString("📣📦 a newer version of krknctl, %s, is currently available, check it out! %s", *latestVersion, config.GithubLatestRelease))
 	}
 
 	if err := rootCmd.Execute(); err != nil {

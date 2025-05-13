@@ -14,6 +14,7 @@ type Config struct {
 	QuayBaseImageRegistry       string `json:"quay_base_image_registry"`
 	QuayBaseImageTag            string `json:"quay_base_image_tag"`
 	QuayRepositoryApi           string `json:"quay_repository_api"`
+	CustomDomainHost            string `json:"custom_domain_host"`
 	PrivateRegistryBaseImageTag string `json:"private_registry_base_image_tag"`
 	ContainerPrefix             string `json:"container_prefix"`
 	KubeconfigPrefix            string `json:"kubeconfig_prefix"`
@@ -68,6 +69,14 @@ func LoadConfig() (Config, error) {
 
 func (c *Config) GetQuayImageUri() (string, error) {
 	imageUri, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageUri, nil
+}
+
+func (c *Config) GetCustomDomainImageUri() (string, error) {
+	imageUri, err := url.JoinPath(c.CustomDomainHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}

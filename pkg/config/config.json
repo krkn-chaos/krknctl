@@ -6,6 +6,7 @@
   "quay_base_image_registry": "krkn",
   "quay_base_image_tag": "latest",
   "quay_repository_api": "api/v1/repository",
+  "custom_domain_host": "containers.krkn-chaos.dev",
   "private_registry_base_image_tag": "latest",
   "container_prefix": "krknctl",
   "kubeconfig_prefix": "krknctl-kubeconfig",
