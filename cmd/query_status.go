@@ -6,28 +6,28 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/spf13/cobra"
 	"os"
+	"path"
 )
 
-func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchestrator, arg string, conn context.Context, conf config.Config) error {
+func resolveContainerIDOrName(orchestrator scenarioorchestrator.ScenarioOrchestrator, arg string, conn context.Context) error {
 	var scenarioContainer *models.ScenarioContainer
-	var containerId *string
+	var containerID *string
 
-	containerId, err := orchestrator.ResolveContainerName(arg, conn)
+	containerID, err := orchestrator.ResolveContainerName(arg, conn)
 	if err != nil {
 		return err
 	}
-	if containerId == nil {
-		containerId = &arg
+	if containerID == nil {
+		containerID = &arg
 	}
 
-	scenarioContainer, err = orchestrator.InspectScenario(models.Container{Id: *containerId}, conn)
+	scenarioContainer, err = orchestrator.InspectScenario(models.Container{ID: *containerID}, conn)
 
 	if err != nil {
 		return err
@@ -48,16 +48,16 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 
 	fmt.Println(buf.String())
 	if scenarioContainer.Container.ExitStatus != 0 {
-		return &utils.ExitError{ExitStatus: int(scenarioContainer.Container.ExitStatus)}
+		return &utils.ExitError{ExitStatus: scenarioContainer.Container.ExitStatus}
 	}
 	return nil
 }
 
-func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, filename string, conn context.Context, conf config.Config) error {
-	var scenarioFile = make(map[string]provider_models.ScenarioDetail)
+func resolveGraphFile(orchestrator scenarioorchestrator.ScenarioOrchestrator, filename string, conn context.Context) error {
+	var scenarioFile = make(map[string]providermodels.ScenarioDetail)
 	var containers = make([]models.Container, 0)
 	var statusCodeError error
-	fileData, err := os.ReadFile(filename)
+	fileData, err := os.ReadFile(path.Clean(filename))
 	if err != nil {
 		return err
 	}
@@ -65,13 +65,13 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 	if err != nil {
 		return err
 	}
-	for key, _ := range scenarioFile {
+	for key := range scenarioFile {
 		scenario, err := orchestrator.ResolveContainerName(key, conn)
 		if err != nil {
 			return err
 		}
 		if scenario != nil {
-			containerScenario, err := orchestrator.InspectScenario(models.Container{Id: *scenario}, conn)
+			containerScenario, err := orchestrator.InspectScenario(models.Container{ID: *scenario}, conn)
 			if err != nil {
 				return err
 			}
@@ -79,7 +79,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 				if (*containerScenario).Container != nil {
 					containers = append(containers, *(*containerScenario).Container)
 					if (*containerScenario).Container.ExitStatus != 0 {
-						return &utils.ExitError{ExitStatus: int((*containerScenario).Container.ExitStatus)}
+						return &utils.ExitError{ExitStatus: (*containerScenario).Container.ExitStatus}
 					}
 				}
 			}
@@ -98,11 +98,11 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 	return statusCodeError
 }
 
-func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewQueryStatusCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:          "query-status",
 		Short:        "checks the status of a container or a list of containers",
-		Long:         `checks the status of a container or a list of containers by container name or container Id`,
+		Long:         `checks the status of a container or a list of containers by container name or container ID`,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -115,7 +115,7 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 				return err
 			}
 			if len(args) > 0 {
-				err = resolveContainerIdOrName(*scenarioOrchestrator, args[0], conn, config)
+				err = resolveContainerIDOrName(*scenarioOrchestrator, args[0], conn)
 				var staterr *utils.ExitError
 				if errors.As(err, &staterr) {
 					if staterr.ExitStatus != 0 {
@@ -131,14 +131,14 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 
 			if graphPath == "" {
-				return fmt.Errorf("neither container Id or name nor graph plan file specified")
+				return fmt.Errorf("neither container ID or name nor graph plan file specified")
 			}
 
-			if CheckFileExists(graphPath) == false {
+			if !CheckFileExists(graphPath) {
 				return fmt.Errorf("graph file %s not found", graphPath)
 			}
 
-			err = resolveGraphFile(*scenarioOrchestrator, graphPath, conn, config)
+			err = resolveGraphFile(*scenarioOrchestrator, graphPath, conn)
 			// since multiple errors of different values might be set
 			// on graph it exits with a generic 1
 			var staterr *utils.ExitError
