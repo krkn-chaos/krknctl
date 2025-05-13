@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -23,6 +26,11 @@ import (
 type ParsedField struct {
 	value  string
 	secret bool
+}
+
+type GitHubRelease struct {
+	TagName string `json:"tag_name"`
+	Body    string `json:"body"`
 }
 
 func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
@@ -240,9 +248,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
+		name *string
+		err  error
+	},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -357,4 +365,81 @@ func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][
 		return err
 	}
 	return nil
+}
+
+func queryGithubRelease(url string) ([]byte, error) {
+	var deferErr error
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	// if any http error is happening the checks are skipped
+	// to avoid errors in disconnected environments
+	if err != nil {
+		return nil, nil
+	}
+	defer func() {
+		deferErr = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("request failed with status : %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, deferErr
+}
+
+func GetLatest(config config.Config) (*string, error) {
+	body, err := queryGithubRelease(config.GithubLatestReleaseAPI)
+	if err != nil {
+		return nil, err
+	}
+	// timeout condition
+	if body == nil {
+		return nil, nil
+	}
+
+	var releaseObject GitHubRelease
+	err = json.Unmarshal(body, &releaseObject)
+	if err != nil {
+		return nil, err
+	}
+	release := releaseObject.TagName
+	return &release, nil
+}
+
+func IsDeprecated(config config.Config) (*bool, error) {
+	githubApiUrl, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
+	if err != nil {
+		return nil, err
+	}
+	body, err := queryGithubRelease(githubApiUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	// timeout condition
+	if body == nil {
+		return nil, nil
+	}
+
+	var releaseObject GitHubRelease
+	err = json.Unmarshal(body, &releaseObject)
+	if err != nil {
+		return nil, err
+	}
+	deprecated := strings.Contains(releaseObject.Body, config.GithubReleaseAPIDeprecated)
+	return &deprecated, nil
 }

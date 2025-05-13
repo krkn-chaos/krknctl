@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
@@ -110,6 +111,31 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator, config)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
+
+	// update and deprecation check
+	isDeprecated, err := IsDeprecated(config)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if isDeprecated != nil && *isDeprecated {
+		_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("⛔️ krknctl %s is deprecated, please update to latest: %s", config.Version, config.GithubLatestRelease))
+		os.Exit(1)
+	}
+
+	latestVersion, err := GetLatest(config)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if latestVersion != nil && *latestVersion != config.Version {
+		_, err = color.New(color.FgHiYellow).Println(fmt.Sprintf("📣📦 a newer version of krknctl, %s, is currently available, check it out! %s", *latestVersion, config.GithubLatestRelease))
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

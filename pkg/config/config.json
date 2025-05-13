@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "v0.0.1-alpha",
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
   "quay_scenario_registry": "krkn-hub",
@@ -40,5 +40,9 @@
   "env_private_registry_skip_tls": "KRKNCTL_PRIVATE_REGISTRY_SKIP_TLS",
   "env_private_registry_token": "KRKNCTL_PRIVATE_REGISTRY_TOKEN",
   "env_private_registry_scenarios": "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS",
-  "env_private_registry_insecure": "KRKNCTL_PRIVATE_REGISTRY_INSECURE"
+  "env_private_registry_insecure": "KRKNCTL_PRIVATE_REGISTRY_INSECURE",
+  "github_latest_release": "https://github.com/krkn-chaos/krknctl/releases/latest",
+  "github_latest_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/latest",
+  "github_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags",
+  "github_release_api_deprecated": "[DEPRECATED]"
 }
