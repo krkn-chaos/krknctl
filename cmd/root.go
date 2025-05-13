@@ -108,7 +108,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	attachCmd := NewAttachCmd(scenarioOrchestrator)
 	rootCmd.AddCommand(attachCmd)
-	queryCmd := NewQueryStatusCommand(scenarioOrchestrator, config)
+	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
 
