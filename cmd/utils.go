@@ -101,6 +101,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				foundArg = &args[i+1]
 			}
 		}
+
 		var value *string = nil
 		if foundArg != nil || skipDefault == false {
 			value, err = field.Validate(foundArg)
@@ -108,6 +109,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 				return nil, nil, err
 			}
 		}
+
 		if value != nil && *value != "" {
 
 			if field.Type != typing.File {
@@ -248,9 +250,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-		name *string
-		err  error
-	},
+	name *string
+	err  error
+},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
