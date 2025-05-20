@@ -196,6 +196,11 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 					}
 					registrySettings.RegistryUrl = (*args)[i+1]
 				}
+			}
+		}
+
+		for i, a := range *args {
+			if strings.HasPrefix(a, "--") {
 				if registrySettings != nil && a == "--private-registry-username" {
 					if err := checkStringArgValue(*args, i); err != nil {
 						return nil, err
@@ -227,7 +232,6 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 				}
 
 				if registrySettings != nil && a == "--private-registry-scenarios" {
-					registrySettings.SkipTls = false
 					if err := checkStringArgValue(*args, i); err != nil {
 						return nil, err
 					}
@@ -253,9 +257,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-		name *string
-		err  error
-	},
+	name *string
+	err  error
+},
 	registrySettings *providermodels.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment

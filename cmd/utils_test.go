@@ -210,7 +210,7 @@ func TestParsePrivateFlags(t *testing.T) {
 	registry, err = parsePrivateRepoArgs(cmd, nil)
 	assert.NotNil(t, err)
 
-	args := []string{}
+	var args []string
 
 	registry, err = parsePrivateRepoArgs(cmd, &args)
 	assert.Nil(t, err)
@@ -239,10 +239,11 @@ func TestParsePrivateFlags(t *testing.T) {
 	registry, err = parsePrivateRepoArgs(cmd, &args)
 	assert.NotNil(t, err)
 
-	args = []string{"--private-registry-username", username,
+	args = []string{
+		"--private-registry-username", username,
 		"--private-registry-password", password,
-		"--private-registry-skip-tls", "true",
-		"--private-registry-insecure", "true",
+		"--private-registry-skip-tls",
+		"--private-registry-insecure",
 		"--private-registry-token", token,
 		"--private-registry", registryHost,
 		"--private-registry-scenarios", registryScenarios,
