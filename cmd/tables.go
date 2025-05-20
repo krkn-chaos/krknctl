@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
@@ -48,19 +49,32 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 	return tbl
 }
 
-func NewEnvironmentTable(env map[string]ParsedField) table.Table {
+func NewEnvironmentTable(env map[string]ParsedField, config config.Config) table.Table {
 	tbl := table.New("Environment Value", "Value")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for k, v := range env {
+		value := reduceString(v.value, config)
 		if v.secret {
-			tbl.AddRow(k, utils.MaskString(v.value))
+			tbl.AddRow(k, utils.MaskString(value))
 		} else {
-			tbl.AddRow(k, v.value)
+			tbl.AddRow(k, value)
 		}
 
 	}
 	return tbl
 
+}
+
+func groupValues(fields map[string]ParsedField) map[string]ParsedField {
+	return map[string]ParsedField{}
+}
+
+func reduceString(value string, config config.Config) string {
+	if len(value) >= config.TableFieldMaxLength {
+		reducedValue := value[0:config.TableFieldMaxLength]
+		return fmt.Sprintf("%s...(%d bytes more)", reducedValue, len(value)-config.TableFieldMaxLength)
+	}
+	return value
 }
 
 func NewGraphTable(graph [][]string) table.Table {

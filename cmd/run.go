@@ -268,7 +268,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 			spinner.Stop()
 
-			tbl := NewEnvironmentTable(parsedFields)
+			tbl := NewEnvironmentTable(parsedFields, config)
 			tbl.Print()
 			fmt.Print("\n")
 			// restarts the spinner to present image pull progress
