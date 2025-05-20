@@ -45,5 +45,7 @@
   "github_latest_release": "https://github.com/krkn-chaos/krknctl/releases/latest",
   "github_latest_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/latest",
   "github_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags",
-  "github_release_api_deprecated": "[DEPRECATED]"
+  "github_release_api_deprecated": "[DEPRECATED]",
+  "table_field_max_length": 20,
+  "table_max_step_scenario_length": 7
 }

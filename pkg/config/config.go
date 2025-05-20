@@ -53,6 +53,8 @@ type Config struct {
 	GithubLatestReleaseAPI      string `json:"github_latest_release_api"`
 	GithubReleaseAPI            string `json:"github_release_api"`
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
+	TableFieldMaxLength         int    `json:"table_field_max_length"`
+	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
 }
 
 //go:embed config.json
