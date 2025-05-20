@@ -194,7 +194,10 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return nil
 			}
 
-			table := NewGraphTable(executionPlan)
+			table, err := NewGraphTable(executionPlan, config)
+			if err != nil {
+				return err
+			}
 			table.Print()
 			fmt.Print("\n\n")
 			spinner.Suffix = "starting chaos scenarios..."

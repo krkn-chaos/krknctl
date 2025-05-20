@@ -65,10 +65,6 @@ func NewEnvironmentTable(env map[string]ParsedField, config config.Config) table
 
 }
 
-func groupValues(fields map[string]ParsedField) map[string]ParsedField {
-	return map[string]ParsedField{}
-}
-
 func reduceString(value string, config config.Config) string {
 	if len(value) >= config.TableFieldMaxLength {
 		reducedValue := value[0:config.TableFieldMaxLength]
@@ -77,13 +73,68 @@ func reduceString(value string, config config.Config) string {
 	return value
 }
 
-func NewGraphTable(graph [][]string) table.Table {
+func NewGraphTable(graph [][]string, config config.Config) (table.Table, error) {
 	tbl := table.New("Step", "Scenario ID")
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for i, v := range graph {
+		if len(v) >= config.TableMaxStepScenarioLength {
+			var err error
+			v, err = groupScenarioLayer(v)
+			if err != nil {
+				return nil, err
+			}
+		}
 		tbl.AddRow(i, strings.Join(v, ", "))
 	}
-	return tbl
+	return tbl, nil
+}
+
+func groupScenarioLayer(layer []string) ([]string, error) {
+
+	layerIndex := make(map[string]int)
+	compressedLayers := make([]string, 0)
+	scenarioIndex := make(map[string]bool)
+
+	for _, srcGraphScenario := range layer {
+		for _, dstGraphScenario := range layer {
+			if srcGraphScenario != dstGraphScenario {
+				cmnPrefix := commonPrefix(srcGraphScenario, dstGraphScenario)
+				if len(cmnPrefix) > 0 {
+					if ok := scenarioIndex[srcGraphScenario]; !ok {
+						if _, ok = layerIndex[cmnPrefix]; ok {
+							layerIndex[cmnPrefix]++
+						} else {
+							layerIndex[cmnPrefix] = 1
+						}
+						scenarioIndex[srcGraphScenario] = true
+					}
+
+				}
+			}
+		}
+	}
+
+	for k, v := range layerIndex {
+		compressedLayers = append(compressedLayers, fmt.Sprintf("(%d) %s", v, k))
+	}
+	return compressedLayers, nil
+}
+
+func commonPrefix(a, b string) string {
+	minLen := len(a)
+	if len(b) < minLen {
+		minLen = len(b)
+	}
+	for i := 0; i < minLen; i++ {
+		if a[i] != b[i] {
+			prefix := a[:i]
+			prefix = strings.TrimSuffix(prefix, "-")
+			return prefix
+		}
+	}
+	prefix := a[:minLen]
+	prefix = strings.TrimSuffix(prefix, "-")
+	return prefix
 }
 
 func NewRunningScenariosTable(runningScenarios []orchestratormodels.ScenarioContainer) table.Table {
