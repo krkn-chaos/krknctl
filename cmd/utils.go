@@ -369,7 +369,7 @@ func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(path, jsonData, 0644)
+	err = os.WriteFile(path, jsonData, 0600)
 	if err != nil {
 		return err
 	}
