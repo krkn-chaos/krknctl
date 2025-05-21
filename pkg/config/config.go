@@ -13,7 +13,7 @@ type Config struct {
 	QuayScenarioRegistry        string `json:"quay_scenario_registry"`
 	QuayBaseImageRegistry       string `json:"quay_base_image_registry"`
 	QuayBaseImageTag            string `json:"quay_base_image_tag"`
-	QuayRepositoryApi           string `json:"quay_repository_api"`
+	QuayRepositoryAPI           string `json:"quay_repository_api"`
 	CustomDomainHost            string `json:"custom_domain_host"`
 	PrivateRegistryBaseImageTag string `json:"private_registry_base_image_tag"`
 	ContainerPrefix             string `json:"container_prefix"`
@@ -45,7 +45,7 @@ type Config struct {
 	EnvPrivateRegistry          string `json:"env_private_registry"`
 	EnvPrivateRegistryUsername  string `json:"env_private_registry_username"`
 	EnvPrivateRegistryPassword  string `json:"env_private_registry_password"`
-	EnvPrivateRegistrySkipTls   string `json:"env_private_registry_skip_tls"`
+	EnvPrivateRegistrySkipTLS   string `json:"env_private_registry_skip_tls"`
 	EnvPrivateRegistryToken     string `json:"env_private_registry_token"`
 	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
 	EnvPrivateRegistryInsecure  string `json:"env_private_registry_insecure"`
@@ -69,36 +69,36 @@ func LoadConfig() (Config, error) {
 	return config, nil
 }
 
-func (c *Config) GetQuayImageUri() (string, error) {
-	imageUri, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
+func (c *Config) GetQuayImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
-	return imageUri, nil
+	return imageURI, nil
 }
 
-func (c *Config) GetCustomDomainImageUri() (string, error) {
-	imageUri, err := url.JoinPath(c.CustomDomainHost, c.QuayOrg, c.QuayScenarioRegistry)
+func (c *Config) GetCustomDomainImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.CustomDomainHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
-	return imageUri, nil
+	return imageURI, nil
 }
 
-func (c *Config) GetQuayScenarioRepositoryApiUri() (string, error) {
+func (c *Config) GetQuayScenarioRepositoryAPIURI() (string, error) {
 	baseHost := "https://" + c.QuayHost
-	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayScenarioRegistry)
+	repositoryURI, err := url.JoinPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
-	return repositoryUri, nil
+	return repositoryURI, nil
 }
 
-func (c *Config) GetQuayBaseImageRepositoryApiUri() (string, error) {
+func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 	baseHost := "https://" + c.QuayHost
-	repositoryUri, err := url.JoinPath(baseHost, c.QuayRepositoryApi, c.QuayOrg, c.QuayBaseImageRegistry)
+	repositoryURI, err := url.JoinPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayBaseImageRegistry)
 	if err != nil {
 		return "", err
 	}
-	return repositoryUri, nil
+	return repositoryURI, nil
 }

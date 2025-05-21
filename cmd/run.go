@@ -130,7 +130,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				}
 			}
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 
 			if err != nil {
@@ -285,7 +285,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
-			quayImageURI, err := config.GetCustomDomainImageUri()
+			quayImageURI, err := config.GetCustomDomainImageURI()
 			if err != nil {
 				return err
 			}
@@ -353,11 +353,11 @@ func printHelp(scenario models.ScenarioDetail) {
 }
 
 func parseScenarioName(args []string) (string, error) {
-	if strings.HasPrefix(args[0], "--") == false {
+	if !strings.HasPrefix(args[0], "--") {
 		return args[0], nil
 	}
 
-	if strings.HasPrefix(args[len(args)-1], "--") == false {
+	if !strings.HasPrefix(args[len(args)-1], "--") {
 		return args[len(args)-1], nil
 	}
 

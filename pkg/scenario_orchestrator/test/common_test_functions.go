@@ -49,7 +49,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
@@ -85,15 +85,15 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	//pulling image from private registry with token
 	quayToken := os.Getenv("QUAY_TOKEN")
 	pr := provider_models.RegistryV2{
-		RegistryUrl:        "quay.io",
+		RegistryURL:        "quay.io",
 		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
 		Token:              &quayToken,
-		SkipTls:            true,
+		SkipTLS:            true,
 	}
 
 	timestamp = time.Now().Unix()
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
 		if err != nil {
 			fmt.Println(err.Error())
@@ -110,16 +110,16 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	basicAuthPassword := "testpassword"
 
 	pr = provider_models.RegistryV2{
-		RegistryUrl:        "localhost:5001",
+		RegistryURL:        "localhost:5001",
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
 		Password:           &basicAuthPassword,
-		SkipTls:            true,
+		SkipTLS:            true,
 	}
 
 	timestamp = time.Now().Unix()
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -143,7 +143,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
@@ -519,7 +519,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
@@ -573,7 +573,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenario_orch
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
@@ -643,7 +643,7 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
@@ -711,7 +711,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageUri()
+	registryUri, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)

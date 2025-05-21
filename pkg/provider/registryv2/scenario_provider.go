@@ -26,12 +26,12 @@ func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2) (*[]mo
 		return nil, errors.New("registry cannot be nil in V2 scenario provider")
 	}
 
-	registryUri, err := registry.GetV2ScenarioRepositoryApiUri()
+	registryURI, err := registry.GetV2ScenarioRepositoryAPIURI()
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := s.queryRegistry(registryUri, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTls)
+	body, err := s.queryRegistry(registryURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +50,10 @@ func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2) (*[]mo
 	return &tags, nil
 }
 
-func (s *ScenarioProvider) queryRegistry(uri string, username *string, password *string, token *string, method string, skipTls bool) (*[]byte, error) {
+func (s *ScenarioProvider) queryRegistry(uri string, username *string, password *string, token *string, method string, skipTLS bool) (*[]byte, error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: skipTls,
+			InsecureSkipVerify: skipTLS,
 		},
 	}
 
@@ -117,14 +117,14 @@ func (s *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, sce
 		}
 	}
 	if foundScenario == nil {
-		return nil, fmt.Errorf("%s scenario not found in registry %s", scenario, registry.RegistryUrl)
+		return nil, fmt.Errorf("%s scenario not found in registry %s", scenario, registry.RegistryURL)
 	}
-	baseImageRegistryUri, err := registry.GetV2ScenarioDetailApiUri(foundScenario.Name)
+	baseImageRegistryURI, err := registry.GetV2ScenarioDetailAPIURI(foundScenario.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	scenarioDetail, err := s.getScenarioDetail(baseImageRegistryUri, foundScenario, true, registry)
+	scenarioDetail, err := s.getScenarioDetail(baseImageRegistryURI, foundScenario, true, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +150,12 @@ func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 		return nil, nil
 	}
 
-	registryUri, err := registry.GetV2ScenarioDetailApiUri(scenario)
+	registryURI, err := registry.GetV2ScenarioDetailAPIURI(scenario)
 	if err != nil {
 		return nil, err
 	}
 
-	scenarioDetail, err := s.getScenarioDetail(registryUri, foundScenario, false, registry)
+	scenarioDetail, err := s.getScenarioDetail(registryURI, foundScenario, false, registry)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 }
 
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
-	body, err := s.queryRegistry(dataSource, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTls)
+	body, err := s.queryRegistry(dataSource, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""
-	if isGlobalEnvironment == true {
+	if isGlobalEnvironment {
 		titleLabel = s.Config.LabelTitleGlobal
 		descriptionLabel = s.Config.LabelDescriptionGlobal
 		inputFieldsLabel = s.Config.LabelInputFieldsGlobal

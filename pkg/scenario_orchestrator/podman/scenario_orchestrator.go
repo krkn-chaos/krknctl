@@ -76,7 +76,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 				if registry.Password != nil {
 					options.Password = registry.Password
 				}
-				options.SkipTLSVerify = &registry.SkipTls
+				options.SkipTLSVerify = &registry.SkipTLS
 			}
 			options.WithProgressWriter(writer)
 			_, err = images.Pull(ctx, image, &options)

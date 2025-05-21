@@ -48,6 +48,9 @@ func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		}
 	} else {
 		scenarioNodes, err = scaffoldSeededScenarios(seed)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
@@ -83,7 +86,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 	}
 	var scenarioNodes = make(map[string]models2.ScenarioNode)
 	// if random is set _comment is not set
-	if random == false {
+	if !random {
 		scenarioNodes["_comment"] = GetInstructionScenario(indexes[0])
 	}
 	for i, scenarioDetail := range scenarioDetails {
@@ -92,7 +95,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 		scenarioNode := models2.ScenarioNode{}
 
 		// if random is not set dependencies will be set
-		if random == false {
+		if !random {
 			if i > 0 {
 				scenarioNode.Parent = &indexes[i-1]
 			} else {
@@ -100,17 +103,17 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 			}
 		}
 
-		var imageUri = ""
+		var imageURI = ""
 		if registry == nil {
-			uri, err := config.GetCustomDomainImageUri()
+			uri, err := config.GetCustomDomainImageURI()
 			if err != nil {
 				return nil, err
 			}
-			imageUri = uri
+			imageURI = uri
 		} else {
-			imageUri = registry.GetPrivateRegistryUri()
+			imageURI = registry.GetPrivateRegistryURI()
 		}
-		scenarioNode.Image = imageUri + ":" + scenarioDetail.Name
+		scenarioNode.Image = imageURI + ":" + scenarioDetail.Name
 		scenarioNode.Name = scenarioDetail.Name
 		scenarioNode.Env = make(map[string]string)
 		scenarioNode.Volumes = make(map[string]string)
@@ -125,7 +128,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 					scenarioNode.Env[*detail.Variable] = *detail.Default
 				} else {
 					var required = ""
-					if detail.Required == true {
+					if detail.Required {
 						required = "(required)"
 					}
 					scenarioNode.Env[*detail.Variable] = fmt.Sprintf("<%s%s>", *detail.Description, required)
@@ -135,7 +138,7 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 
 		}
 
-		if includeGlobalEnv == true {
+		if includeGlobalEnv {
 			globalDetail, err := p.GetGlobalEnvironment(registry, scenarios[0])
 			if err != nil {
 				return nil, err
@@ -155,7 +158,6 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNode, error) {
 	var nodeMap map[string]models2.ScenarioNode
 	resultMap := make(map[string]models2.ScenarioNode)
-	var nodeSeed []models2.ScenarioNode
 	buf, err := os.ReadFile(seed.Path)
 	if err != nil {
 		return nil, err
@@ -192,7 +194,7 @@ func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNod
 			limit := slot - minimum + 1
 			percentage = utils.RandomInt64(&limit) + minimum
 		}
-		nodeSeed = append(nodeSeed, nodeMap[key])
+
 		percentages = append(percentages, percentage)
 
 		total -= percentage

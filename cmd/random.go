@@ -53,7 +53,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 			spinner := NewSpinnerWithSuffix("running randomly generated chaos plan...")
 			volumes := make(map[string]string)
