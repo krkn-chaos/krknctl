@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
@@ -45,4 +46,11 @@ func TestExpandFolder(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, expectedParentFolderWithBase, *resultParentFolderWithBase)
 
+}
+
+func TestRandomInt64(t *testing.T) {
+	randOne := RandomInt64(nil)
+	randTwo := RandomInt64(nil)
+	fmt.Printf("RandomInt64: %v, RandomInt64: %v\n", randOne, randTwo)
+	assert.NotEqual(t, randOne, randTwo)
 }
