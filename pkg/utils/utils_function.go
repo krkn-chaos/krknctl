@@ -19,7 +19,7 @@ func ExpandFolder(folder string, basePath *string) (*string, error) {
 		expandedPath := filepath.Join(home, replacedHome)
 		return &expandedPath, nil
 	}
-	if filepath.IsAbs(folder) == false {
+	if !filepath.IsAbs(folder) {
 		if basePath != nil {
 			path := filepath.Join(*basePath, folder)
 			return &path, nil
