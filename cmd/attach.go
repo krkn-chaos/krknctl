@@ -78,12 +78,12 @@ func NewAttachCmd(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrato
 			if err != nil {
 				return err
 			}
-			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.Id, os.Stdout, os.Stderr, ctx)
+			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.ID, os.Stdout, os.Stderr, ctx)
 			if err != nil {
 				return err
 			}
 			if *interrupted {
-				_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", scenario.Container.Id))
+				_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", scenario.Container.ID))
 				if err != nil {
 					return err
 				}

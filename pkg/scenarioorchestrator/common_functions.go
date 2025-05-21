@@ -35,13 +35,13 @@ func CommonRunGraph(
 
 			socket, err := orchestrator.GetContainerRuntimeSocket(userID)
 			if err != nil {
-				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
 
 			ctx, err := orchestrator.Connect(*socket)
 			if err != nil {
-				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
 
@@ -69,17 +69,17 @@ func CommonRunGraph(
 			file, err := os.Create(path.Clean(filename))
 
 			if err != nil {
-				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
+				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
-			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioId: &scID, ScenarioLogFile: &filename, Err: nil}
+			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: nil}
 			wg.Add(1)
 
 			go func() {
 				defer wg.Done()
 				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
 				if err != nil {
-					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioId: &scID, ScenarioLogFile: &filename, Err: err}
+					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
 					return
 				}
 			}()
@@ -118,7 +118,7 @@ func CommonRunAttached(image string, containerName string, env map[string]string
 		}
 	}
 
-	containerStatus, err := c.InspectScenario(models.Container{Id: *containerID}, ctx)
+	containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,10 +136,10 @@ func CommonPrintRuntime(containerRuntime models.ContainerRuntime) {
 	fmt.Printf("\n\n%s %s\n\n", green("container runtime:"), boldGreen(containerRuntime.String()))
 }
 
-func CommonAttachWait(containerId *string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, ctx context.Context) (bool, error) {
+func CommonAttachWait(containerID *string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, ctx context.Context) (bool, error) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	interrupted, err := c.Attach(containerId, sigCh, stdout, stderr, ctx)
+	interrupted, err := c.Attach(containerID, sigCh, stdout, stderr, ctx)
 	return interrupted, err
 }
 
@@ -152,7 +152,7 @@ func CommonListRunningScenarios(c ScenarioOrchestrator, ctx context.Context) (*[
 	var indexes []int64
 	var runningScenarios []models.ScenarioContainer
 
-	for k, _ := range *containersMap {
+	for k := range *containersMap {
 		indexes = append(indexes, k)
 	}
 	sort.Slice(indexes, func(i, j int) bool { return indexes[i] < indexes[j] })

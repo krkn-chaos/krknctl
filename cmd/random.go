@@ -218,9 +218,9 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 						spinner.Stop()
 						var statErr *utils.ExitError
 						if errors.As(c.Err, &statErr) {
-							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
+							if c.ScenarioID != nil && c.ScenarioLogFile != nil {
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
-									*c.ScenarioId,
+									*c.ScenarioID,
 									*c.Layer,
 									statErr.ExitStatus,
 									*c.ScenarioLogFile))
