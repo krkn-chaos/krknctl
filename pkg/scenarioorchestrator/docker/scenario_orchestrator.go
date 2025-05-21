@@ -7,7 +7,7 @@ import (
 	"fmt"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimage "github.com/docker/docker/api/types/image"
-	images "github.com/docker/docker/api/types/image"
+
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -41,7 +41,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	if err != nil {
 		return nil, err
 	}
-	if cache == false || exists == false {
+	if !cache || !exists {
 		err := pullImage(ctx, cli, image, commChan, registry)
 		if err != nil {
 			return nil, err
@@ -80,7 +80,7 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	return &resp.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
 		return false, err
@@ -91,7 +91,7 @@ func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os
 		Follow:     true,
 	}
 
-	reader, err := cli.ContainerLogs(context.Background(), *containerId, options)
+	reader, err := cli.ContainerLogs(context.Background(), *containerID, options)
 	if err != nil {
 		return false, err
 	}
@@ -115,7 +115,7 @@ func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os
 	// - the container to finish run
 	// and signals to the outer select
 	go func() {
-		respCh, errCH := cli.ContainerWait(ctx, *containerId, dockercontainer.WaitConditionNotRunning)
+		respCh, errCH := cli.ContainerWait(ctx, *containerID, dockercontainer.WaitConditionNotRunning)
 		select {
 		case err := <-errCH:
 			errorChan <- err
@@ -141,13 +141,13 @@ func (c *ScenarioOrchestrator) Attach(containerId *string, signalChannel chan os
 
 }
 
-func (c *ScenarioOrchestrator) Kill(containerId *string, ctx context.Context) error {
+func (c *ScenarioOrchestrator) Kill(containerID *string, ctx context.Context) error {
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = cli.ContainerKill(ctx, *containerId, "KILL")
+	err = cli.ContainerKill(ctx, *containerID, "KILL")
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func dockerClientFromContext(ctx context.Context) (*client.Client, error) {
 
 func ImageExists(ctx context.Context, cli *client.Client, imageName, expectedDigest string) (bool, error) {
 
-	imgs, err := cli.ImageList(ctx, images.ListOptions{})
+	imgs, err := cli.ImageList(ctx, dockerimage.ListOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -235,7 +235,7 @@ func ImageExists(ctx context.Context, cli *client.Client, imageName, expectedDig
 }
 
 func pullImage(ctx context.Context, cli *client.Client, imageName string, commChan *chan *string, registry *providermodels.RegistryV2) error {
-	pullOptions := images.PullOptions{}
+	pullOptions := dockerimage.PullOptions{}
 	if registry != nil {
 		registryAuth, err := registry.ToDockerV2AuthString()
 		if err != nil {

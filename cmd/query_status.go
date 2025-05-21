@@ -102,7 +102,7 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 	var command = &cobra.Command{
 		Use:          "query-status",
 		Short:        "checks the status of a container or a list of containers",
-		Long:         `checks the status of a container or a list of containers by container name or container Id`,
+		Long:         `checks the status of a container or a list of containers by container name or container ID`,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -131,7 +131,7 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 			}
 
 			if graphPath == "" {
-				return fmt.Errorf("neither container Id or name nor graph plan file specified")
+				return fmt.Errorf("neither container ID or name nor graph plan file specified")
 			}
 
 			if !CheckFileExists(graphPath) {

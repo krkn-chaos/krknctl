@@ -118,7 +118,7 @@ func TestNewRegistryV2FromEnv(t *testing.T) {
 	registry := "testregistry.io"
 	username := "username"
 	password := "password"
-	skipTls := true
+	skipTLS := true
 	insecure := true
 	token := "abcdefghilmnopqrstuvz123456790"
 	scenarios := "krkn-chaos/krkn-hub"
@@ -131,7 +131,7 @@ func TestNewRegistryV2FromEnv(t *testing.T) {
 	assert.Nil(t, err)
 	err = os.Setenv(config.EnvPrivateRegistryToken, token)
 	assert.Nil(t, err)
-	err = os.Setenv(config.EnvPrivateRegistrySkipTls, strconv.FormatBool(skipTls))
+	err = os.Setenv(config.EnvPrivateRegistrySkipTLS, strconv.FormatBool(skipTLS))
 	assert.Nil(t, err)
 	err = os.Setenv(config.EnvPrivateRegistryInsecure, strconv.FormatBool(insecure))
 	assert.Nil(t, err)
@@ -143,23 +143,23 @@ func TestNewRegistryV2FromEnv(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, registryv2)
 
-	assert.Equal(t, registryv2.RegistryUrl, registry)
+	assert.Equal(t, registryv2.RegistryURL, registry)
 	assert.Equal(t, *registryv2.Username, username)
 	assert.Equal(t, *registryv2.Password, password)
-	assert.Equal(t, registryv2.SkipTls, skipTls)
+	assert.Equal(t, registryv2.SkipTLS, skipTLS)
 	assert.Equal(t, registryv2.Insecure, insecure)
 	assert.Equal(t, *registryv2.Token, token)
 	assert.Equal(t, registryv2.ScenarioRepository, scenarios)
 
 	err = os.Unsetenv(config.EnvPrivateRegistryScenarios)
 	assert.Nil(t, err)
-	registryv2, err = NewRegistryV2FromEnv(config)
+	_, err = NewRegistryV2FromEnv(config)
 	assert.NotNil(t, err)
 
 	// must be true false
-	err = os.Setenv(config.EnvPrivateRegistrySkipTls, "True")
+	err = os.Setenv(config.EnvPrivateRegistrySkipTLS, "True")
 	assert.Nil(t, err)
-	registryv2, err = NewRegistryV2FromEnv(config)
+	_, err = NewRegistryV2FromEnv(config)
 	assert.NotNil(t, err)
 
 	err = os.Unsetenv(config.EnvPrivateRegistry)

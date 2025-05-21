@@ -46,7 +46,7 @@ func TestGetProvider(t *testing.T) {
 	basicAuthPassword := "testpassword"
 
 	pr := providerModels.RegistryV2{
-		RegistryUrl:        "localhost:5001",
+		RegistryURL:        "localhost:5001",
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
 		Password:           &basicAuthPassword,
@@ -73,7 +73,7 @@ func TestFetchScenarios(t *testing.T) {
 	basicAuthPassword := "testpassword"
 
 	pr := providerModels.RegistryV2{
-		RegistryUrl:        "localhost:5001",
+		RegistryURL:        "localhost:5001",
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
 		Password:           &basicAuthPassword,
@@ -148,7 +148,6 @@ func TestParseFlags(t *testing.T) {
 	assert.Nil(t, err)
 
 	env = *environment
-	vol = *volume
 	duration = env["END"]
 	exit = env["EXIT_STATUS"]
 	secretString = env["SECRET_STRING"]
@@ -161,7 +160,7 @@ func TestParseFlags(t *testing.T) {
 
 	// bad value
 	args = []string{"dummy-scenario", "--duration", "string"}
-	environment, volume, err = ParseFlags(scenario, args, scenarioFields, false)
+	_, _, err = ParseFlags(scenario, args, scenarioFields, false)
 	assert.NotNil(t, err)
 
 }
@@ -174,14 +173,14 @@ func TestParsePrivateFlags(t *testing.T) {
 	assert.Nil(t, registry)
 	username := "username"
 	password := "password"
-	skipTls := true
+	skipTLS := true
 	insecure := true
 	token := "token"
 	registryScenarios := "repository/registry"
 	registryHost := "registry.example.com"
 	cmd.Flags().StringVar(&username, "private-registry-username", username, "")
 	cmd.Flags().StringVar(&password, "private-registry-password", password, "")
-	cmd.Flags().BoolVar(&skipTls, "private-registry-skip-tls", skipTls, "")
+	cmd.Flags().BoolVar(&skipTLS, "private-registry-skip-tls", skipTLS, "")
 	cmd.Flags().Lookup("private-registry-skip-tls").Changed = true
 	cmd.Flags().BoolVar(&insecure, "private-registry-insecure", insecure, "")
 	cmd.Flags().Lookup("private-registry-insecure").Changed = true
@@ -192,7 +191,7 @@ func TestParsePrivateFlags(t *testing.T) {
 	assert.Nil(t, registry)
 	cmd.Flags().StringVar(&registryHost, "private-registry", registryHost, "")
 	cmd.Flags().Lookup("private-registry").Changed = true
-	registry, err = parsePrivateRepoArgs(cmd, nil)
+	_, err = parsePrivateRepoArgs(cmd, nil)
 	assert.NotNil(t, err)
 	cmd.Flags().Set("private-registry-scenarios", "registry.example.com")
 	registry, err = parsePrivateRepoArgs(cmd, nil)
@@ -202,12 +201,12 @@ func TestParsePrivateFlags(t *testing.T) {
 	assert.Equal(t, *registry.Username, username)
 	assert.Equal(t, *registry.Password, password)
 	assert.True(t, registry.Insecure)
-	assert.True(t, registry.SkipTls)
+	assert.True(t, registry.SkipTLS)
 	assert.Equal(t, *registry.Token, "token")
 
 	cmd.DisableFlagParsing = true
 
-	registry, err = parsePrivateRepoArgs(cmd, nil)
+	_, err = parsePrivateRepoArgs(cmd, nil)
 	assert.NotNil(t, err)
 
 	var args []string
@@ -236,7 +235,7 @@ func TestParsePrivateFlags(t *testing.T) {
 		"--private-registry", registryHost,
 	}
 
-	registry, err = parsePrivateRepoArgs(cmd, &args)
+	_, err = parsePrivateRepoArgs(cmd, &args)
 	assert.NotNil(t, err)
 
 	args = []string{
@@ -255,7 +254,7 @@ func TestParsePrivateFlags(t *testing.T) {
 	assert.Equal(t, *registry.Username, username)
 	assert.Equal(t, *registry.Password, password)
 	assert.True(t, registry.Insecure)
-	assert.True(t, registry.SkipTls)
+	assert.True(t, registry.SkipTLS)
 	assert.Equal(t, *registry.Token, token)
 }
 
@@ -325,7 +324,7 @@ func TestGetLatest(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, latest)
 	config.GithubLatestReleaseAPI = "https://httpstat.us/200?sleep=3000"
-	latest, err = GetLatest(config)
+	_, err = GetLatest(config)
 	assert.Nil(t, err)
 	assert.Nil(t, err)
 	config.GithubLatestReleaseAPI = "https://httpstat.us/404"

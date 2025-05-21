@@ -69,7 +69,7 @@ func TestDependencyGraph(t *testing.T) {
     "name": "node-scenarios",
     "env": {
       "ACTION": "<action performed on the node, visit https://github.com/krkn-chaos/krkn/blob/main/docs/node_scenarios.md for more infos(required)>",
-      "AWS_ACCESS_KEY_ID": "<AWS Access Key Id>",
+      "AWS_ACCESS_KEY_ID": "<AWS Access Key ID>",
       "AWS_DEFAULT_REGION": "<AWS default region>",
       "AWS_SECRET_ACCESS_KEY": "<AWS Secret Access Key>",
       "AZURE_CLIENT_ID": "<IBM Cloud API Key>",
@@ -190,7 +190,7 @@ func TestDependencyGraph(t *testing.T) {
     "image": "quay.io/krkn-chaos/krkn-hub:zone-outages",
     "name": "zone-outages",
     "env": {
-      "AWS_ACCESS_KEY_ID": "<AWS Access Key Id>",
+      "AWS_ACCESS_KEY_ID": "<AWS Access Key ID>",
       "AWS_DEFAULT_REGION": "<AWS default region>",
       "AWS_SECRET_ACCESS_KEY": "<AWS Secret Access Key>",
       "CLOUD_TYPE": "aws",

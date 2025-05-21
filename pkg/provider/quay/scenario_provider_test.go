@@ -44,7 +44,7 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, scenarios)
 	assert.Greater(t, len(*scenarios), 0)
-	for i, _ := range *scenarios {
+	for i := range *scenarios {
 		assert.NotEqual(t, (*scenarios)[i].Name, "")
 		assert.NotEqual(t, (*scenarios)[i].Digest, "")
 		assert.NotEqual(t, (*scenarios)[i].Size, 0)

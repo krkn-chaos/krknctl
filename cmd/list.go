@@ -42,7 +42,7 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 				}
 			}
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 
 			if err != nil {

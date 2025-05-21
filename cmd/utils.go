@@ -4,23 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/briandowns/spinner"
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
+	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
-
-	"github.com/briandowns/spinner"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/typing"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 type ParsedField struct {
@@ -103,7 +101,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		}
 
 		var value *string = nil
-		if foundArg != nil || skipDefault == false {
+		if foundArg != nil || !skipDefault {
 			value, err = field.Validate(foundArg)
 			if err != nil {
 				return nil, nil, err
@@ -129,14 +127,14 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV2, error) {
 
 	var registrySettings *models.RegistryV2 = nil
-	if cmd.DisableFlagParsing == false {
+	if !cmd.DisableFlagParsing {
 		var f *pflag.Flag = nil
 		var privateRegistryFlag *pflag.Flag = nil
 		privateRegistryFlag = cmd.Flags().Lookup("private-registry")
 		if privateRegistryFlag != nil && privateRegistryFlag.Changed {
 			registrySettings = &models.RegistryV2{}
-			registrySettings.SkipTls = false
-			registrySettings.RegistryUrl = privateRegistryFlag.Value.String()
+			registrySettings.SkipTLS = false
+			registrySettings.RegistryURL = privateRegistryFlag.Value.String()
 
 		}
 
@@ -158,7 +156,7 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 
 		f = cmd.Flags().Lookup("private-registry-skip-tls")
 		if registrySettings != nil && f != nil && f.Changed {
-			registrySettings.SkipTls = true
+			registrySettings.SkipTLS = true
 		}
 
 		f = cmd.Flags().Lookup("private-registry-insecure")
@@ -190,11 +188,11 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 			if strings.HasPrefix(a, "--") {
 				if a == "--private-registry" {
 					registrySettings = &models.RegistryV2{}
-					registrySettings.SkipTls = false
+					registrySettings.SkipTLS = false
 					if err := checkStringArgValue(*args, i); err != nil {
 						return nil, err
 					}
-					registrySettings.RegistryUrl = (*args)[i+1]
+					registrySettings.RegistryURL = (*args)[i+1]
 				}
 			}
 		}
@@ -216,7 +214,7 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 					registrySettings.Password = &v
 				}
 				if registrySettings != nil && a == "--private-registry-skip-tls" {
-					registrySettings.SkipTls = true
+					registrySettings.SkipTLS = true
 				}
 
 				if registrySettings != nil && a == "--private-registry-insecure" {
@@ -257,10 +255,10 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
-	registrySettings *providermodels.RegistryV2) {
+		name *string
+		err  error
+	},
+	registrySettings *models.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
 		if n.Name == "" {
@@ -430,11 +428,11 @@ func GetLatest(config config.Config) (*string, error) {
 }
 
 func IsDeprecated(config config.Config) (*bool, error) {
-	githubApiUrl, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
+	githubAPIURL, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
 	if err != nil {
 		return nil, err
 	}
-	body, err := queryGithubRelease(githubApiUrl)
+	body, err := queryGithubRelease(githubAPIURL)
 	if err != nil {
 		return nil, err
 	}
