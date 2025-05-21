@@ -12,6 +12,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"
 	"os"
+	"path"
 )
 
 func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchestrator, arg string, conn context.Context) error {
@@ -56,7 +57,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 	var scenarioFile = make(map[string]providermodels.ScenarioDetail)
 	var containers = make([]models.Container, 0)
 	var statusCodeError error
-	fileData, err := os.ReadFile(filename)
+	fileData, err := os.ReadFile(path.Clean(filename))
 	if err != nil {
 		return err
 	}

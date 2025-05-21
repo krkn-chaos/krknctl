@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"os"
 	"os/user"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -492,13 +493,14 @@ func CommonAttachWait(t *testing.T, so scenario_orchestrator.ScenarioOrchestrato
 	assert.NotNil(t, ctx)
 	testFilename := fmt.Sprintf("krknctl-attachwait-%d", time.Now().Unix())
 	fmt.Println("FILE_NAME -> ", testFilename)
-	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	file, err := os.OpenFile(path.Clean(testFilename), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	assert.Nil(t, err)
 	containerId := CommonTestScenarioOrchestratorRunAttached(t, so, conf, 5)
-	so.AttachWait(&containerId, file, file, ctx)
+	_, err = so.AttachWait(&containerId, file, file, ctx)
+	assert.Nil(t, err)
 	err = file.Close()
 	assert.Nil(t, err)
-	filecontent, err := os.ReadFile(testFilename)
+	filecontent, err := os.ReadFile(path.Clean(testFilename))
 	assert.Nil(t, err)
 	return string(filecontent)
 }

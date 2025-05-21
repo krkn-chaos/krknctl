@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path"
 	"sort"
 	"sync"
 	"syscall"
@@ -54,7 +55,7 @@ func CommonRunGraph(scenarios models.ScenarioSet, resolvedGraph models.ResolvedG
 
 			containerName := utils.GenerateContainerName(config, scenario.Name, &scId)
 			filename := fmt.Sprintf("%s.log", containerName)
-			file, err := os.Create(filename)
+			file, err := os.Create(path.Clean(filename))
 
 			if err != nil {
 				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioId: nil, ScenarioLogFile: nil, Err: err}
