@@ -48,7 +48,7 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 
 	fmt.Println(buf.String())
 	if scenarioContainer.Container.ExitStatus != 0 {
-		return &utils.ExitError{ExitStatus: int(scenarioContainer.Container.ExitStatus)}
+		return &utils.ExitError{ExitStatus: scenarioContainer.Container.ExitStatus}
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 				if (*containerScenario).Container != nil {
 					containers = append(containers, *(*containerScenario).Container)
 					if (*containerScenario).Container.ExitStatus != 0 {
-						return &utils.ExitError{ExitStatus: int((*containerScenario).Container.ExitStatus)}
+						return &utils.ExitError{ExitStatus: (*containerScenario).Container.ExitStatus}
 					}
 				}
 			}

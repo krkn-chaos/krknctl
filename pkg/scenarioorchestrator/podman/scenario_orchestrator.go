@@ -260,7 +260,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 
 	container.Name = inspectData.Name
 	container.Status = inspectData.State.Status
-	container.ExitStatus = inspectData.State.ExitCode
+	container.ExitStatus = int(inspectData.State.ExitCode)
 
 	if inspectData.Config == nil {
 		return nil, fmt.Errorf("container %s has no config", container.Id)
