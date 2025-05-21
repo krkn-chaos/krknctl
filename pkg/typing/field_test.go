@@ -324,7 +324,7 @@ func TestEnumField(t *testing.T) {
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowed_values":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3"
 }
 `
 	err = json.Unmarshal([]byte(enumFieldDefaultSeparator), &field)
