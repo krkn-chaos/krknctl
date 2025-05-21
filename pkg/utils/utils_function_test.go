@@ -12,6 +12,7 @@ import (
 func TestExpandFolder(t *testing.T) {
 
 	currentfolder, err := os.Getwd()
+	assert.Nil(t, err)
 	parentfolder := filepath.Dir(currentfolder)
 	grandParentFolder := filepath.Dir(parentfolder)
 	baseFolder := "/usr/local/bin"

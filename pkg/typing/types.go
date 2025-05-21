@@ -95,8 +95,5 @@ func IsFile(f string) bool {
 		}
 	}()
 
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

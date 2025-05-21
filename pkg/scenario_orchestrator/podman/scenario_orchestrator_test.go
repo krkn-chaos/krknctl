@@ -19,7 +19,7 @@ import (
 func TestScenarioOrchestrator_Podman_Connect(t *testing.T) {
 	config := test.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
-	test.CommonTestScenarioOrchestratorConnect(t, &sopodman, config)
+	test.CommonTestScenarioOrchestratorConnect(t, &sopodman)
 }
 
 func TestScenarioOrchestrator_Podman_RunAttached(t *testing.T) {
