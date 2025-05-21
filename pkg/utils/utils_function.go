@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"crypto/rand"
+	"math"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,4 +33,16 @@ func ExpandFolder(folder string, basePath *string) (*string, error) {
 
 	}
 	return &folder, nil
+}
+
+func RandomInt64(max *int) int64 {
+	maxRand := math.MaxInt64
+	if max != nil {
+		maxRand = *max
+	}
+	bigRand, err := rand.Int(rand.Reader, big.NewInt(int64(maxRand)))
+	if err != nil {
+		panic(err)
+	}
+	return bigRand.Int64()
 }

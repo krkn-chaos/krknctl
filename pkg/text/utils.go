@@ -1,7 +1,7 @@
 package text
 
 import (
-	"math/rand"
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"strings"
 )
 
@@ -61,8 +61,9 @@ func Justify(text string, width int) []string {
 func RandString(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, n)
+	runesLength := len(letterRunes)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		b[i] = letterRunes[utils.RandomInt64(&runesLength)]
 	}
 	return string(b)
 }
