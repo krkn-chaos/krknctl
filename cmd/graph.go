@@ -210,9 +210,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 						spinner.Stop()
 						var staterr *utils.ExitError
 						if errors.As(c.Err, &staterr) {
-							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
+							if c.ScenarioID != nil && c.ScenarioLogFile != nil {
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s.",
-									*c.ScenarioId,
+									*c.ScenarioID,
 									*c.Layer,
 									staterr.ExitStatus,
 									*c.ScenarioLogFile))

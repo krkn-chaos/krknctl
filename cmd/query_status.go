@@ -27,7 +27,7 @@ func resolveContainerIDOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 		containerID = &arg
 	}
 
-	scenarioContainer, err = orchestrator.InspectScenario(models.Container{Id: *containerID}, conn)
+	scenarioContainer, err = orchestrator.InspectScenario(models.Container{ID: *containerID}, conn)
 
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 			return err
 		}
 		if scenario != nil {
-			containerScenario, err := orchestrator.InspectScenario(models.Container{Id: *scenario}, conn)
+			containerScenario, err := orchestrator.InspectScenario(models.Container{ID: *scenario}, conn)
 			if err != nil {
 				return err
 			}

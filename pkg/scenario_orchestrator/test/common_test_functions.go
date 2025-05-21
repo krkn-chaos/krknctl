@@ -42,6 +42,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	}
 
 	currentUser, err := user.Current()
+	assert.Nil(t, err)
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{
@@ -49,7 +50,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 			Config: conf,
 			Cache:  cache.NewCache(),
 		}}
-	registryUri, err := conf.GetQuayImageURI()
+	registryURI, err := conf.GetQuayImageURI()
 	assert.Nil(t, err)
 
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
@@ -78,9 +79,9 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerId, err := so.Run(registryUri+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
 	assert.Nil(t, err)
-	assert.NotNil(t, containerId)
+	assert.NotNil(t, containerID)
 
 	//pulling image from private registry with token
 	quayToken := os.Getenv("QUAY_TOKEN")
@@ -93,13 +94,13 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 
 	timestamp = time.Now().Unix()
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		assert.Nil(t, err)
-		assert.NotNil(t, containerId)
+		assert.NotNil(t, containerID)
 	} else {
 		assert.NotNil(t, err)
 		assert.Equal(t, err.Error(), "token authentication not yet supported in podman")
@@ -119,14 +120,14 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 
 	timestamp = time.Now().Unix()
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	assert.Nil(t, err)
-	assert.NotNil(t, containerId)
+	assert.NotNil(t, containerID)
 
-	return *containerId
+	return *containerID
 }
 
 func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchestrator.ScenarioOrchestrator, conf krknctlconfig.Config, duration int) string {
@@ -136,6 +137,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenario_orchest
 	}
 
 	currentUser, err := user.Current()
+	assert.Nil(t, err)
 	fmt.Println("Current user: " + (*currentUser).Name)
 	fmt.Println("current user id" + (*currentUser).Uid)
 	quayProvider := quay.ScenarioProvider{
@@ -333,7 +335,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 			break
 		} else {
 			assert.Nil(t, (*c).Err)
-			fmt.Printf("Running step %d scenario: %s\n", *c.Layer, *c.ScenarioId)
+			fmt.Printf("Running step %d scenario: %s\n", *c.Layer, *c.ScenarioID)
 		}
 
 	}
@@ -409,7 +411,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenario_orchestrat
 			break
 		} else {
 			if (*c).Err != nil {
-				assert.NotNil(t, (*c).ScenarioId)
+				assert.NotNil(t, (*c).ScenarioID)
 				assert.NotNil(t, (*c).ScenarioLogFile)
 				assert.NotNil(t, (*c).Layer)
 				var staterr *utils.ExitError
@@ -744,15 +746,15 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	assert.Nil(t, err)
 	time.Sleep(1 * time.Second)
 
-	inspectData, err := so.InspectScenario(models.Container{Id: *containerId1}, ctx)
+	inspectData, err := so.InspectScenario(models.Container{ID: *containerId1}, ctx)
 	assert.Nil(t, err)
 	assert.NotNil(t, inspectData)
 
 	assert.Equal(t, inspectData.Container.Name, containerName1)
-	assert.Equal(t, inspectData.Container.Id, *containerId1)
+	assert.Equal(t, inspectData.Container.ID, *containerId1)
 	assert.Equal(t, inspectData.Scenario.Name, scenario.Name)
 
-	inspectData, err = so.InspectScenario(models.Container{Id: "mimmo"}, ctx)
+	inspectData, err = so.InspectScenario(models.Container{ID: "mimmo"}, ctx)
 	assert.Nil(t, err)
 	assert.Nil(t, inspectData)
 

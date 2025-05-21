@@ -80,7 +80,7 @@ func TestScenarioOrchestrator_Podman_CleanContainers(t *testing.T) {
 	numcontainers, err := sopodman.CleanContainers(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, foundContainers, *numcontainers)
-	foundContainers, ctx = findContainers(t, config)
+	foundContainers, _ = findContainers(t, config)
 	assert.Equal(t, foundContainers, 0)
 }
 

@@ -48,7 +48,7 @@ type ScenarioContainer struct {
 }
 
 type Container struct {
-	Id         string `json:"id,omitempty"`
+	ID         string `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Started    int64  `json:"started,omitempty"`
@@ -61,7 +61,7 @@ type ResolvedGraph [][]string
 
 type GraphCommChannel struct {
 	Layer           *int
-	ScenarioId      *string
+	ScenarioID      *string
 	ScenarioLogFile *string
 	Err             error
 }
