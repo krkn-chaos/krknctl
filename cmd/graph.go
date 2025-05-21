@@ -66,7 +66,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				kubeconfig = *expandedConfig
-				if CheckFileExists(kubeconfig) == false {
+				if !CheckFileExists(kubeconfig) {
 					return fmt.Errorf("file %s does not exist", kubeconfig)
 				}
 			}
@@ -80,7 +80,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				alertsProfile = *expandedProfile
-				if CheckFileExists(alertsProfile) == false {
+				if !CheckFileExists(alertsProfile) {
 					return fmt.Errorf("file %s does not exist", alertsProfile)
 				}
 			}
@@ -94,7 +94,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				metricsProfile = *expandedProfile
-				if CheckFileExists(metricsProfile) == false {
+				if !CheckFileExists(metricsProfile) {
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}

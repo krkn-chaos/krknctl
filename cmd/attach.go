@@ -61,19 +61,19 @@ func NewAttachCmd(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrato
 				return err
 			}
 
-			scenarioId, err := strconv.ParseInt(args[0], 10, 64)
+			scenarioID, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("invalid scenario id: %s, scenario id must be a number", args[0])
 			}
 
-			if scenarioId > int64(len(*runningScenarios)-1) {
-				return fmt.Errorf("invalid scenario id: %d, scenario id out of range", scenarioId)
+			if scenarioID > int64(len(*runningScenarios)-1) {
+				return fmt.Errorf("invalid scenario id: %d, scenario id out of range", scenarioID)
 			}
 			_, err = color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to stop streaming scenario output (scenario won't be interrupted)")
 			if err != nil {
 				return err
 			}
-			scenario := (*runningScenarios)[scenarioId]
+			scenario := (*runningScenarios)[scenarioID]
 			ctx, err = (*scenarioOrchestrator).Connect(*socket)
 			if err != nil {
 				return err

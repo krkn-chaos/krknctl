@@ -15,19 +15,19 @@ import (
 	"path"
 )
 
-func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchestrator, arg string, conn context.Context) error {
+func resolveContainerIDOrName(orchestrator scenario_orchestrator.ScenarioOrchestrator, arg string, conn context.Context) error {
 	var scenarioContainer *models.ScenarioContainer
-	var containerId *string
+	var containerID *string
 
-	containerId, err := orchestrator.ResolveContainerName(arg, conn)
+	containerID, err := orchestrator.ResolveContainerName(arg, conn)
 	if err != nil {
 		return err
 	}
-	if containerId == nil {
-		containerId = &arg
+	if containerID == nil {
+		containerID = &arg
 	}
 
-	scenarioContainer, err = orchestrator.InspectScenario(models.Container{Id: *containerId}, conn)
+	scenarioContainer, err = orchestrator.InspectScenario(models.Container{Id: *containerID}, conn)
 
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 				return err
 			}
 			if len(args) > 0 {
-				err = resolveContainerIdOrName(*scenarioOrchestrator, args[0], conn)
+				err = resolveContainerIDOrName(*scenarioOrchestrator, args[0], conn)
 				var staterr *utils.ExitError
 				if errors.As(err, &staterr) {
 					if staterr.ExitStatus != 0 {
@@ -134,7 +134,7 @@ func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioO
 				return fmt.Errorf("neither container Id or name nor graph plan file specified")
 			}
 
-			if CheckFileExists(graphPath) == false {
+			if !CheckFileExists(graphPath) {
 				return fmt.Errorf("graph file %s not found", graphPath)
 			}
 

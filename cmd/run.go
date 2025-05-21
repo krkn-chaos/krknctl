@@ -109,9 +109,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				yellow := color.New(color.FgYellow).SprintFunc()
 				green := color.New(color.FgGreen).SprintFunc()
 				boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
-				fmt.Println(fmt.Sprintf("%s", yellow("Krkn Global flags")))
+				fmt.Printf("%s", yellow("Krkn Global flags\n"))
 				printHelp(*globalEnvDetail)
-				fmt.Println(fmt.Sprintf("\n%s %s", boldGreen(scenarioDetail.Name), green("Flags")))
+				fmt.Printf("\n%s %s\n", boldGreen(scenarioDetail.Name), green("Flags"))
 				printHelp(*scenarioDetail)
 				fmt.Print("\n\n")
 			})
@@ -177,7 +177,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err != nil {
 							return err
 						}
-						if CheckFileExists(*expandedConfig) == false {
+						if !CheckFileExists(*expandedConfig) {
 							return fmt.Errorf("file %s does not exist", args[i+1])
 						}
 						foundKubeconfig = expandedConfig
@@ -190,7 +190,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err != nil {
 							return err
 						}
-						if CheckFileExists(*expandedProfile) == false {
+						if !CheckFileExists(*expandedProfile) {
 							return fmt.Errorf("file %s does not exist", *expandedProfile)
 						}
 						foundAlertsProfile = expandedProfile
@@ -203,7 +203,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						if err != nil {
 							return err
 						}
-						if CheckFileExists(*expandedProfile) == false {
+						if !CheckFileExists(*expandedProfile) {
 							return fmt.Errorf("file %s does not exist", *expandedProfile)
 						}
 						foundMetricsProfile = expandedProfile
@@ -285,12 +285,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 			startTime := time.Now()
 			containerName := utils.GenerateContainerName(config, scenarioDetail.Name, nil)
-			quayImageUri, err := config.GetCustomDomainImageUri()
+			quayImageURI, err := config.GetCustomDomainImageUri()
 			if err != nil {
 				return err
 			}
 
-			if runDetached == false {
+			if !runDetached {
 				commChan := make(chan *string)
 				go func() {
 					for msg := range commChan {
@@ -299,7 +299,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -308,14 +308,14 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					return err
 				}
 				scenarioDuration := time.Since(startTime)
-				fmt.Println(fmt.Sprintf("%s ran for %s", scenarioDetail.Name, scenarioDuration.String()))
+				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {
-				containerId, err := (*scenarioOrchestrator).Run(quayImageUri+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings)
+				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings)
 				if err != nil {
 					return err
 				}
 				spinner.Stop()
-				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerId %s", scenarioDetail.Name, *containerId))
+				_, err = color.New(color.FgGreen, color.Underline).Println(fmt.Sprintf("scenario %s started with containerID %s", scenarioDetail.Name, *containerID))
 				if err != nil {
 					return err
 				}

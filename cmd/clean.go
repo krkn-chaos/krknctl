@@ -36,7 +36,7 @@ func NewCleanCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestr
 			if err != nil {
 				return err
 			}
-			fmt.Println(fmt.Sprintf("%d containers, %d kubeconfig files, %d log files deleted", *deletedContainers, *deletedKubeconfigFiles, *deletedLogFiles))
+			fmt.Printf("%d containers, %d kubeconfig files, %d log files deleted\n", *deletedContainers, *deletedKubeconfigFiles, *deletedLogFiles)
 			return nil
 		},
 	}
