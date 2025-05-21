@@ -68,7 +68,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				kubeconfig = *expandedConfig
-				if CheckFileExists(kubeconfig) == false {
+				if !CheckFileExists(kubeconfig) {
 					return fmt.Errorf("file %s does not exist", kubeconfig)
 				}
 			}
@@ -82,7 +82,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				alertsProfile = *expandedProfile
-				if CheckFileExists(alertsProfile) == false {
+				if !CheckFileExists(alertsProfile) {
 					return fmt.Errorf("file %s does not exist", alertsProfile)
 				}
 			}
@@ -96,7 +96,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				metricsProfile = *expandedProfile
-				if CheckFileExists(metricsProfile) == false {
+				if !CheckFileExists(metricsProfile) {
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}
@@ -316,7 +316,7 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 				if err != nil {
 					return err
 				}
-				if CheckFileExists(*seedFilePath) == false {
+				if !CheckFileExists(*seedFilePath) {
 					return fmt.Errorf("file %s does not exist", seedFile)
 				}
 				seed = &provider.ScaffoldSeed{

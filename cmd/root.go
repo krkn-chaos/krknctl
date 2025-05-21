@@ -120,6 +120,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	}
 	if isDeprecated != nil && *isDeprecated {
 		_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("⛔️ krknctl %s is deprecated, please update to latest: %s", config.Version, config.GithubLatestRelease))
+		if err != nil {
+			fmt.Println(err)
+		}
 		os.Exit(1)
 	}
 
