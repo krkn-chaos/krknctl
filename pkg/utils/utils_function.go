@@ -35,8 +35,8 @@ func ExpandFolder(folder string, basePath *string) (*string, error) {
 	return &folder, nil
 }
 
-func RandomInt64(max *int) int64 {
-	maxRand := math.MaxInt64
+func RandomInt64(max *int64) int64 {
+	maxRand := int64(math.MaxInt64)
 	if max != nil {
 		maxRand = *max
 	}

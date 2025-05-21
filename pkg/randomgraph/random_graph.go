@@ -5,7 +5,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/utils"
 )
 
-func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numberOfScenarios int) [][]string {
+func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int64, numberOfScenarios int) [][]string {
 	var randomGraph [][]string
 	keys := make([]string, 0)
 	selectedKeys := make([]string, 0)
@@ -17,7 +17,7 @@ func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numbe
 
 	if numberOfScenarios != 0 {
 		for i := 0; i < numberOfScenarios; i++ {
-			keysLen := len(keys)
+			keysLen := int64(len(keys))
 			index := utils.RandomInt64(&keysLen)
 			selectedKeys = append(selectedKeys, keys[index])
 			keys = append(keys[:index], keys[index+1:]...)
@@ -35,7 +35,7 @@ func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numbe
 			parallelScenarios = int64(len(selectedKeys))
 		}
 		for i := int64(1); i <= parallelScenarios; i++ {
-			lenSelectedKeys := len(selectedKeys)
+			lenSelectedKeys := int64(len(selectedKeys))
 			randomKey := utils.RandomInt64(&lenSelectedKeys)
 			randomSteps = append(randomSteps, selectedKeys[randomKey])
 			selectedKeys = append(selectedKeys[:randomKey], selectedKeys[randomKey+1:]...)

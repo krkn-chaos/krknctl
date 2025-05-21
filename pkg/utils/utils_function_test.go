@@ -56,7 +56,7 @@ func TestRandomInt64(t *testing.T) {
 	assert.NotEqual(t, randOne, randTwo)
 
 	// ensures that respects the limit
-	maxInt := math.MaxInt
+	maxInt := int64(math.MaxInt)
 	for i := 0; i < 1000; i++ {
 		maxRandInt := RandomInt64(&maxInt)
 		assert.Greater(t, int64(math.MaxInt64), maxRandInt)

@@ -9,9 +9,9 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	models2 "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/letsencrypt/boulder/core"
 	"github.com/tjarratt/babble"
-	"math/rand"
 	"os"
 	"strings"
 )
@@ -169,17 +169,17 @@ func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNod
 	if err != nil {
 		return nil, err
 	}
-	total := 100
-	seedNumber := len(nodeMap)
+	total := int64(100)
+	seedNumber := int64(len(nodeMap))
 	if seedNumber > total {
 		return nil, fmt.Errorf("seed file with more than %d nodes is not supported", total)
 	}
 
-	counter := 0
-	minimum := 1
-	percentage := 0
+	counter := int64(0)
+	minimum := int64(1)
+	percentage := int64(0)
 	slot := (100 / seedNumber) + 10
-	var percentages []int
+	var percentages []int64
 	var keys []string
 	for key := range nodeMap {
 		keys = append(keys, key)
@@ -189,7 +189,8 @@ func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNod
 			// the rest of the division is greater than 0
 			percentage = total
 		} else {
-			percentage = rand.Intn(slot-minimum+1) + minimum
+			limit := slot - minimum + 1
+			percentage = utils.RandomInt64(&limit) + minimum
 		}
 		nodeSeed = append(nodeSeed, nodeMap[key])
 		percentages = append(percentages, percentage)
@@ -202,8 +203,8 @@ func scaffoldSeededScenarios(seed *ScaffoldSeed) (map[string]models2.ScenarioNod
 	}
 
 	for i := 0; i < len(percentages); i++ {
-		totalNodesPerKey := seed.NumberOfScenarios * percentages[i] / 100
-		for j := 0; j < totalNodesPerKey; j++ {
+		totalNodesPerKey := int64(seed.NumberOfScenarios) * percentages[i] / 100
+		for j := int64(0); j < totalNodesPerKey; j++ {
 			nodeName := keys[i] + "-" + core.RandomString(6)
 			resultMap[nodeName] = nodeMap[keys[i]]
 		}

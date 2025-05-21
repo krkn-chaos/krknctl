@@ -61,7 +61,7 @@ func Justify(text string, width int) []string {
 func RandString(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	b := make([]rune, n)
-	runesLength := len(letterRunes)
+	runesLength := int64(len(letterRunes))
 	for i := range b {
 		b[i] = letterRunes[utils.RandomInt64(&runesLength)]
 	}
