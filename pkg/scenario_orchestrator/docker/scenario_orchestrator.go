@@ -348,7 +348,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	}
 	container.Name = strings.Replace(inspectData.Name, "/", "", 1)
 	container.Status = inspectData.State.Status
-	container.ExitStatus = int32(inspectData.State.ExitCode)
+	container.ExitStatus = inspectData.State.ExitCode
 
 	scenarioDetail := providermodels.ScenarioDetail{}
 	scenarioDetail.Digest = &inspectData.ContainerJSONBase.Image
