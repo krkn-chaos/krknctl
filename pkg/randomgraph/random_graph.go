@@ -1,8 +1,8 @@
 package randomgraph
 
 import (
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"math/rand"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 )
 
 func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numberOfScenarios int) [][]string {
@@ -17,7 +17,8 @@ func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numbe
 
 	if numberOfScenarios != 0 {
 		for i := 0; i < numberOfScenarios; i++ {
-			index := rand.Intn(len(keys))
+			keysLen := len(keys)
+			index := utils.RandomInt64(&keysLen)
 			selectedKeys = append(selectedKeys, keys[index])
 			keys = append(keys[:index], keys[index+1:]...)
 		}
@@ -28,13 +29,14 @@ func NewRandomGraph(nodes map[string]models.ScenarioNode, maxParallel int, numbe
 
 	for len(selectedKeys) > 0 {
 		var randomSteps []string
-		parallelScenarios := rand.Intn(maxParallel) + 1
+		parallelScenarios := utils.RandomInt64(&maxParallel) + 1
 
-		if len(selectedKeys) < parallelScenarios {
-			parallelScenarios = len(selectedKeys)
+		if int64(len(selectedKeys)) < parallelScenarios {
+			parallelScenarios = int64(len(selectedKeys))
 		}
-		for i := 1; i <= parallelScenarios; i++ {
-			randomKey := rand.Intn(len(selectedKeys))
+		for i := int64(1); i <= parallelScenarios; i++ {
+			lenSelectedKeys := len(selectedKeys)
+			randomKey := utils.RandomInt64(&lenSelectedKeys)
 			randomSteps = append(randomSteps, selectedKeys[randomKey])
 			selectedKeys = append(selectedKeys[:randomKey], selectedKeys[randomKey+1:]...)
 		}

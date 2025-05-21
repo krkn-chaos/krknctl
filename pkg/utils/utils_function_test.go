@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,4 +54,12 @@ func TestRandomInt64(t *testing.T) {
 	randTwo := RandomInt64(nil)
 	fmt.Printf("RandomInt64: %v, RandomInt64: %v\n", randOne, randTwo)
 	assert.NotEqual(t, randOne, randTwo)
+
+	// ensures that respects the limit
+	maxInt := math.MaxInt
+	for i := 0; i < 1000; i++ {
+		maxRandInt := RandomInt64(&maxInt)
+		assert.Greater(t, int64(math.MaxInt64), maxRandInt)
+	}
+
 }
