@@ -15,7 +15,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	krknctlutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
 	"os"
 	"os/user"
 	"strconv"
@@ -92,7 +91,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenario_orchestrator.Sc
 	}
 
 	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, rand.Int())
+	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
 	containerId, err = so.Run(pr.GetPrivateRegistryUri()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
 		if err != nil {

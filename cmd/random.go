@@ -100,7 +100,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}
-			maxParallel, err := cmd.Flags().GetInt("max-parallel")
+			maxParallel, err := cmd.Flags().GetInt64("max-parallel")
 			if err != nil {
 				return err
 			}
