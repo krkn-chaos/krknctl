@@ -1,3 +1,4 @@
+// Package typing provides the type validation methods and structures for the tool input
 package typing
 
 import (
