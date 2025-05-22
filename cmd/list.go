@@ -6,7 +6,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -70,7 +70,7 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 	return command
 }
 
-func NewListRunningScenario(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
+func NewListRunningScenario(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "running",
 		Short: "lists running scenarios",

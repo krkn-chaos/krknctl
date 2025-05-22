@@ -14,9 +14,9 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"io"
@@ -351,12 +351,12 @@ func (c *ScenarioOrchestrator) RunAttached(
 	registry *providermodels.RegistryV2,
 ) (*string, error) {
 
-	return scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
 
-	interrupted, err := scenario_orchestrator.CommonAttachWait(containerID, stdout, stderr, c, ctx)
+	interrupted, err := scenarioorchestrator.CommonAttachWait(containerID, stdout, stderr, c, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -374,13 +374,13 @@ func (c *ScenarioOrchestrator) RunGraph(
 	userID *int,
 ) {
 	//TODO: add a getconfig method in scenarioOrchestrator
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
-	scenario_orchestrator.CommonPrintRuntime(c.ContainerRuntime)
+	scenarioorchestrator.CommonPrintRuntime(c.ContainerRuntime)
 }
 
 func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
-	return scenario_orchestrator.CommonListRunningScenarios(c, ctx)
+	return scenarioorchestrator.CommonListRunningScenarios(c, ctx)
 }

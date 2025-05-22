@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
 	"os"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
+func NewAttachCmd(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "attach",
 		Short: "connects krknctl to the running scenario logs",

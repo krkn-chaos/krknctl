@@ -2,14 +2,14 @@ package cmd
 
 import (
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	scenarioorchestratorfactory "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/factory"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	scenarioorchestratorfactory "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func getOrchestrator(t *testing.T) scenario_orchestrator.ScenarioOrchestrator {
+func getOrchestrator(t *testing.T) scenarioorchestrator.ScenarioOrchestrator {
 	config := getConfig(t)
 	scenarioOrchestratorFactory := scenarioorchestratorfactory.NewScenarioOrchestratorFactory(config)
 	detectedRuntime, err := utils.DetectContainerRuntime(config)

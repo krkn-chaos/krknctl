@@ -65,7 +65,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 	}
 
 	// variable must be always present since represents
-	// the envvar to be exported in the scenario_orchestrator
+	// the envvar to be exported in the scenarioorchestrator
 	if fieldProperty, ok := temp["variable"]; ok {
 		f.Variable = &fieldProperty
 	} else {

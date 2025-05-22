@@ -9,7 +9,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

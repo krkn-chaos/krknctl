@@ -6,8 +6,8 @@ import (
 	"github.com/krkn-chaos/krknctl/cmd"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	scenarioorchestratorfactory "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/factory"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	scenarioorchestratorfactory "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/factory"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"os"
 )
 
