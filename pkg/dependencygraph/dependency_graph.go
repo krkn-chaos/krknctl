@@ -1,3 +1,4 @@
+// Package dependencygraph provides the algorithm and the data structures needed to solve the tool dependency graph
 package dependencygraph
 
 import "github.com/kendru/darwin/go/depgraph"
