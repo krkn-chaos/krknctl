@@ -97,7 +97,7 @@ func CommonRunAttached(image string, containerName string, env map[string]string
 		return nil, err
 	}
 
-	signalChan := make(chan os.Signal)
+	signalChan := make(chan os.Signal, 1)
 
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 

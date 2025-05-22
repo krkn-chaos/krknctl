@@ -1,3 +1,4 @@
+// Package utils provides several methods and structures used by all the other tool packages
 package utils
 
 import (
