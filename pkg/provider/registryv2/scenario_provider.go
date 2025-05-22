@@ -1,3 +1,4 @@
+// Package registryv2 Package provides the implementation of the generic V2 Docker registry
 package registryv2
 
 import (

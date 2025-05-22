@@ -1,3 +1,4 @@
+// Package provider defines the interface for the tool metadata provider from the various data sources available
 package provider
 
 import (

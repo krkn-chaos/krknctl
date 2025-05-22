@@ -1,3 +1,4 @@
+// Package factory provides the factory for the various data providers available
 package factory
 
 import (

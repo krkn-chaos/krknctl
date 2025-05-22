@@ -1,3 +1,4 @@
+// Package models provides the data models used by the data providers to exchange data
 package models
 
 import (

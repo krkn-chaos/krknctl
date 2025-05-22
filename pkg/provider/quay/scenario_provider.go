@@ -1,3 +1,4 @@
+// Package quay provides the implementation of the quay.io data provider
 package quay
 
 import (

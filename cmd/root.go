@@ -1,3 +1,4 @@
+// Package cmd contains the CLI options and commands to interact with krknctl
 package cmd
 
 import (
