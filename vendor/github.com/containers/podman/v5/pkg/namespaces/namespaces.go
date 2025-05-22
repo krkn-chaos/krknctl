@@ -20,12 +20,14 @@ const (
 	pastaType     = "pasta"
 )
 
-// KeepIDUserNsOptions defines how to keepIDmatically create a user namespace.
+// KeepIDUserNsOptions defines how to create a user namespace using keep-id.
 type KeepIDUserNsOptions struct {
 	// UID is the target uid in the user namespace.
 	UID *uint32
 	// GID is the target uid in the user namespace.
 	GID *uint32
+	// MaxSize is the maximum size of the user namespace.
+	MaxSize *uint32
 }
 
 // CgroupMode represents cgroup mode in the container.
@@ -148,6 +150,13 @@ func (n UsernsMode) GetKeepIDOptions() (*KeepIDUserNsOptions, error) {
 			}
 			v := uint32(s)
 			options.GID = &v
+		case "size":
+			s, err := strconv.ParseUint(val, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			v := uint32(s)
+			options.MaxSize = &v
 		default:
 			return nil, fmt.Errorf("unknown option specified: %q", opt)
 		}
@@ -157,7 +166,7 @@ func (n UsernsMode) GetKeepIDOptions() (*KeepIDUserNsOptions, error) {
 
 // IsPrivate indicates whether the container uses the a private userns.
 func (n UsernsMode) IsPrivate() bool {
-	return !(n.IsHost() || n.IsContainer())
+	return !n.IsHost() && !n.IsContainer()
 }
 
 // Valid indicates whether the userns is valid.
@@ -297,7 +306,7 @@ type PidMode string
 
 // IsPrivate indicates whether the container uses its own new pid namespace.
 func (n PidMode) IsPrivate() bool {
-	return !(n.IsHost() || n.IsContainer())
+	return !n.IsHost() && !n.IsContainer()
 }
 
 // IsHost indicates whether the container uses the host's pid namespace.
@@ -355,7 +364,7 @@ func (n NetworkMode) IsDefault() bool {
 
 // IsPrivate indicates whether container uses its private network stack.
 func (n NetworkMode) IsPrivate() bool {
-	return !(n.IsHost() || n.IsContainer())
+	return !n.IsHost() && !n.IsContainer()
 }
 
 // IsContainer indicates whether container uses a container network stack.

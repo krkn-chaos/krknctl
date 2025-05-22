@@ -237,6 +237,12 @@ func Build(ctx context.Context, containerFiles []string, options types.BuildOpti
 	if options.IgnoreUnrecognizedInstructions {
 		params.Set("ignore", "1")
 	}
+	if options.InheritLabels == imageTypes.OptionalBoolFalse {
+		params.Set("inheritlabels", "0")
+	} else {
+		params.Set("inheritlabels", "1")
+	}
+
 	params.Set("isolation", strconv.Itoa(int(options.Isolation)))
 	if options.CommonBuildOpts.HTTPProxy {
 		params.Set("httpproxy", "1")
@@ -334,6 +340,9 @@ func Build(ctx context.Context, containerFiles []string, options types.BuildOpti
 	}
 	if options.NoCache {
 		params.Set("nocache", "1")
+	}
+	if options.CommonBuildOpts.NoHosts {
+		params.Set("nohosts", "1")
 	}
 	if t := options.Output; len(t) > 0 {
 		params.Set("output", t)
@@ -787,9 +796,6 @@ func nTar(excludes []string, sources ...string) (io.ReadCloser, error) {
 						return err
 					}
 					di, isHardLink := checkHardLink(info)
-					if err != nil {
-						return err
-					}
 
 					hdr, err := tar.FileInfoHeader(info, "")
 					if err != nil {
