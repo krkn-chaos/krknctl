@@ -66,9 +66,9 @@ jobs:
         with:
           args: --exclude G402 ./...
       -  name: run staticcheck static code analyzer
-         uses: dominikh/staticcheck-action@v1.2.0
+         uses: dominikh/staticcheck-action@v1.3.1
          with:
-           version: "2022.1.1"
+           version: "2025.1.1"
       - name: run test suite
         run: |
          export USERID=$(id -u)
