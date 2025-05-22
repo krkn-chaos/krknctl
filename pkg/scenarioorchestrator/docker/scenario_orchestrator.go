@@ -432,7 +432,7 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
 
-	interrupted, err := scenario_orchestrator.CommonAttachWait(containerID, stdout, stderr, c, ctx)
+	interrupted, err := scenarioorchestrator.CommonAttachWait(containerID, stdout, stderr, c, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func (c *ScenarioOrchestrator) RunAttached(
 	ctx context.Context,
 	registry *providermodels.RegistryV2,
 ) (*string, error) {
-	containerID, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
 	return containerID, err
 }
 
@@ -466,7 +466,7 @@ func (c *ScenarioOrchestrator) RunGraph(
 	registry *providermodels.RegistryV2,
 	userID *int,
 ) {
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
