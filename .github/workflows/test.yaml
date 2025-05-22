@@ -65,6 +65,10 @@ jobs:
         uses: securego/gosec@master
         with:
           args: --exclude G402 ./...
+      -  name: run staticcheck static code analyzer
+         uses: dominikh/staticcheck-action@v1.2.0
+         with:
+           version: "2022.1.1"
       - name: run test suite
         run: |
          export USERID=$(id -u)
