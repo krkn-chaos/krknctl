@@ -10,9 +10,9 @@ import (
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/randomgraph"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"log"
@@ -34,7 +34,7 @@ func NewRandomCommand() *cobra.Command {
 	return command
 }
 
-func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "runs a random chaos run",
@@ -53,7 +53,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 			spinner := NewSpinnerWithSuffix("running randomly generated chaos plan...")
 			volumes := make(map[string]string)
@@ -68,7 +68,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				kubeconfig = *expandedConfig
-				if CheckFileExists(kubeconfig) == false {
+				if !CheckFileExists(kubeconfig) {
 					return fmt.Errorf("file %s does not exist", kubeconfig)
 				}
 			}
@@ -82,7 +82,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				alertsProfile = *expandedProfile
-				if CheckFileExists(alertsProfile) == false {
+				if !CheckFileExists(alertsProfile) {
 					return fmt.Errorf("file %s does not exist", alertsProfile)
 				}
 			}
@@ -96,11 +96,11 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return err
 				}
 				metricsProfile = *expandedProfile
-				if CheckFileExists(metricsProfile) == false {
+				if !CheckFileExists(metricsProfile) {
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}
-			maxParallel, err := cmd.Flags().GetInt("max-parallel")
+			maxParallel, err := cmd.Flags().GetInt64("max-parallel")
 			if err != nil {
 				return err
 			}
@@ -218,9 +218,9 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 						spinner.Stop()
 						var statErr *utils.ExitError
 						if errors.As(c.Err, &statErr) {
-							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
+							if c.ScenarioID != nil && c.ScenarioLogFile != nil {
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
-									*c.ScenarioId,
+									*c.ScenarioID,
 									*c.Layer,
 									statErr.ExitStatus,
 									*c.ScenarioLogFile))
@@ -316,7 +316,7 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 				if err != nil {
 					return err
 				}
-				if CheckFileExists(*seedFilePath) == false {
+				if !CheckFileExists(*seedFilePath) {
 					return fmt.Errorf("file %s does not exist", seedFile)
 				}
 				seed = &provider.ScaffoldSeed{

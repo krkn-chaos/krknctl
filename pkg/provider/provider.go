@@ -1,3 +1,4 @@
+// Package provider defines the interface for the tool metadata provider from the various data sources available
 package provider
 
 import (
@@ -24,7 +25,7 @@ type BaseScenarioProvider struct {
 
 func (p *BaseScenarioProvider) ParseTitle(s string, isGlobalEnvironment bool) (*string, error) {
 	var regex = ""
-	if isGlobalEnvironment == true {
+	if isGlobalEnvironment {
 		regex = p.Config.LabelTitleRegexGlobal
 	} else {
 		regex = p.Config.LabelTitleRegex
@@ -44,8 +45,8 @@ func (p *BaseScenarioProvider) ParseTitle(s string, isGlobalEnvironment bool) (*
 }
 
 func (p *BaseScenarioProvider) ParseDescription(s string, isGlobalEnvironment bool) (*string, error) {
-	var regex string = ""
-	if isGlobalEnvironment == true {
+	var regex = ""
+	if isGlobalEnvironment {
 		regex = p.Config.LabelDescriptionRegexGlobal
 	} else {
 		regex = p.Config.LabelDescriptionRegex
@@ -62,8 +63,8 @@ func (p *BaseScenarioProvider) ParseDescription(s string, isGlobalEnvironment bo
 }
 
 func (p *BaseScenarioProvider) ParseInputFields(s string, isGlobalEnvironment bool) ([]typing.InputField, error) {
-	var regex string = ""
-	if isGlobalEnvironment == true {
+	var regex = ""
+	if isGlobalEnvironment {
 		regex = p.Config.LabelInputFieldsRegexGlobal
 	} else {
 		regex = p.Config.LabelInputFieldsRegex

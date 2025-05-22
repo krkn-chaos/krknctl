@@ -1,3 +1,4 @@
+// Package quay provides the implementation of the quay.io data provider
 package quay
 
 import (
@@ -18,12 +19,12 @@ type ScenarioProvider struct {
 }
 
 func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
-	tagBaseUrl, err := url.Parse(dataSource + "/tag")
+	tagBaseURL, err := url.Parse(dataSource + "/tag")
 	if err != nil {
 		return nil, err
 	}
 	var deferErr error = nil
-	cacheKey := tagBaseUrl.String()
+	cacheKey := tagBaseURL.String()
 	bodyBytes := p.Cache.Get(cacheKey)
 	if len(bodyBytes) == 0 {
 		params := url.Values{}
@@ -31,15 +32,15 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 		params.Add("limit", "100")
 		// currently paging support is not needed
 		params.Add("page", "1")
-		tagBaseUrl.RawQuery = params.Encode()
+		tagBaseURL.RawQuery = params.Encode()
 
-		resp, _ := http.Get(tagBaseUrl.String())
+		resp, _ := http.Get(tagBaseURL.String())
 
 		defer func() {
 			deferErr = resp.Body.Close()
 		}()
 		if resp.StatusCode != http.StatusOK {
-			return nil, errors.New("failed to retrieve tags, " + tagBaseUrl.String() + " returned: " + resp.Status)
+			return nil, errors.New("failed to retrieve tags, " + tagBaseURL.String() + " returned: " + resp.Status)
 		}
 
 		bodyBytes, err = io.ReadAll(resp.Body)
@@ -47,7 +48,7 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 			log.Fatal(err)
 			return nil, err
 		}
-		p.Cache.Set(tagBaseUrl.String(), bodyBytes)
+		p.Cache.Set(tagBaseURL.String(), bodyBytes)
 
 	}
 	var quayPage TagPage
@@ -70,7 +71,7 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 }
 
 func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
-	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
+	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""
-	if isGlobalEnvironment == true {
+	if isGlobalEnvironment {
 		titleLabel = p.Config.LabelTitleGlobal
 		descriptionLabel = p.Config.LabelDescriptionGlobal
 		inputFieldsLabel = p.Config.LabelInputFieldsGlobal
@@ -179,7 +180,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 }
 
 func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
-	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
+	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +206,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 }
 
 func (p *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error) {
-	dataSource, err := p.Config.GetQuayScenarioRepositoryApiUri()
+	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
 	if err != nil {
 		return nil, err
 	}

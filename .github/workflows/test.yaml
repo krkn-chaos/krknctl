@@ -61,6 +61,14 @@ jobs:
           docker tag quay.io/krkn-chaos/krkn:latest localhost:5001/krkn-chaos/krkn:latest
           docker push -q localhost:5001/krkn-chaos/krkn-hub:dummy-scenario
           docker push -q localhost:5001/krkn-chaos/krkn:latest
+      - name: run gosec security scanner
+        uses: securego/gosec@master
+        with:
+          args: --exclude G402 ./...
+      -  name: run staticcheck static code analyzer
+         uses: dominikh/staticcheck-action@v1.3.1
+         with:
+           version: "2025.1.1"
       - name: run test suite
         run: |
          export USERID=$(id -u)
