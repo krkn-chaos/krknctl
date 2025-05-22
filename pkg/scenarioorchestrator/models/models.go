@@ -1,3 +1,4 @@
+// Package models provides the data models for the container runtime environment
 package models
 
 import "github.com/krkn-chaos/krknctl/pkg/provider/models"

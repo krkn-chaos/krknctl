@@ -1,3 +1,4 @@
+// Package config provides all the string constraints and options for the krknctl tool
 package config
 
 import (

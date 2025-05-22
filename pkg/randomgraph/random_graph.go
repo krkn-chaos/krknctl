@@ -1,3 +1,4 @@
+// Package randomgraph provides the implementation of the random dependency graph
 package randomgraph
 
 import (

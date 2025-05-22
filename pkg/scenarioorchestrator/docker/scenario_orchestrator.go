@@ -1,3 +1,4 @@
+// Package docker provides the implementation for the Docker container runtime
 package docker
 
 import (

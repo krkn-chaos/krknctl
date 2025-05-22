@@ -1,3 +1,4 @@
+// Package scenarioorchestrator provides the interface and the common function to interact with the underlying container environment
 package scenarioorchestrator
 
 import (
