@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	docker "github.com/docker/docker/api/types"
 	dockerBackend "github.com/docker/docker/api/types/backend"
 	dockerContainer "github.com/docker/docker/api/types/container"
+	dockerImage "github.com/docker/docker/api/types/image"
 	dockerNetwork "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/registry"
 	"github.com/docker/docker/api/types/system"
+	"github.com/docker/docker/api/types/volume"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -16,7 +19,7 @@ type AuthConfig struct {
 }
 
 type ImageInspect struct {
-	docker.ImageInspect
+	dockerImage.InspectResponse
 	// Container is for backwards compat but is basically unused
 	Container string
 }
@@ -44,7 +47,7 @@ type LibpodImagesResolveReport struct {
 }
 
 type ContainersPruneReport struct {
-	docker.ContainersPruneReport
+	dockerContainer.PruneReport
 }
 
 type ContainersPruneReportLibpod struct {
@@ -73,7 +76,11 @@ type LibpodContainersRmReport struct {
 // UpdateEntities used to wrap the oci resource spec in a swagger model
 // swagger:model
 type UpdateEntities struct {
-	Resources *specs.LinuxResources
+	specs.LinuxResources
+	define.UpdateHealthCheckConfig
+	define.UpdateContainerDevicesLimits
+	Env      []string
+	UnsetEnv []string
 }
 
 type Info struct {
@@ -98,11 +105,11 @@ type DiskUsage struct {
 }
 
 type VolumesPruneReport struct {
-	docker.VolumesPruneReport
+	volume.PruneReport
 }
 
 type ImagesPruneReport struct {
-	docker.ImagesPruneReport
+	dockerImage.PruneReport
 }
 
 type BuildCachePruneReport struct {
@@ -110,7 +117,7 @@ type BuildCachePruneReport struct {
 }
 
 type NetworkPruneReport struct {
-	docker.NetworksPruneReport
+	dockerNetwork.PruneReport
 }
 
 type ConfigCreateResponse struct {
@@ -163,7 +170,7 @@ type HistoryResponse struct {
 }
 
 type ExecCreateConfig struct {
-	docker.ExecConfig
+	dockerContainer.ExecOptions
 }
 
 type ExecStartConfig struct {

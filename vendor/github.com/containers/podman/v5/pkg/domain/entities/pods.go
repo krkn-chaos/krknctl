@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	commonFlag "github.com/containers/common/pkg/flag"
+	"github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/domain/entities/types"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/containers/podman/v5/pkg/util"
@@ -275,9 +276,12 @@ type ContainerCreateOptions struct {
 
 func NewInfraContainerCreateOptions() ContainerCreateOptions {
 	options := ContainerCreateOptions{
-		IsInfra:          true,
-		ImageVolume:      "anonymous",
-		MemorySwappiness: -1,
+		IsInfra:              true,
+		ImageVolume:          "anonymous",
+		MemorySwappiness:     -1,
+		HealthLogDestination: define.DefaultHealthCheckLocalDestination,
+		HealthMaxLogCount:    define.DefaultHealthMaxLogCount,
+		HealthMaxLogSize:     define.DefaultHealthMaxLogSize,
 	}
 	return options
 }
@@ -287,22 +291,16 @@ type PodCreateReport = types.PodCreateReport
 type PodCloneReport = types.PodCloneReport
 
 func (p *PodCreateOptions) CPULimits() *specs.LinuxCPU {
-	cpu := &specs.LinuxCPU{}
-	hasLimits := false
+	cpu := &specs.LinuxCPU{
+		Cpus: p.CpusetCpus,
+	}
 
 	if p.Cpus != 0 {
 		period, quota := util.CoresToPeriodAndQuota(p.Cpus)
 		cpu.Period = &period
 		cpu.Quota = &quota
-		hasLimits = true
 	}
-	if p.CpusetCpus != "" {
-		cpu.Cpus = p.CpusetCpus
-		hasLimits = true
-	}
-	if !hasLimits {
-		return cpu
-	}
+
 	return cpu
 }
 
@@ -367,25 +365,20 @@ func ToPodSpecGen(s specgen.PodSpecGenerator, p *PodCreateOptions) (*specgen.Pod
 		s.DNSSearch = p.Net.DNSSearch
 		s.DNSOption = p.Net.DNSOptions
 		s.NoManageHosts = p.Net.NoHosts
+		s.NoManageHostname = p.Net.NoHostname
 		s.HostAdd = p.Net.AddHosts
+		s.HostsFile = p.Net.HostsFile
 	}
 
 	// Cgroup
 	s.CgroupParent = p.CgroupParent
 
 	// Resource config
-	cpuDat := p.CPULimits()
 	if s.ResourceLimits == nil {
 		s.ResourceLimits = &specs.LinuxResources{}
-		s.ResourceLimits.CPU = &specs.LinuxCPU{}
 	}
-	if cpuDat != nil {
-		s.ResourceLimits.CPU = cpuDat
-		if p.Cpus != 0 {
-			s.CPUPeriod = *cpuDat.Period
-			s.CPUQuota = *cpuDat.Quota
-		}
-	}
+	s.ResourceLimits.CPU = p.CPULimits()
+
 	s.Userns = p.Userns
 	sysctl := map[string]string{}
 	if ctl := p.Sysctl; len(ctl) > 0 {
