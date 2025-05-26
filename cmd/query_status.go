@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/spf13/cobra"
 	"os"
 )
 
-func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchestrator, arg string, conn context.Context, conf config.Config) error {
+func resolveContainerIdOrName(orchestrator scenarioorchestrator.ScenarioOrchestrator, arg string, conn context.Context, conf config.Config) error {
 	var scenarioContainer *models.ScenarioContainer
 	var containerId *string
 
@@ -53,7 +53,7 @@ func resolveContainerIdOrName(orchestrator scenario_orchestrator.ScenarioOrchest
 	return nil
 }
 
-func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, filename string, conn context.Context, conf config.Config) error {
+func resolveGraphFile(orchestrator scenarioorchestrator.ScenarioOrchestrator, filename string, conn context.Context, conf config.Config) error {
 	var scenarioFile = make(map[string]provider_models.ScenarioDetail)
 	var containers = make([]models.Container, 0)
 	var statusCodeError error
@@ -98,7 +98,7 @@ func resolveGraphFile(orchestrator scenario_orchestrator.ScenarioOrchestrator, f
 	return statusCodeError
 }
 
-func NewQueryStatusCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewQueryStatusCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:          "query-status",
 		Short:        "checks the status of a container or a list of containers",
