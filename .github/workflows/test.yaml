@@ -16,7 +16,7 @@ jobs:
           go-version: '1.23.1'
       - name: install podman
         run: |
-          sudo apt-get update && sudo apt-get install podman libbtrfs-dev nodejs wamerican
+          sudo apt-get update && sudo apt-get install podman libbtrfs-dev nodejs wamerican libgpgme-dev
       - name: setup podman
         run: |
           echo "XDG_RUNTIME_DIR=/run/user/$UID" >> $GITHUB_ENV
