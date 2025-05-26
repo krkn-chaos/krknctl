@@ -67,6 +67,7 @@ jobs:
           args: --exclude G402 ./...
       -  name: run staticcheck static code analyzer
          run: |
+           go clean -modcache
            wget https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
            tar xfvz staticcheck_linux_amd64.tar.gz
            ./staticcheck/staticcheck -checks all ./...
