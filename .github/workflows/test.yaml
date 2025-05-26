@@ -67,7 +67,10 @@ jobs:
           args: --exclude G402 ./...
       -  name: run staticcheck static code analyzer
          uses: dominikh/staticcheck-action@v1.3.1
+         env:
+           GOFLAGS: -mod=mod
          with:
+           install-go: 'false'
            version: "2025.1.1"
       - name: run test suite
         run: |
