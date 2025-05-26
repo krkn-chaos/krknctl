@@ -14,9 +14,9 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"io"
 	"os"
@@ -431,7 +431,7 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 
 func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
 
-	interrupted, err := scenario_orchestrator.CommonAttachWait(containerId, stdout, stderr, c, ctx)
+	interrupted, err := scenarioorchestrator.CommonAttachWait(containerId, stdout, stderr, c, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -440,18 +440,18 @@ func (c *ScenarioOrchestrator) AttachWait(containerId *string, stdout io.Writer,
 }
 
 func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
-	containerId, err := scenario_orchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	containerId, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
 	return containerId, err
 }
 
 func (c *ScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *providermodels.RegistryV2, userId *int) {
-	scenario_orchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userId)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userId)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
-	scenario_orchestrator.CommonPrintRuntime(c.ContainerRuntime)
+	scenarioorchestrator.CommonPrintRuntime(c.ContainerRuntime)
 }
 
 func (c *ScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
-	return scenario_orchestrator.CommonListRunningScenarios(c, ctx)
+	return scenarioorchestrator.CommonListRunningScenarios(c, ctx)
 }

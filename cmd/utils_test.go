@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

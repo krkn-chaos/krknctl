@@ -7,8 +7,8 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	scenarioCollectedFlags := make(map[string]*string)
 	globalCollectedFlags := make(map[string]*string)
 	var command = &cobra.Command{

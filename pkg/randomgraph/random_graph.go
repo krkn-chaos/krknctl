@@ -1,7 +1,7 @@
 package randomgraph
 
 import (
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"math/rand"
 )
 

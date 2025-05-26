@@ -5,12 +5,12 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
 	"os"
 )
 
-func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(config)
 	rootCmd.PersistentFlags().String("private-registry", "", "private registry URI (eg. quay.io, without any protocol schema prefix)")
