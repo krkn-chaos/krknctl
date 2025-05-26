@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"io"
 	"os"
 )
@@ -38,12 +38,12 @@ type ScenarioOrchestrator interface {
 	) (*string, error)
 
 	RunGraph(
-		scenarios orchestrator_models.ScenarioSet,
-		resolvedGraph orchestrator_models.ResolvedGraph,
+		scenarios orchestratormodels.ScenarioSet,
+		resolvedGraph orchestratormodels.ResolvedGraph,
 		extraEnv map[string]string,
 		extraVolumeMounts map[string]string,
 		cache bool,
-		commChannel chan *orchestrator_models.GraphCommChannel,
+		commChannel chan *orchestratormodels.GraphCommChannel,
 		registry *models.RegistryV2,
 		userID *int,
 	)
@@ -67,13 +67,13 @@ type ScenarioOrchestrator interface {
 
 	Kill(containerID *string, ctx context.Context) error
 
-	ListRunningContainers(ctx context.Context) (*map[int64]orchestrator_models.Container, error)
-	ListRunningScenarios(ctx context.Context) (*[]orchestrator_models.ScenarioContainer, error)
-	InspectScenario(container orchestrator_models.Container, ctx context.Context) (*orchestrator_models.ScenarioContainer, error)
+	ListRunningContainers(ctx context.Context) (*map[int64]orchestratormodels.Container, error)
+	ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error)
+	InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error)
 
 	GetContainerRuntimeSocket(userID *int) (*string, error)
 
-	GetContainerRuntime() orchestrator_models.ContainerRuntime
+	GetContainerRuntime() orchestratormodels.ContainerRuntime
 	PrintContainerRuntime()
 	GetConfig() config.Config
 	ResolveContainerName(containerName string, ctx context.Context) (*string, error)
