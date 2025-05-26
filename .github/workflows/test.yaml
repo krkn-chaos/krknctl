@@ -70,7 +70,6 @@ jobs:
          env:
            GOFLAGS: -mod=mod
          with:
-           install-go: 'false'
            version: "2025.1.1"
       - name: run test suite
         run: |
