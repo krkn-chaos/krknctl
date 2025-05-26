@@ -3,12 +3,12 @@ package cmd
 import (
 	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"github.com/spf13/cobra"
 )
 
-func NewCleanCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewCleanCommand(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "clean",
 		Short: "cleans already run scenario files and containers",

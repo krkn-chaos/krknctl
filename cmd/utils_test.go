@@ -7,7 +7,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providerModels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"os"

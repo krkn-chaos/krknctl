@@ -9,9 +9,9 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"log"
@@ -32,7 +32,7 @@ func NewGraphCommand() *cobra.Command {
 	return command
 }
 
-func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "runs a dependency graph based run",

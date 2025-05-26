@@ -7,7 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	models2 "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	models2 "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/letsencrypt/boulder/core"

@@ -2,9 +2,9 @@ package factory
 
 import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/docker"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/podman"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/docker"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/podman"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

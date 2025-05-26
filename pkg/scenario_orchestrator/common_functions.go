@@ -1,4 +1,4 @@
-package scenarioorchestrator
+package scenario_orchestrator
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 	"io"
 	"os"
 	"os/signal"

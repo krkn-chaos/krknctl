@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/stretchr/testify/assert"
 	"io/fs"
 	"k8s.io/client-go/tools/clientcmd"

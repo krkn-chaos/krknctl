@@ -3,11 +3,11 @@ package factory
 
 import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/docker"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/podman"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/docker"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/podman"
+	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
 )
 
 type ScenarioOrchestratorFactory struct {
@@ -20,7 +20,7 @@ func NewScenarioOrchestratorFactory(config config.Config) *ScenarioOrchestratorF
 	}
 }
 
-func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.ContainerRuntime) scenarioorchestrator.ScenarioOrchestrator {
+func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.ContainerRuntime) scenario_orchestrator.ScenarioOrchestrator {
 	switch containerEnvironment {
 	case models.Podman:
 		return f.getOrchestratorInstance(models.Podman)
@@ -33,7 +33,7 @@ func (f *ScenarioOrchestratorFactory) NewInstance(containerEnvironment models.Co
 	return nil
 }
 
-func (f *ScenarioOrchestratorFactory) getOrchestratorInstance(containerEnvironment models.ContainerRuntime) scenarioorchestrator.ScenarioOrchestrator {
+func (f *ScenarioOrchestratorFactory) getOrchestratorInstance(containerEnvironment models.ContainerRuntime) scenario_orchestrator.ScenarioOrchestrator {
 	if containerEnvironment == models.Podman {
 		return &podman.ScenarioOrchestrator{
 			Config:           f.Config,

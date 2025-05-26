@@ -1,11 +1,11 @@
-// Package scenarioorchestrator provides the interface and the common function to interact with the underlying container environment
-package scenarioorchestrator
+// Package scenario_orchestrator provides the interface and the common function to interact with the underlying container environment
+package scenario_orchestrator
 
 import (
 	"context"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"io"
 	"os"
 )

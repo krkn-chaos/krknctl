@@ -9,7 +9,7 @@ import (
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"io/fs"
