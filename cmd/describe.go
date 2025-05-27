@@ -59,7 +59,7 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 				}
 			}
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()

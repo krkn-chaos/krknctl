@@ -9,9 +9,9 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/utils"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"log"
@@ -32,7 +32,7 @@ func NewGraphCommand() *cobra.Command {
 	return command
 }
 
-func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "runs a dependency graph based run",
@@ -51,7 +51,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 			(*scenarioOrchestrator).PrintContainerRuntime()
 			if registrySettings != nil {
-				logPrivateRegistry(registrySettings.RegistryUrl)
+				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 			spinner := NewSpinnerWithSuffix("running graph based chaos plan...")
 			volumes := make(map[string]string)
@@ -66,7 +66,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				kubeconfig = *expandedConfig
-				if CheckFileExists(kubeconfig) == false {
+				if !CheckFileExists(kubeconfig) {
 					return fmt.Errorf("file %s does not exist", kubeconfig)
 				}
 			}
@@ -80,7 +80,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				alertsProfile = *expandedProfile
-				if CheckFileExists(alertsProfile) == false {
+				if !CheckFileExists(alertsProfile) {
 					return fmt.Errorf("file %s does not exist", alertsProfile)
 				}
 			}
@@ -94,7 +94,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					return err
 				}
 				metricsProfile = *expandedProfile
-				if CheckFileExists(metricsProfile) == false {
+				if !CheckFileExists(metricsProfile) {
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}
@@ -210,9 +210,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 						spinner.Stop()
 						var staterr *utils.ExitError
 						if errors.As(c.Err, &staterr) {
-							if c.ScenarioId != nil && c.ScenarioLogFile != nil {
+							if c.ScenarioID != nil && c.ScenarioLogFile != nil {
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("scenario %s at step %d with exit status %d, check log file %s.",
-									*c.ScenarioId,
+									*c.ScenarioID,
 									*c.Layer,
 									staterr.ExitStatus,
 									*c.ScenarioLogFile))

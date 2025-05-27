@@ -1,3 +1,4 @@
+// Package models provides the data models for the container runtime environment
 package models
 
 import "github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -48,12 +49,12 @@ type ScenarioContainer struct {
 }
 
 type Container struct {
-	Id         string `json:"id,omitempty"`
+	ID         string `json:"id,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Image      string `json:"image,omitempty"`
 	Started    int64  `json:"started,omitempty"`
 	Status     string `json:"status,omitempty"`
-	ExitStatus int32  `json:"exit_status"`
+	ExitStatus int    `json:"exit_status"`
 }
 
 type ScenarioSet map[string]ScenarioNode
@@ -61,7 +62,7 @@ type ResolvedGraph [][]string
 
 type GraphCommChannel struct {
 	Layer           *int
-	ScenarioId      *string
+	ScenarioID      *string
 	ScenarioLogFile *string
 	Err             error
 }

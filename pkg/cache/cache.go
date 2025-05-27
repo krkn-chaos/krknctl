@@ -1,3 +1,4 @@
+// Package cache provides a basic caching mechanism for the REST calls made by krknctl
 package cache
 
 import "sync"

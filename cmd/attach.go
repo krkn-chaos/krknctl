@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
 	"os"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator) *cobra.Command {
+func NewAttachCmd(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "attach",
 		Short: "connects krknctl to the running scenario logs",
@@ -61,29 +61,29 @@ func NewAttachCmd(scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrat
 				return err
 			}
 
-			scenarioId, err := strconv.ParseInt(args[0], 10, 64)
+			scenarioID, err := strconv.ParseInt(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("invalid scenario id: %s, scenario id must be a number", args[0])
 			}
 
-			if scenarioId > int64(len(*runningScenarios)-1) {
-				return fmt.Errorf("invalid scenario id: %d, scenario id out of range", scenarioId)
+			if scenarioID > int64(len(*runningScenarios)-1) {
+				return fmt.Errorf("invalid scenario id: %d, scenario id out of range", scenarioID)
 			}
 			_, err = color.New(color.FgGreen, color.Underline).Println("hit CTRL+C to stop streaming scenario output (scenario won't be interrupted)")
 			if err != nil {
 				return err
 			}
-			scenario := (*runningScenarios)[scenarioId]
+			scenario := (*runningScenarios)[scenarioID]
 			ctx, err = (*scenarioOrchestrator).Connect(*socket)
 			if err != nil {
 				return err
 			}
-			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.Id, os.Stdout, os.Stderr, ctx)
+			interrupted, err := (*scenarioOrchestrator).AttachWait(&scenario.Container.ID, os.Stdout, os.Stderr, ctx)
 			if err != nil {
 				return err
 			}
 			if *interrupted {
-				_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", scenario.Container.Id))
+				_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("scenario output terminated, container %s still running", scenario.Container.ID))
 				if err != nil {
 					return err
 				}

@@ -1,3 +1,4 @@
+// Package cmd contains the CLI options and commands to interact with krknctl
 package cmd
 
 import (
@@ -5,12 +6,12 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
 	"os"
 )
 
-func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenario_orchestrator.ScenarioOrchestrator, config config.Config) {
+func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) {
 
 	rootCmd := NewRootCommand(config)
 	rootCmd.PersistentFlags().String("private-registry", "", "private registry URI (eg. quay.io, without any protocol schema prefix)")
@@ -108,7 +109,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	attachCmd := NewAttachCmd(scenarioOrchestrator)
 	rootCmd.AddCommand(attachCmd)
-	queryCmd := NewQueryStatusCommand(scenarioOrchestrator, config)
+	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
 
@@ -120,6 +121,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	}
 	if isDeprecated != nil && *isDeprecated {
 		_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("⛔️ krknctl %s is deprecated, please update to latest: %s", config.Version, config.GithubLatestRelease))
+		if err != nil {
+			fmt.Println(err)
+		}
 		os.Exit(1)
 	}
 

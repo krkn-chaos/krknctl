@@ -67,11 +67,11 @@ func TestNumberField(t *testing.T) {
 
 	// wrong format
 	param = "test"
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.Error(t, err)
 
 	param = "2,5"
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.Error(t, err)
 
 	// reset
@@ -90,7 +90,7 @@ func TestNumberField(t *testing.T) {
 `
 	err = json.Unmarshal([]byte(numberFieldValueWrongDefault), &field)
 	assert.Nil(t, err)
-	value, err = field.Validate(nil)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
 	field = InputField{}
@@ -107,10 +107,10 @@ func TestNumberField(t *testing.T) {
 `
 	err = json.Unmarshal([]byte(numberRequiredNoDefault), &field)
 	assert.Nil(t, err)
-	value, err = field.Validate(nil)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 	param = ""
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 }
@@ -164,11 +164,11 @@ func TestStringField(t *testing.T) {
 
 	// not validated
 	param = "\"krkn\"@\"notvalid\""
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 	//wrong default
-	value, err = field.Validate(nil)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
 	field = InputField{}
@@ -222,6 +222,7 @@ func TestBooleanField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(booleanFieldDefault), &field)
+	assert.Nil(t, err)
 	param = "false"
 	value, err = field.Validate(&param)
 	assert.Nil(t, err)
@@ -249,7 +250,8 @@ func TestBooleanField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(booleanFieldWrongDefault), &field)
-	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
 	field = InputField{}
@@ -265,10 +267,11 @@ func TestBooleanField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(booleanFieldRequiredNoDefault), &field)
-	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 	param = ""
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 }
@@ -290,6 +293,7 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldSeparator), &field)
+	assert.Nil(t, err)
 	param = "param_1"
 	value, err = field.Validate(&param)
 	assert.Nil(t, err)
@@ -306,7 +310,7 @@ func TestEnumField(t *testing.T) {
 	assert.Equal(t, param, *value)
 
 	param = "param_4"
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 	// reset
@@ -320,10 +324,11 @@ func TestEnumField(t *testing.T) {
 	"description":"Number of cores (workers) of node CPU to be consumed",
 	"variable":"NODE_CPU_CORE",
 	"type":"enum",
-	"allowed_values":"param_1,param_2,param_3",
+	"allowed_values":"param_1,param_2,param_3"
 }
 `
 	err = json.Unmarshal([]byte(enumFieldDefaultSeparator), &field)
+	assert.Nil(t, err)
 	param = "param_1"
 	value, err = field.Validate(&param)
 	assert.Nil(t, err)
@@ -344,8 +349,9 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldWrongSeparator), &field)
+	assert.Nil(t, err)
 	param = "param_1"
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 
 	field = InputField{}
@@ -364,6 +370,7 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldDefault), &field)
+	assert.Nil(t, err)
 	value, err = field.Validate(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "param_2", *value)
@@ -382,6 +389,7 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldNilValue), &field)
+	assert.Nil(t, err)
 	value, err = field.Validate(nil)
 	assert.Nil(t, err)
 	assert.Nil(t, value)
@@ -401,7 +409,8 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldWrongDefault), &field)
-	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 
 	field = InputField{}
@@ -418,10 +427,11 @@ func TestEnumField(t *testing.T) {
 }
 `
 	err = json.Unmarshal([]byte(enumFieldRequiredNoDefault), &field)
-	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
 	param = ""
-	value, err = field.Validate(&param)
+	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
 }
 
@@ -455,13 +465,15 @@ func TestFieldFileBase64(t *testing.T) {
 	}
 
 	err = os.WriteFile(fileName, data, 0644)
+	assert.Nil(t, err)
 	err = os.WriteFile(bigfileName, bigData, 0644)
+	assert.Nil(t, err)
 	defer os.Remove(fileName)
 	defer os.Remove(bigfileName)
-	assert.Nil(t, err)
 
 	// ok filename
 	err = json.Unmarshal([]byte(fileField), &field)
+	assert.Nil(t, err)
 	value, err = field.Validate(&fileName)
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
@@ -499,6 +511,7 @@ func TestFieldFileBase64(t *testing.T) {
 }
 `, fileName)
 	err = json.Unmarshal([]byte(fileFieldDefault), &field)
+	assert.Nil(t, err)
 	value, err = field.Validate(nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, value)
@@ -528,9 +541,11 @@ func TestFieldFile(t *testing.T) {
 		data[i] = 'A'
 	}
 	err = os.WriteFile(fileName, data, 0644)
+	assert.Nil(t, err)
 	defer os.Remove(fileName)
 
 	err = json.Unmarshal([]byte(fileField), &field)
+	assert.Nil(t, err)
 
 	// ok file
 	value, err = field.Validate(&fileName)

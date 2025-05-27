@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +12,7 @@ import (
 func TestExpandFolder(t *testing.T) {
 
 	currentfolder, err := os.Getwd()
+	assert.Nil(t, err)
 	parentfolder := filepath.Dir(currentfolder)
 	grandParentFolder := filepath.Dir(parentfolder)
 	baseFolder := "/usr/local/bin"
@@ -44,5 +47,20 @@ func TestExpandFolder(t *testing.T) {
 	resultParentFolderWithBase, err := ExpandFolder("../krknctl", &baseFolder)
 	assert.Nil(t, err)
 	assert.Equal(t, expectedParentFolderWithBase, *resultParentFolderWithBase)
+
+}
+
+func TestRandomInt64(t *testing.T) {
+	randOne := RandomInt64(nil)
+	randTwo := RandomInt64(nil)
+	fmt.Printf("RandomInt64: %v, RandomInt64: %v\n", randOne, randTwo)
+	assert.NotEqual(t, randOne, randTwo)
+
+	// ensures that respects the limit
+	maxInt := int64(math.MaxInt)
+	for i := 0; i < 1000; i++ {
+		maxRandInt := RandomInt64(&maxInt)
+		assert.Greater(t, int64(math.MaxInt64), maxRandInt)
+	}
 
 }

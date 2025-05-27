@@ -104,11 +104,11 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 func (f *InputField) Validate(value *string) (*string, error) {
 	var deferErr error
 	// if string value is nil, the default value is nil and the field is required the field is not valid
-	if value == nil && f.Default == nil && f.Required == true && f.Type == String {
+	if value == nil && f.Default == nil && f.Required && f.Type == String {
 		return nil, errors.New("`" + f.Type.String() + " can be blank, but not null without a default if required")
 	}
 	// if any other type value is nil or empty, the default value is nil or empty and the field is required the field is not valid
-	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Required == true && f.Type != String {
+	if (value == nil || *value == "") && (f.Default == nil || *f.Default == "") && f.Required && f.Type != String {
 		return nil, fmt.Errorf("field `%s` doesn't have a `default` and cannot be nil or empty for type `%s`", *f.Name, f.Type)
 	}
 
@@ -140,16 +140,16 @@ func (f *InputField) Validate(value *string) (*string, error) {
 				if err != nil {
 					return nil, err
 				}
-				if match == false {
+				if !match {
 					return nil, errors.New("`value`: '" + *selectedValue + "' does not match `validator`: '" + *f.Validator + "'")
 				}
 			}
 		case Number:
-			if IsNumber(*selectedValue) == false {
+			if !IsNumber(*selectedValue) {
 				return nil, errors.New("`value`: '" + *selectedValue + "' is not a number")
 			}
 		case Boolean:
-			if IsBoolean(*selectedValue) == false {
+			if !IsBoolean(*selectedValue) {
 				return nil, errors.New("`value`: '" + *selectedValue + "' is not a boolean")
 			}
 		case Enum:
@@ -163,7 +163,7 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			if f.AllowedValues == nil {
 				return nil, errors.New("invalid schema: `allowed_values` is required for enum type")
 			}
-			if IsEnum(*selectedValue, *separator, *f.AllowedValues) == false {
+			if !IsEnum(*selectedValue, *separator, *f.AllowedValues) {
 				return nil, errors.New("`value`: '" + *selectedValue + "' is not in: '" + *f.AllowedValues + "' separated by: '" + *separator + "'")
 			}
 		case FileBase64:
