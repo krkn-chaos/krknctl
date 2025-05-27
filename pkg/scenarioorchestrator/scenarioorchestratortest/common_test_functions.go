@@ -8,15 +8,16 @@ import (
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
-	provider_models "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/provider/quay"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
+	krknctlutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/stretchr/testify/assert"
-	"math/rand"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -83,7 +84,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 
 	//pulling image from private registry with token
 	quayToken := os.Getenv("QUAY_TOKEN")
-	pr := provider_models.RegistryV2{
+	pr := providermodels.RegistryV2{
 		RegistryURL:        "quay.io",
 		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
 		Token:              &quayToken,
@@ -91,7 +92,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	}
 
 	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, rand.Int())
+	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
 	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if so.GetContainerRuntime() == models.Docker {
 		if err != nil {
@@ -108,7 +109,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	basicAuthUsername := "testuser"
 	basicAuthPassword := "testpassword"
 
-	pr = provider_models.RegistryV2{
+	pr = providermodels.RegistryV2{
 		RegistryURL:        "localhost:5001",
 		ScenarioRepository: "krkn-chaos/krkn-hub",
 		Username:           &basicAuthUsername,
@@ -117,7 +118,8 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	}
 
 	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, rand.Int())
+
+	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
 	containerId, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -491,11 +493,13 @@ func CommonAttachWait(t *testing.T, so scenarioorchestrator.ScenarioOrchestrator
 	assert.Nil(t, err)
 	assert.NotNil(t, ctx)
 	testFilename := fmt.Sprintf("krknctl-attachwait-%d", time.Now().Unix())
+	testFilename = filepath.Clean(testFilename)
 	fmt.Println("FILE_NAME -> ", testFilename)
-	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	file, err := os.OpenFile(testFilename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	assert.Nil(t, err)
 	containerId := CommonTestScenarioOrchestratorRunAttached(t, so, conf, 5)
-	so.AttachWait(&containerId, file, file, ctx)
+	_, err = so.AttachWait(&containerId, file, file, ctx)
+	assert.Nil(t, err)
 	err = file.Close()
 	assert.Nil(t, err)
 	filecontent, err := os.ReadFile(testFilename)
