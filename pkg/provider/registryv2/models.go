@@ -15,7 +15,7 @@ type ManifestV2 struct {
 }
 
 type LayerV1Compat struct {
-	Id              string              `json:"id"`
+	ID              string              `json:"id"`
 	Parent          string              `json:"parent"`
 	Created         string              `json:"created"`
 	Throwaway       bool                `json:"throwaway"`

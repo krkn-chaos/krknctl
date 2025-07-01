@@ -1,3 +1,4 @@
+// Package models provides the data models used by the data providers to exchange data
 package models
 
 import (
@@ -17,19 +18,19 @@ type RegistryV2 struct {
 	Username           *string `form:"username"`
 	Password           *string `form:"password"`
 	Token              *string `form:"token"`
-	RegistryUrl        string  `form:"registry_url"`
+	RegistryURL        string  `form:"registry_url"`
 	ScenarioRepository string  `form:"scenario_repository"`
-	SkipTls            bool    `form:"skip_tls"`
+	SkipTLS            bool    `form:"skip_tls"`
 	Insecure           bool    `form:"insecure"`
 }
 
 func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
 	var registryV2 = RegistryV2{}
-	registryUrl := os.Getenv(config.EnvPrivateRegistry)
-	if registryUrl == "" {
+	registryURL := os.Getenv(config.EnvPrivateRegistry)
+	if registryURL == "" {
 		return nil, nil
 	}
-	registryV2.RegistryUrl = registryUrl
+	registryV2.RegistryURL = registryURL
 
 	scenarioRepository := os.Getenv(config.EnvPrivateRegistryScenarios)
 	if scenarioRepository == "" {
@@ -45,15 +46,15 @@ func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
 	registryV2.Password = &password
 	registryV2.Token = &token
 
-	skipTls := os.Getenv(config.EnvPrivateRegistrySkipTls)
-	if skipTls == "" {
-		registryV2.SkipTls = false
+	skipTLS := os.Getenv(config.EnvPrivateRegistrySkipTLS)
+	if skipTLS == "" {
+		registryV2.SkipTLS = false
 	} else {
-		skip, err := strconv.ParseBool(skipTls)
+		skip, err := strconv.ParseBool(skipTLS)
 		if err != nil {
-			return nil, fmt.Errorf("wrong %s format can be `true` or `false`,  `%s` found instead", config.EnvPrivateRegistrySkipTls, skipTls)
+			return nil, fmt.Errorf("wrong %s format can be `true` or `false`,  `%s` found instead", config.EnvPrivateRegistrySkipTLS, skipTLS)
 		}
-		registryV2.SkipTls = skip
+		registryV2.SkipTLS = skip
 	}
 
 	insecure := os.Getenv(config.EnvPrivateRegistryInsecure)
@@ -71,32 +72,32 @@ func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
 
 }
 
-func (r *RegistryV2) GetV2ScenarioRepositoryApiUri() (string, error) {
+func (r *RegistryV2) GetV2ScenarioRepositoryAPIURI() (string, error) {
 	prefix := "http://"
-	if r.Insecure == false {
+	if !r.Insecure {
 		prefix = "https://"
 	}
-	registryUrl, err := url.Parse(fmt.Sprintf("%s/v2/%s/tags/list", prefix+r.RegistryUrl, r.ScenarioRepository))
+	registryURL, err := url.Parse(fmt.Sprintf("%s/v2/%s/tags/list", prefix+r.RegistryURL, r.ScenarioRepository))
 	if err != nil {
 		return "", err
 	}
-	return registryUrl.String(), nil
+	return registryURL.String(), nil
 }
 
-func (r *RegistryV2) GetV2ScenarioDetailApiUri(scenario string) (string, error) {
+func (r *RegistryV2) GetV2ScenarioDetailAPIURI(scenario string) (string, error) {
 	prefix := "http://"
-	if r.Insecure == false {
+	if !r.Insecure {
 		prefix = "https://"
 	}
-	registryUrl, err := url.Parse(fmt.Sprintf("%s/v2/%s/manifests/%s", prefix+r.RegistryUrl, r.ScenarioRepository, scenario))
+	registryURL, err := url.Parse(fmt.Sprintf("%s/v2/%s/manifests/%s", prefix+r.RegistryURL, r.ScenarioRepository, scenario))
 	if err != nil {
 		return "", err
 	}
-	return registryUrl.String(), nil
+	return registryURL.String(), nil
 }
 
-func (r *RegistryV2) GetPrivateRegistryUri() string {
-	return fmt.Sprintf("%s/%s", r.RegistryUrl, r.ScenarioRepository)
+func (r *RegistryV2) GetPrivateRegistryURI() string {
+	return fmt.Sprintf("%s/%s", r.RegistryURL, r.ScenarioRepository)
 }
 
 func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {

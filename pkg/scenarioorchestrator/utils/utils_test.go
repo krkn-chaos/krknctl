@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/stretchr/testify/assert"
 	"io/fs"
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,28 +17,30 @@ func TestFlatten(t *testing.T) {
 	conf, err := krknctlconfig.LoadConfig()
 	assert.Nil(t, err)
 
-	not_existing_kubeconfig := "tests/data/not_existing"
-	flat_kubeconfig_path, err := PrepareKubeconfig(&not_existing_kubeconfig, conf)
+	notExistingKubeconfig := "tests/data/not_existing"
+	flatKubeconfigPath, err := PrepareKubeconfig(&notExistingKubeconfig, conf)
 	assert.Nil(t, err)
-	assert.Nil(t, flat_kubeconfig_path)
+	assert.Nil(t, flatKubeconfigPath)
 
-	wrong_kubeconfig := "tests/data/not_existing"
-	wrong_kubeconfig_path, err := PrepareKubeconfig(&wrong_kubeconfig, conf)
+	wrongKubeconfig := "tests/data/not_existing"
+	wrongKubeconfigPath, err := PrepareKubeconfig(&wrongKubeconfig, conf)
 	assert.Nil(t, err)
-	assert.Nil(t, wrong_kubeconfig_path)
+	assert.Nil(t, wrongKubeconfigPath)
 
-	kubeconfig_path := "../../../tests/data/kubeconfig"
-	flat_kubeconfig_path, err = PrepareKubeconfig(&kubeconfig_path, conf)
+	kubeconfigPath := "../../../tests/data/kubeconfig"
+	flatKubeconfigPath, err = PrepareKubeconfig(&kubeconfigPath, conf)
 	assert.Nil(t, err)
-	assert.NotNil(t, flat_kubeconfig_path)
+	assert.NotNil(t, flatKubeconfigPath)
 
-	kubeconfig, err := clientcmd.LoadFromFile(*flat_kubeconfig_path)
+	kubeconfig, err := clientcmd.LoadFromFile(*flatKubeconfigPath)
 	assert.Nil(t, err)
 	assert.NotNil(t, kubeconfig)
 
 	assert.NotEmpty(t, kubeconfig.Clusters)
 	ca, err := os.ReadFile("../../../tests/data/test_ca")
+	assert.Nil(t, err)
 	cert, err := os.ReadFile("../../../tests/data/test_cert")
+	assert.Nil(t, err)
 	key, err := os.ReadFile("../../../tests/data/test_key")
 	assert.Nil(t, err)
 
@@ -61,10 +63,10 @@ func TestCleanKubeconfigFiles(t *testing.T) {
 	assert.Nil(t, err)
 	conf, err := krknctlconfig.LoadConfig()
 	assert.Nil(t, err)
-	kubeconfig_path := "../../../tests/data/kubeconfig"
-	flat_kubeconfig_path, err := PrepareKubeconfig(&kubeconfig_path, conf)
+	kubeconfigPath := "../../../tests/data/kubeconfig"
+	flatKubeconfigPath, err := PrepareKubeconfig(&kubeconfigPath, conf)
 	assert.Nil(t, err)
-	assert.NotNil(t, flat_kubeconfig_path)
+	assert.NotNil(t, flatKubeconfigPath)
 	root := os.DirFS(cwd)
 	mdFiles, err := fs.Glob(root, "krknctl-kubeconfig-*")
 	assert.Nil(t, err)
@@ -92,14 +94,18 @@ func TestCleanLogFiles(t *testing.T) {
 	filename3 := "random-log.log"
 
 	file, err := os.Create(filename1)
+	assert.Nil(t, err)
 	file.Close()
 	file, err = os.Create(filename2)
+	assert.Nil(t, err)
 	file.Close()
 	file, err = os.Create(filename3)
+	assert.Nil(t, err)
 	file.Close()
 
 	root := os.DirFS(cwd)
 	mdFiles, err := fs.Glob(root, "*.log")
+	assert.Nil(t, err)
 	assert.GreaterOrEqual(t, len(mdFiles), 3)
 	num, err := CleanLogFiles(conf)
 	assert.Nil(t, err)
@@ -132,7 +138,7 @@ func TestGetSocketByContainerEnvironment(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, *socket, conf.DockerSocketRoot)
 
-		socket, err = GetSocketByContainerEnvironment(models.Both, conf, &root)
+		_, err = GetSocketByContainerEnvironment(models.Both, conf, &root)
 		assert.NotNil(t, err)
 
 	} else if runtime.GOOS == "darwin" {
@@ -155,7 +161,7 @@ func TestGetSocketByContainerEnvironment(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, *socket, conf.DockerSocketRoot)
 
-		socket, err = GetSocketByContainerEnvironment(models.Both, conf, &root)
+		_, err = GetSocketByContainerEnvironment(models.Both, conf, &root)
 		assert.NotNil(t, err)
 
 	} else {

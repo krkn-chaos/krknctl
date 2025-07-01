@@ -5,8 +5,8 @@ import (
 	"fmt"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/test"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/scenarioorchestratortest"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"regexp"
@@ -16,27 +16,27 @@ import (
 )
 
 func TestScenarioOrchestrator_Docker_Connect(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorConnect(t, &sopodman, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorConnect(t, &sopodman)
 }
 
 func TestScenarioOrchestrator_Docker_RunAttached(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 3)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorRunAttached(t, &sopodman, config, 3)
 }
 
 func TestScenarioOrchestrator_Docker_Run(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRun(t, &sodocker, config, 5)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorRun(t, &sodocker, config, 5)
 }
 
 func TestScenarioOrchestrator_Docker_RunGraph(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorRunGraph(t, &sodocker, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorRunGraph(t, &sodocker, config)
 }
 
 func findContainers(t *testing.T, config config.Config, ctx context.Context) []string {
@@ -59,7 +59,7 @@ func findContainers(t *testing.T, config config.Config, ctx context.Context) []s
 }
 
 func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
 	envuid := os.Getenv("USERID")
 	var uid *int = nil
@@ -73,7 +73,7 @@ func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
 	assert.Nil(t, err)
 	ctx, err := sodocker.Connect(*socket)
 	assert.Nil(t, err)
-	test.CommonTestScenarioOrchestratorRunAttached(t, &sodocker, config, 5)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorRunAttached(t, &sodocker, config, 5)
 	foundContainers := findContainers(t, config, ctx)
 	assert.Greater(t, len(foundContainers), 0)
 	numcontainers, err := sodocker.CleanContainers(ctx)
@@ -85,40 +85,40 @@ func TestScenarioOrchestrator_Docker_CleanContainers(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_AttachWait(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	fileContent := test.CommonAttachWait(t, &sopodman, config)
+	fileContent := scenarioorchestratortest.CommonAttachWait(t, &sopodman, config)
 	fmt.Println("FILE CONTENT -> ", fileContent)
 	assert.True(t, strings.Contains(fileContent, "Release the krkn 4"))
 
 }
 
 func TestScenarioOrchestrator_Docker_Kill(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorKillContainers(t, &sodocker, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorKillContainers(t, &sodocker, config)
 }
 
 func TestScenarioOrchestrator_Docker_ListRunningContainers(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorListRunningContainers(t, &sodocker, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorListRunningContainers(t, &sodocker, config)
 }
 
 func TestScenarioOrchestrator_Docker_ListRunningScenarios(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorListRunningScenarios(t, &sodocker, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorListRunningScenarios(t, &sodocker, config)
 }
 func TestScenarioOrchestrator_Docker_InspectRunningScenario(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorInspectRunningScenario(t, &sodocker, config)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorInspectRunningScenario(t, &sodocker, config)
 
 }
 
 func TestScenarioOrchestrator_Docker_GetContainerRuntimeSocket(t *testing.T) {
-	config := test.CommonGetConfig(t)
+	config := scenarioorchestratortest.CommonGetConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
 	var uid *int = nil
 	envuid := os.Getenv("USERID")
@@ -140,13 +140,13 @@ func TestScenarioOrchestrator_Docker_GetContainerRuntimeSocket(t *testing.T) {
 }
 
 func TestScenarioOrchestrator_Docker_GetContainerRuntime(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
 	assert.Equal(t, sopodman.GetContainerRuntime(), models.Docker)
 }
 
 func TestScenarioOrchestrator_Docker_ResolveContainerId(t *testing.T) {
-	config := test.CommonGetTestConfig(t)
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sodocker := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
-	test.CommonTestScenarioOrchestratorResolveContainerName(t, &sodocker, config, 3)
+	scenarioorchestratortest.CommonTestScenarioOrchestratorResolveContainerName(t, &sodocker, config, 3)
 }

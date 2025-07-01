@@ -1,3 +1,4 @@
+// Package utils provides utility functions for the container runtime environment
 package utils
 
 import (
@@ -8,7 +9,7 @@ import (
 	images "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenario_orchestrator/models"
+	orchestatormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"io/fs"
@@ -95,13 +96,16 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	}
 
 	flattenedConfig, err := clientcmd.Write(*kubeconfig)
+	if err != nil {
+		return nil, err
+	}
 	currentDirectory, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 	filename := fmt.Sprintf("%s-%s-%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
 	path := filepath.Join(currentDirectory, filename)
-	err = os.WriteFile(path, flattenedConfig, 0777)
+	err = os.WriteFile(path, flattenedConfig, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -162,15 +166,15 @@ func CleanLogFiles(config config.Config) (*int, error) {
 	return &deletedFiles, nil
 }
 
-func GetSocketByContainerEnvironment(environment orchestatormodels.ContainerRuntime, config config.Config, userId *int) (*string, error) {
+func GetSocketByContainerEnvironment(environment orchestatormodels.ContainerRuntime, config config.Config, userID *int) (*string, error) {
 	switch environment {
 	case orchestatormodels.Docker:
 		return &config.DockerSocketRoot, nil
 	case orchestatormodels.Podman:
 		if runtime.GOOS == "linux" {
 			uid := os.Getuid()
-			if userId != nil {
-				uid = *userId
+			if userID != nil {
+				uid = *userID
 			}
 			if uid == 0 {
 				return &config.PodmanSocketRoot, nil
@@ -182,16 +186,22 @@ func GetSocketByContainerEnvironment(environment orchestatormodels.ContainerRunt
 			socket := fmt.Sprintf(config.PodmanDarwinSocketTemplate, home)
 			return &socket, nil
 		}
-		return nil, errors.New(fmt.Sprintf("could not determine container container runtime socket for podman"))
+		return nil, fmt.Errorf("could not determine container container runtime socket for podman")
 	case orchestatormodels.Both:
-		return nil, errors.New(fmt.Sprintf("%s invalid container environment", environment.String()))
+		return nil, fmt.Errorf("%s invalid container environment", environment.String())
 	}
 	return nil, errors.New("invalid environment value")
 }
 
 func DetectContainerRuntime(config config.Config) (*orchestatormodels.ContainerRuntime, error) {
 	socketDocker, err := GetSocketByContainerEnvironment(orchestatormodels.Docker, config, nil)
+	if err != nil {
+		return nil, err
+	}
 	socketPodman, err := GetSocketByContainerEnvironment(orchestatormodels.Podman, config, nil)
+	if err != nil {
+		return nil, err
+	}
 	_docker := orchestatormodels.Docker
 	_podman := orchestatormodels.Podman
 	_both := orchestatormodels.Both

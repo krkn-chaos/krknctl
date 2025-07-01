@@ -1,8 +1,10 @@
+// Package typing provides the type validation methods and structures for the tool input
 package typing
 
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -78,6 +80,7 @@ func IsEnum(s string, separator string, allowedValues string) bool {
 }
 
 func IsFile(f string) bool {
+	f = filepath.Clean(f)
 	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
 		return false
 	}
@@ -93,8 +96,5 @@ func IsFile(f string) bool {
 		}
 	}()
 
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
