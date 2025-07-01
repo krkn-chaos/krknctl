@@ -19,6 +19,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/containers/common/pkg/ssh"
 	"github.com/containers/podman/v5/version"
+	"github.com/containers/storage/pkg/fileutils"
 	"github.com/kevinburke/ssh_config"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
@@ -92,9 +93,7 @@ func NewConnection(ctx context.Context, uri string) (context.Context, error) {
 // or unix:///run/podman/podman.sock
 // or ssh://<user>@<host>[:port]/run/podman/podman.sock
 func NewConnectionWithIdentity(ctx context.Context, uri string, identity string, machine bool) (context.Context, error) {
-	var (
-		err error
-	)
+	var err error
 	if v, found := os.LookupEnv("CONTAINER_HOST"); found && uri == "" {
 		uri = v
 	}
@@ -210,15 +209,27 @@ func sshClient(_url *url.URL, uri string, identity string, machine bool) (Connec
 
 		if identity == "" {
 			if val := cfg.Get(alias, "IdentityFile"); val != "" {
+				// we get default IdentityFile value (~/.ssh/identity) every time
+				// checking if we got default
+				defaultIdentityPath := val == ssh_config.Default("IdentityFile")
+
 				identity = strings.Trim(val, "\"")
+
 				if strings.HasPrefix(identity, "~/") {
 					homedir, err := os.UserHomeDir()
 					if err != nil {
 						return connection, fmt.Errorf("failed to find home dir: %w", err)
 					}
+
 					identity = filepath.Join(homedir, identity[2:])
 				}
-				found = true
+
+				// if we have default value but no file exists ignoring identity
+				if err := fileutils.Exists(identity); err != nil && defaultIdentityPath {
+					identity = ""
+				} else {
+					found = true
+				}
 			}
 		}
 
@@ -262,7 +273,8 @@ func sshClient(_url *url.URL, uri string, identity string, machine bool) (Connec
 	connection.Client = &http.Client{
 		Transport: &http.Transport{
 			DialContext: dialContext,
-		}}
+		},
+	}
 	return connection, nil
 }
 
@@ -431,25 +443,21 @@ func (c *Connection) GetDialer(ctx context.Context) (net.Conn, error) {
 
 // IsInformational returns true if the response code is 1xx
 func (h *APIResponse) IsInformational() bool {
-	//nolint:usestdlibvars // linter wants to use http.StatusContinue over 100 but that makes less readable IMO
 	return h.Response.StatusCode/100 == 1
 }
 
 // IsSuccess returns true if the response code is 2xx
 func (h *APIResponse) IsSuccess() bool {
-	//nolint:usestdlibvars // linter wants to use http.StatusContinue over 100 but that makes less readable IMO
 	return h.Response.StatusCode/100 == 2
 }
 
 // IsRedirection returns true if the response code is 3xx
 func (h *APIResponse) IsRedirection() bool {
-	//nolint:usestdlibvars // linter wants to use http.StatusContinue over 100 but that makes less readable IMO
 	return h.Response.StatusCode/100 == 3
 }
 
 // IsClientError returns true if the response code is 4xx
 func (h *APIResponse) IsClientError() bool {
-	//nolint:usestdlibvars // linter wants to use http.StatusContinue over 100 but that makes less readable IMO
 	return h.Response.StatusCode/100 == 4
 }
 
@@ -460,6 +468,5 @@ func (h *APIResponse) IsConflictError() bool {
 
 // IsServerError returns true if the response code is 5xx
 func (h *APIResponse) IsServerError() bool {
-	//nolint:usestdlibvars // linter wants to use http.StatusContinue over 100 but that makes less readable IMO
 	return h.Response.StatusCode/100 == 5
 }
