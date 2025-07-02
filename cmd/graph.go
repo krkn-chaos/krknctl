@@ -156,6 +156,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 					break
 				}
 				if validateResult.err != nil {
+					spinner.Stop()
 					return fmt.Errorf("failed to validate scenario: %s, error: %s", *validateResult.name, validateResult.err)
 				}
 				if validateResult.name != nil {

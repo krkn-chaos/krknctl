@@ -151,10 +151,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			provider := GetProvider(registrySettings != nil, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 			globalDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 
@@ -175,6 +177,8 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 						}
 						expandedConfig, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
+
+							spinner.Stop()
 							return err
 						}
 						if !CheckFileExists(*expandedConfig) {
@@ -184,10 +188,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 					if a == "--alerts-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
+							spinner.Stop()
 							return err
 						}
 						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
+							spinner.Stop()
 							return err
 						}
 						if !CheckFileExists(*expandedProfile) {
@@ -197,13 +203,16 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 					if a == "--metrics-profile" {
 						if err := checkStringArgValue(args, i); err != nil {
+							spinner.Stop()
 							return err
 						}
 						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
 						if err != nil {
+							spinner.Stop()
 							return err
 						}
 						if !CheckFileExists(*expandedProfile) {
+							spinner.Stop()
 							return fmt.Errorf("file %s does not exist", *expandedProfile)
 						}
 						foundMetricsProfile = expandedProfile
@@ -225,10 +234,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 			kubeconfigPath, err := utils.PrepareKubeconfig(foundKubeconfig, config)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 			if kubeconfigPath == nil {
-				return fmt.Errorf("kubeconfig not found: %s", *foundKubeconfig)
+				spinner.Stop()
+				return errors.New("kubeconfig not found on default path, please specify a " +
+					"valid kubeconfig path with the --kubeconfig flag")
 			}
 			volumes[*kubeconfigPath] = config.KubeconfigPath
 			if foundMetricsProfile != nil {
@@ -242,10 +254,12 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			//dynamic flags parsing
 			scenarioEnv, scenarioVol, err := ParseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 			globalEnv, globalVol, err := ParseFlags(globalDetail, args, globalCollectedFlags, true)
 			if err != nil {
+				spinner.Stop()
 				return err
 			}
 
