@@ -105,7 +105,7 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	}
 	filename := fmt.Sprintf("%s-%s-%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
 	path := filepath.Join(currentDirectory, filename)
-	err = os.WriteFile(path, flattenedConfig, 0600)
+	err = os.WriteFile(path, flattenedConfig, 0644) /* #nosec */
 	if err != nil {
 		return nil, err
 	}
