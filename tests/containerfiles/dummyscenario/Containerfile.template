@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9-minimal:9.4-1227.1726694542
+FROM registry.access.redhat.com/ubi9-minimal:9.6-1752587672
 RUN groupadd -g 1001 krkn && useradd -m -u 1001 -g krkn krkn
 COPY run.sh /home/krkn
 
