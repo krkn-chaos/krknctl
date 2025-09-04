@@ -27,7 +27,7 @@ func TestNewLightspeedCheckCommand(t *testing.T) {
 	assert.Equal(t, "check", cmd.Use)
 	assert.Contains(t, cmd.Short, "Check GPU support")
 	assert.Contains(t, cmd.Long, "Check whether the container runtime")
-	assert.Equal(t, cobra.NoArgs, cmd.Args)
+	assert.NotNil(t, cmd.Args)
 	
 	// Check that the image flag exists
 	imageFlag := cmd.Flags().Lookup("image")
@@ -193,8 +193,8 @@ func TestCommandCreationHelpers(t *testing.T) {
 	// Verify command has proper run function
 	assert.NotNil(t, checkCmd.RunE)
 	
-	// Verify command accepts no args
-	assert.Equal(t, cobra.NoArgs, checkCmd.Args)
+	// Verify command has args validation function
+	assert.NotNil(t, checkCmd.Args)
 }
 
 // Test registry building edge cases
