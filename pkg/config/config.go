@@ -1,4 +1,5 @@
 // Package config provides all the string constraints and options for the krknctl tool
+// Assisted by Claude Sonnet 4
 package config
 
 import (
@@ -56,6 +57,8 @@ type Config struct {
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
 	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
+	GpuCheckRegistry            string `json:"gpu_check_registry"`
+	GpuCheckTag                 string `json:"gpu_check_tag"`
 }
 
 //go:embed config.json
@@ -102,4 +105,12 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 		return "", err
 	}
 	return repositoryURI, nil
+}
+
+func (c *Config) GetGpuCheckImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.GpuCheckRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.GpuCheckTag, nil
 }
