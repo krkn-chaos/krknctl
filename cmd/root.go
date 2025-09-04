@@ -1,4 +1,5 @@
 // Package cmd contains the CLI options and commands to interact with krknctl
+// Assisted by Claude Sonnet 4
 package cmd
 
 import (
@@ -112,6 +113,12 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
+
+	// lightspeed subcommands
+	lightspeedCmd := NewLightspeedCommand()
+	lightspeedCheckCmd := NewLightspeedCheckCommand(providerFactory, scenarioOrchestrator, config)
+	lightspeedCmd.AddCommand(lightspeedCheckCmd)
+	rootCmd.AddCommand(lightspeedCmd)
 
 	// update and deprecation check
 	isDeprecated, err := IsDeprecated(config)
