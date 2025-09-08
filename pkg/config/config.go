@@ -57,8 +57,8 @@ type Config struct {
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
 	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
-	GpuCheckRegistry            string `json:"gpu_check_registry"`
-	GpuCheckTag                 string `json:"gpu_check_tag"`
+	LightspeedRegistry          string `json:"lightspeed_registry"`
+	GpuCheckBaseTag             string `json:"gpu_check_base_tag"`
 }
 
 //go:embed config.json
@@ -108,9 +108,36 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 }
 
 func (c *Config) GetGpuCheckImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.GpuCheckRegistry)
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
 	if err != nil {
 		return "", err
 	}
-	return imageURI + ":" + c.GpuCheckTag, nil
+	return imageURI + ":" + c.GpuCheckBaseTag, nil
+}
+
+// GetGpuCheckImageURIByType returns the GPU check image URI for a specific GPU type
+func (c *Config) GetGpuCheckImageURIByType(gpuType string) (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	
+	// Check for known GPU types
+	knownGpuTypes := map[string]bool{
+		"nvidia":        true,
+		"amd":           true,
+		"intel":         true,
+		"apple-silicon": true,
+	}
+	
+	var tag string
+	if knownGpuTypes[gpuType] {
+		// Construct tag by appending GPU type to base tag
+		tag = c.GpuCheckBaseTag + "-" + gpuType
+	} else {
+		// Fall back to base tag for unknown GPU types
+		tag = c.GpuCheckBaseTag
+	}
+	
+	return imageURI + ":" + tag, nil
 }

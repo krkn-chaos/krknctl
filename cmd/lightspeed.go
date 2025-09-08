@@ -82,11 +82,6 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get selected GPU type
 			gpuType := getSelectedGPUType(cmd)
-			// Get the image flag value
-			image, err := cmd.Flags().GetString("image")
-			if err != nil {
-				return fmt.Errorf("failed to get image flag: %w", err)
-			}
 
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
@@ -103,21 +98,17 @@ Examples:
 				return fmt.Errorf("failed to connect to container runtime: %w", err)
 			}
 
-			// Build registry configuration from flags and environment
-			registry, err := buildRegistryFromFlags(cmd, providerFactory, config)
+			// Build lightspeed registry configuration from flags
+			registry, err := buildLightspeedRegistryFromFlags(cmd, config)
 			if err != nil {
-				return fmt.Errorf("failed to build registry configuration: %w", err)
+				return fmt.Errorf("failed to build lightspeed registry configuration: %w", err)
 			}
 
 			// Create GPU checker
 			gpuChecker := gpucheck.NewGpuChecker(*scenarioOrchestrator, config)
 
-			// TODO: Pass GPU type to checker for architecture-specific image selection
-			// For now, using the current image selection logic
-			_ = gpuType // Acknowledge the variable is set but not yet used
-
-			// Run GPU check
-			result, err := gpuChecker.CheckGPUSupport(ctx, image, registry)
+			// Run GPU check with GPU-specific image
+			result, err := gpuChecker.CheckGPUSupportByType(ctx, gpuType, registry)
 			if err != nil {
 				return fmt.Errorf("failed to check GPU support: %w", err)
 			}
@@ -130,16 +121,14 @@ Examples:
 		},
 	}
 
-	// Add image flag
-	command.Flags().String("image", "", "custom GPU check container image (defaults to config value)")
-
 	return command
 }
 
-// buildRegistryFromFlags builds registry configuration from command flags and environment
-func buildRegistryFromFlags(cmd *cobra.Command, providerFactory *factory.ProviderFactory, config config.Config) (*models.RegistryV2, error) {
+// buildLightspeedRegistryFromFlags builds lightspeed registry configuration from command flags
+func buildLightspeedRegistryFromFlags(cmd *cobra.Command, config config.Config) (*models.RegistryV2, error) {
 	// Get private registry flags from parent command
 	privateRegistry, _ := cmd.Flags().GetString("private-registry")
+	privateRegistryLightspeed, _ := cmd.Flags().GetString("private-registry-lightspeed")
 	privateRegistryUsername, _ := cmd.Flags().GetString("private-registry-username")
 	privateRegistryPassword, _ := cmd.Flags().GetString("private-registry-password")
 	privateRegistryToken, _ := cmd.Flags().GetString("private-registry-token")
@@ -151,6 +140,12 @@ func buildRegistryFromFlags(cmd *cobra.Command, providerFactory *factory.Provide
 		return nil, nil
 	}
 
+	// Use lightspeed repository override if provided, otherwise use config default
+	lightspeedRepo := privateRegistryLightspeed
+	if lightspeedRepo == "" {
+		lightspeedRepo = config.LightspeedRegistry
+	}
+
 	// Build registry configuration
 	registry := &models.RegistryV2{
 		RegistryURL:        privateRegistry,
@@ -159,7 +154,7 @@ func buildRegistryFromFlags(cmd *cobra.Command, providerFactory *factory.Provide
 		Token:              &privateRegistryToken,
 		Insecure:           privateRegistryInsecure,
 		SkipTLS:            privateRegistrySkipTLS,
-		ScenarioRepository: "", // Empty for GPU check since we use full image path
+		ScenarioRepository: lightspeedRepo,
 	}
 
 	return registry, nil

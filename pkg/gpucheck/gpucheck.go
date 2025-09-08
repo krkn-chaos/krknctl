@@ -9,6 +9,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"strings"
 	"time"
 )
@@ -94,6 +95,103 @@ func (gc *GpuChecker) CheckGPUSupport(ctx context.Context, customImage string, r
 		Output:        output,
 		Error:         nil,
 	}, nil
+}
+
+// CheckGPUSupportByType runs a container to check GPU support using the GPU-type-specific image with appropriate device mounting
+func (gc *GpuChecker) CheckGPUSupportByType(ctx context.Context, gpuType string, registry *models.RegistryV2) (*Result, error) {
+	// Check if running on Docker runtime
+	if gc.orchestrator.GetContainerRuntime() == orchestratormodels.Docker {
+		return &Result{
+			HasGPUSupport: false,
+			Error:         fmt.Errorf("lightspeed GPU features are not available with Docker runtime - requires Podman with GPU support"),
+		}, nil
+	}
+
+	// Get GPU-type-specific image URI
+	image, err := gc.config.GetGpuCheckImageURIByType(gpuType)
+	if err != nil {
+		return &Result{
+			HasGPUSupport: false,
+			Error:         fmt.Errorf("failed to get GPU check image URI for type %s: %w", gpuType, err),
+		}, err
+	}
+
+	// Run container with GPU-specific device mounting
+	return gc.runGPUCheckWithDevices(ctx, image, gpuType, registry)
+}
+
+// runGPUCheckWithDevices runs the GPU check container with appropriate device mounting for the GPU type
+func (gc *GpuChecker) runGPUCheckWithDevices(ctx context.Context, image string, gpuType string, registry *models.RegistryV2) (*Result, error) {
+	// Generate unique container name
+	containerName := fmt.Sprintf("krknctl-gpu-check-%s-%d", gpuType, time.Now().Unix())
+
+	// Get GPU-specific device mounts
+	deviceMounts := gc.getGPUDeviceMounts(gpuType)
+
+	// Create buffers to capture container output
+	var stdout, stderr bytes.Buffer
+
+	// Run the GPU check container with device mounts as volume mounts
+	// Note: This is a workaround since the current orchestrator doesn't support proper device mounting
+	_, err := scenarioorchestrator.CommonRunAttached(
+		image,
+		containerName,
+		map[string]string{}, // No special environment variables needed
+		false,               // Don't cache
+		deviceMounts,        // Use device mounts as volume mounts
+		&stdout,
+		&stderr,
+		gc.orchestrator,
+		nil, // No communication channel needed for this use case
+		ctx,
+		registry,
+	)
+
+	if err != nil {
+		return &Result{
+			HasGPUSupport: false,
+			Error:         fmt.Errorf("failed to run GPU check container with devices: %w", err),
+		}, err
+	}
+
+	// Combine stdout and stderr
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += stderr.String()
+	}
+
+	// Parse the output to determine GPU support
+	hasGPU := parseGPUCheckOutput(output)
+
+	return &Result{
+		HasGPUSupport: hasGPU,
+		Output:        output,
+		Error:         nil,
+	}, nil
+}
+
+// getGPUDeviceMounts returns the appropriate device mounts for the given GPU type
+func (gc *GpuChecker) getGPUDeviceMounts(gpuType string) map[string]string {
+	deviceMounts := make(map[string]string)
+
+	switch gpuType {
+	case "nvidia":
+		// NVIDIA GPU devices
+		deviceMounts["/dev/nvidia0"] = "/dev/nvidia0"
+		deviceMounts["/dev/nvidiactl"] = "/dev/nvidiactl" 
+		deviceMounts["/dev/nvidia-uvm"] = "/dev/nvidia-uvm"
+	case "amd", "intel":
+		// AMD and Intel GPUs use DRI devices
+		deviceMounts["/dev/dri"] = "/dev/dri"
+	case "apple-silicon":
+		// Apple Silicon GPUs (via libkrun) use DRI devices
+		deviceMounts["/dev/dri"] = "/dev/dri"
+	}
+
+	return deviceMounts
 }
 
 // parseGPUCheckOutput parses the container output to determine if GPU support is available
