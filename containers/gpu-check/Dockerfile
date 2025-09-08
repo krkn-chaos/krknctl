@@ -19,3 +19,5 @@ RUN chmod +x /usr/local/bin/gpu-check.sh
 
 # Set the script as the entrypoint
 ENTRYPOINT ["/usr/local/bin/gpu-check.sh"]
+
+

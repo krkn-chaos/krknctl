@@ -3,6 +3,7 @@
 package gpucheck
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -51,17 +52,20 @@ func (gc *GpuChecker) CheckGPUSupport(ctx context.Context, customImage string, r
 	// Generate unique container name
 	containerName := fmt.Sprintf("krknctl-gpu-check-%d", time.Now().Unix())
 
-	// Create communication channel for container output
-	commChan := make(chan *string, 1)
+	// Create buffers to capture container output
+	var stdout, stderr bytes.Buffer
 
-	// Run the GPU check container
-	containerID, err := gc.orchestrator.Run(
+	// Run the GPU check container with output capture
+	_, err := scenarioorchestrator.CommonRunAttached(
 		image,
 		containerName,
 		map[string]string{}, // No special environment variables needed
 		false,               // Don't cache
 		map[string]string{}, // No volume mounts needed
-		&commChan,
+		&stdout,
+		&stderr,
+		gc.orchestrator,
+		nil, // No communication channel needed for this use case
 		ctx,
 		registry,
 	)
@@ -73,44 +77,30 @@ func (gc *GpuChecker) CheckGPUSupport(ctx context.Context, customImage string, r
 		}, err
 	}
 
-	// Wait for container output with timeout
-	select {
-	case output := <-commChan:
-		if output == nil {
-			return &Result{
-				HasGPUSupport: false,
-				Output:        "",
-				Error:         fmt.Errorf("no output received from GPU check container"),
-			}, nil
+	// Combine stdout and stderr
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		if output != "" {
+			output += "\n"
 		}
-
-		// Parse the output to determine GPU support
-		hasGPU := parseGPUCheckOutput(*output)
-
-		return &Result{
-			HasGPUSupport: hasGPU,
-			Output:        *output,
-			Error:         nil,
-		}, nil
-
-	case <-time.After(30 * time.Second):
-		// Cleanup: kill the container if it's still running
-		if containerID != nil {
-			_ = gc.orchestrator.Kill(containerID, ctx)
-		}
-
-		return &Result{
-			HasGPUSupport: false,
-			Error:         fmt.Errorf("timeout waiting for GPU check container output"),
-		}, nil
+		output += stderr.String()
 	}
+
+	// Parse the output to determine GPU support
+	hasGPU := parseGPUCheckOutput(output)
+
+	return &Result{
+		HasGPUSupport: hasGPU,
+		Output:        output,
+		Error:         nil,
+	}, nil
 }
 
 // parseGPUCheckOutput parses the container output to determine if GPU support is available
 func parseGPUCheckOutput(output string) bool {
 	// Look for success indicators in the output
 	output = strings.ToLower(strings.TrimSpace(output))
-	
+
 	// Check for negative indicators first to handle cases like "no gpu detected"
 	if strings.Contains(output, "gpu_check_failed") ||
 		strings.Contains(output, "gpu support: no") ||
@@ -133,12 +123,12 @@ func parseGPUCheckOutput(output string) bool {
 // FormatResult formats the GPU check result for CLI output
 func (gc *GpuChecker) FormatResult(result *Result) string {
 	if result.Error != nil {
-		return "No"
+		return fmt.Sprintf("GPU Support: No\n\nError occurred during GPU check: %v\n\n⚠️  Container runtime does not support GPU acceleration.\nThis environment is not suitable for running krknctl lightspeed workloads.\n\nTo enable GPU support:\n• For NVIDIA GPUs: Install nvidia-container-toolkit and configure your container runtime\n• For AMD GPUs: Install ROCm and configure appropriate device access\n• For Intel GPUs: Ensure proper device permissions and Intel GPU drivers\n• For Apple Silicon (M1/M2/M3): Create Podman machine with libkrun for virtualized GPU\n  See: https://podman-desktop.io/docs/podman/gpu", result.Error)
 	}
 
 	if result.HasGPUSupport {
-		return "Yes"
+		return "GPU Support: Yes\n\n✅ Container runtime has GPU acceleration available.\nThis environment is suitable for running krknctl lightspeed workloads."
 	}
 
-	return "No"
+	return "GPU Support: No\n\n⚠️  Container runtime does not support GPU acceleration.\nThis environment is not suitable for running krknctl lightspeed workloads.\n\nTo enable GPU support:\n• For NVIDIA GPUs: Install nvidia-container-toolkit and configure your container runtime\n• For AMD GPUs: Install ROCm and configure appropriate device access\n• For Intel GPUs: Ensure proper device permissions and Intel GPU drivers\n• For Apple Silicon (M1/M2/M3): Create Podman machine with libkrun for virtualized GPU\n  Note: Only supports Vulkan compute shaders, not Metal framework\n  See: https://podman-desktop.io/docs/podman/gpu\n\nFor more information, refer to your container runtime's GPU configuration documentation."
 }
