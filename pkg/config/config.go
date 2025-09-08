@@ -141,3 +141,12 @@ func (c *Config) GetGpuCheckImageURIByType(gpuType string) (string, error) {
 	
 	return imageURI + ":" + tag, nil
 }
+
+// GetRAGModelImageURI returns the RAG model image URI
+func (c *Config) GetRAGModelImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":rag-model", nil
+}

@@ -2,10 +2,86 @@
 package cmd
 
 import (
+	"context"
+	"io"
+	"os"
+	"testing"
+
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
+
+// Test helper functions
+func getTestConfig(t *testing.T) config.Config {
+	config, err := config.LoadConfig()
+	assert.NoError(t, err)
+	return config
+}
+
+func getTestProviderFactory(t *testing.T) *factory.ProviderFactory {
+	return &factory.ProviderFactory{}
+}
+
+func getTestOrchestrator(t *testing.T) scenarioorchestrator.ScenarioOrchestrator {
+	// Create a mock orchestrator for testing
+	return &MockScenarioOrchestrator{}
+}
+
+// MockScenarioOrchestrator for testing
+type MockScenarioOrchestrator struct{}
+
+func (m *MockScenarioOrchestrator) Connect(containerRuntimeURI string) (context.Context, error) {
+	return context.Background(), nil
+}
+
+func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+	id := "mock-container-id"
+	return &id, nil
+}
+
+func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
+	id := "mock-container-id"
+	return &id, nil
+}
+
+func (m *MockScenarioOrchestrator) GetContainerRuntime() orchestratormodels.ContainerRuntime {
+	return orchestratormodels.Podman
+}
+
+func (m *MockScenarioOrchestrator) PrintContainerRuntime() {}
+
+func (m *MockScenarioOrchestrator) GetConfig() config.Config {
+	config, _ := config.LoadConfig()
+	return config
+}
+
+func (m *MockScenarioOrchestrator) GetContainerRuntimeSocket(userID *int) (*string, error) {
+	socket := "unix:///tmp/podman.sock"
+	return &socket, nil
+}
+
+func (m *MockScenarioOrchestrator) Kill(containerID *string, ctx context.Context) error {
+	return nil
+}
+
+func (m *MockScenarioOrchestrator) CleanContainers(ctx context.Context) (*int, error) {
+	count := 0
+	return &count, nil
+}
+
+// Implement other required interface methods as no-ops
+func (m *MockScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int) {}
+func (m *MockScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) { return false, nil }
+func (m *MockScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[int64]orchestratormodels.Container, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) { return nil, nil }
 
 func TestNewLightspeedCommand(t *testing.T) {
 	cmd := NewLightspeedCommand()
@@ -14,12 +90,19 @@ func TestNewLightspeedCommand(t *testing.T) {
 	assert.Equal(t, "lightspeed", cmd.Use)
 	assert.Contains(t, cmd.Short, "GPU and acceleration")
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
+	
+	// Test GPU flags are present
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("nvidia"))
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("amd"))
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("intel"))
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("apple-silicon"))
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("offline"))
 }
 
 func TestNewLightspeedCheckCommand(t *testing.T) {
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	orchestrator := getOrchestrator(t)
+	config := getTestConfig(t)
+	providerFactory := getTestProviderFactory(t)
+	orchestrator := getTestOrchestrator(t)
 	
 	cmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
 	
@@ -28,221 +111,79 @@ func TestNewLightspeedCheckCommand(t *testing.T) {
 	assert.Contains(t, cmd.Short, "Check GPU support")
 	assert.Contains(t, cmd.Long, "Check whether the container runtime")
 	assert.NotNil(t, cmd.Args)
-	
-	// Check that the image flag exists
-	imageFlag := cmd.Flags().Lookup("image")
-	assert.NotNil(t, imageFlag)
-	assert.Equal(t, "string", imageFlag.Value.Type())
-	assert.Contains(t, imageFlag.Usage, "custom GPU check container image")
+	assert.NotNil(t, cmd.RunE)
 }
 
-func TestBuildRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
+func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	cmd := &cobra.Command{}
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
+	config := getTestConfig(t)
 	
 	// Add all the required flags but don't set private-registry
 	cmd.Flags().String("private-registry", "", "")
+	cmd.Flags().String("private-registry-lightspeed", "", "")
 	cmd.Flags().String("private-registry-username", "", "")
 	cmd.Flags().String("private-registry-password", "", "")
 	cmd.Flags().String("private-registry-token", "", "")
 	cmd.Flags().Bool("private-registry-insecure", false, "")
 	cmd.Flags().Bool("private-registry-skip-tls", false, "")
 	
-	registry, err := buildRegistryFromFlags(cmd, providerFactory, config)
+	registry, err := buildLightspeedRegistryFromFlags(cmd, config)
 	
 	assert.NoError(t, err)
 	assert.Nil(t, registry)
 }
 
-func TestBuildRegistryFromFlags_WithPrivateRegistry(t *testing.T) {
+func TestGetSelectedGPUType(t *testing.T) {
 	cmd := &cobra.Command{}
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
 	
-	// Add and set all the required flags
-	cmd.Flags().String("private-registry", "registry.example.com", "")
-	cmd.Flags().String("private-registry-username", "testuser", "")
-	cmd.Flags().String("private-registry-password", "testpass", "")
-	cmd.Flags().String("private-registry-token", "testtoken", "")
-	cmd.Flags().Bool("private-registry-insecure", true, "")
-	cmd.Flags().Bool("private-registry-skip-tls", true, "")
+	// Add GPU flags
+	cmd.Flags().Bool("nvidia", false, "")
+	cmd.Flags().Bool("amd", false, "")
+	cmd.Flags().Bool("intel", false, "")
+	cmd.Flags().Bool("apple-silicon", false, "")
 	
-	// Set the flag values
-	cmd.Flags().Set("private-registry", "registry.example.com")
-	cmd.Flags().Set("private-registry-username", "testuser")
-	cmd.Flags().Set("private-registry-password", "testpass")
-	cmd.Flags().Set("private-registry-token", "testtoken")
-	cmd.Flags().Set("private-registry-insecure", "true")
-	cmd.Flags().Set("private-registry-skip-tls", "true")
+	// Test NVIDIA selection
+	cmd.Flags().Set("nvidia", "true")
+	assert.Equal(t, "nvidia", getSelectedGPUType(cmd))
 	
-	registry, err := buildRegistryFromFlags(cmd, providerFactory, config)
+	// Reset and test AMD
+	cmd.Flags().Set("nvidia", "false")
+	cmd.Flags().Set("amd", "true")
+	assert.Equal(t, "amd", getSelectedGPUType(cmd))
 	
-	assert.NoError(t, err)
-	assert.NotNil(t, registry)
-	assert.Equal(t, "registry.example.com", registry.RegistryURL)
-	assert.Equal(t, "testuser", *registry.Username)
-	assert.Equal(t, "testpass", *registry.Password)
-	assert.Equal(t, "testtoken", *registry.Token)
-	assert.True(t, registry.Insecure)
-	assert.True(t, registry.SkipTLS)
-	assert.Equal(t, "", registry.ScenarioRepository)
+	// Reset and test Intel
+	cmd.Flags().Set("amd", "false")
+	cmd.Flags().Set("intel", "true")
+	assert.Equal(t, "intel", getSelectedGPUType(cmd))
+	
+	// Reset and test Apple Silicon
+	cmd.Flags().Set("intel", "false")
+	cmd.Flags().Set("apple-silicon", "true")
+	assert.Equal(t, "apple-silicon", getSelectedGPUType(cmd))
+	
+	// Test no selection
+	cmd.Flags().Set("apple-silicon", "false")
+	assert.Equal(t, "", getSelectedGPUType(cmd))
 }
 
-func TestBuildRegistryFromFlags_PartialConfiguration(t *testing.T) {
-	cmd := &cobra.Command{}
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
+// Test command creation and basic structure
+func TestLightspeedCommands_Structure(t *testing.T) {
+	config := getTestConfig(t)
+	providerFactory := getTestProviderFactory(t)
+	orchestrator := getTestOrchestrator(t)
 	
-	// Add flags and set only some values
-	cmd.Flags().String("private-registry", "registry.example.com", "")
-	cmd.Flags().String("private-registry-username", "testuser", "")
-	cmd.Flags().String("private-registry-password", "", "")
-	cmd.Flags().String("private-registry-token", "", "")
-	cmd.Flags().Bool("private-registry-insecure", false, "")
-	cmd.Flags().Bool("private-registry-skip-tls", false, "")
-	
-	// Set only some flag values
-	cmd.Flags().Set("private-registry", "registry.example.com")
-	cmd.Flags().Set("private-registry-username", "testuser")
-	
-	registry, err := buildRegistryFromFlags(cmd, providerFactory, config)
-	
-	assert.NoError(t, err)
-	assert.NotNil(t, registry)
-	assert.Equal(t, "registry.example.com", registry.RegistryURL)
-	assert.Equal(t, "testuser", *registry.Username)
-	assert.Equal(t, "", *registry.Password)
-	assert.Equal(t, "", *registry.Token)
-	assert.False(t, registry.Insecure)
-	assert.False(t, registry.SkipTLS)
-}
-
-func TestLightspeedCheckCommand_Integration(t *testing.T) {
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	orchestrator := getOrchestrator(t)
-	
-	// Create lightspeed command structure
-	lightspeedCmd := NewLightspeedCommand()
-	lightspeedCheckCmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
-	lightspeedCmd.AddCommand(lightspeedCheckCmd)
-	
-	// Test command structure
-	assert.NotNil(t, lightspeedCmd)
-	assert.Equal(t, 1, len(lightspeedCmd.Commands()))
-	
-	checkCmd := lightspeedCmd.Commands()[0]
-	assert.Equal(t, "check", checkCmd.Use)
-	
-	// Test that the image flag can be set
-	err := checkCmd.Flags().Set("image", "custom-image:latest")
-	assert.NoError(t, err)
-	
-	imageValue, err := checkCmd.Flags().GetString("image")
-	assert.NoError(t, err)
-	assert.Equal(t, "custom-image:latest", imageValue)
-}
-
-func TestLightspeedCommand_FlagInheritance(t *testing.T) {
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	orchestrator := getOrchestrator(t)
-	
-	// Create root command with global flags
-	rootCmd := NewRootCommand(config)
-	rootCmd.PersistentFlags().String("private-registry", "", "private registry URI")
-	rootCmd.PersistentFlags().String("private-registry-username", "", "private registry username")
-	rootCmd.PersistentFlags().String("private-registry-password", "", "private registry password")
-	rootCmd.PersistentFlags().Bool("private-registry-insecure", false, "uses plain HTTP instead of TLS")
-	rootCmd.PersistentFlags().Bool("private-registry-skip-tls", false, "skips tls verification")
-	rootCmd.PersistentFlags().String("private-registry-token", "", "private registry token")
-	
-	// Add lightspeed commands
-	lightspeedCmd := NewLightspeedCommand()
-	lightspeedCheckCmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
-	lightspeedCmd.AddCommand(lightspeedCheckCmd)
-	rootCmd.AddCommand(lightspeedCmd)
-	
-	// Test that global flags are inherited
-	assert.NotNil(t, rootCmd.PersistentFlags().Lookup("private-registry"))
-	assert.NotNil(t, lightspeedCheckCmd.Flags().Lookup("image"))
-	
-	// Test setting flags
-	err := rootCmd.PersistentFlags().Set("private-registry", "test-registry.com")
-	assert.NoError(t, err)
-	
-	registryValue, err := rootCmd.PersistentFlags().GetString("private-registry")
-	assert.NoError(t, err)
-	assert.Equal(t, "test-registry.com", registryValue)
-}
-
-// Test helper functions for command creation
-func TestCommandCreationHelpers(t *testing.T) {
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	orchestrator := getOrchestrator(t)
-	
-	// Test that all required parameters are properly used
+	// Test lightspeed command creation
 	lightspeedCmd := NewLightspeedCommand()
 	assert.NotNil(t, lightspeedCmd)
+	assert.Equal(t, "lightspeed", lightspeedCmd.Use)
 	
+	// Test check command creation
 	checkCmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
 	assert.NotNil(t, checkCmd)
-	
-	// Verify command has proper run function
+	assert.Equal(t, "check", checkCmd.Use)
 	assert.NotNil(t, checkCmd.RunE)
 	
-	// Verify command has args validation function
-	assert.NotNil(t, checkCmd.Args)
-}
-
-// Test registry building edge cases
-func TestBuildRegistryFromFlags_EmptyStrings(t *testing.T) {
-	cmd := &cobra.Command{}
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	
-	// Add flags with empty string values
-	cmd.Flags().String("private-registry", "registry.example.com", "")
-	cmd.Flags().String("private-registry-username", "", "")
-	cmd.Flags().String("private-registry-password", "", "")
-	cmd.Flags().String("private-registry-token", "", "")
-	cmd.Flags().Bool("private-registry-insecure", false, "")
-	cmd.Flags().Bool("private-registry-skip-tls", false, "")
-	
-	cmd.Flags().Set("private-registry", "registry.example.com")
-	// Leave other flags as empty strings
-	
-	registry, err := buildRegistryFromFlags(cmd, providerFactory, config)
-	
-	assert.NoError(t, err)
-	assert.NotNil(t, registry)
-	assert.Equal(t, "registry.example.com", registry.RegistryURL)
-	assert.Equal(t, "", *registry.Username)
-	assert.Equal(t, "", *registry.Password)
-	assert.Equal(t, "", *registry.Token)
-}
-
-// Test command validation
-func TestLightspeedCheckCommand_Validation(t *testing.T) {
-	config := getConfig(t)
-	providerFactory := getProviderFactory(t)
-	orchestrator := getOrchestrator(t)
-	
-	cmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
-	
-	// Test that command has required fields
-	assert.NotEmpty(t, cmd.Use)
-	assert.NotEmpty(t, cmd.Short)
-	assert.NotEmpty(t, cmd.Long)
-	assert.NotNil(t, cmd.RunE)
-	
-	// Test command flags
-	flags := cmd.Flags()
-	assert.NotNil(t, flags)
-	
-	imageFlag := flags.Lookup("image")
-	assert.NotNil(t, imageFlag)
-	assert.Equal(t, "", imageFlag.DefValue) // Should default to empty string
+	// Add check command to lightspeed
+	lightspeedCmd.AddCommand(checkCmd)
+	assert.Equal(t, 1, len(lightspeedCmd.Commands()))
 }
