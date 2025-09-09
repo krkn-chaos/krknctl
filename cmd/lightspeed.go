@@ -27,9 +27,11 @@ GPU Types:
   Use one of these flags with any lightspeed command to specify your GPU type:
   
   --nvidia         NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)
-  --amd           AMD GPUs (Radeon, FirePro, Instinct with ROCm)
-  --intel         Intel GPUs (Arc, Iris, UHD Graphics)
   --apple-silicon Apple Silicon (M1, M2, M3, M4 with Metal)
+  
+  Temporarily disabled:
+  --amd           AMD GPUs (Radeon, FirePro, Instinct with ROCm) [DISABLED]
+  --intel         Intel GPUs (Arc, Iris, UHD Graphics) [DISABLED]
 
 Examples:
   krknctl lightspeed check --nvidia
@@ -39,16 +41,18 @@ Examples:
 
 	// Add GPU type flags
 	command.PersistentFlags().Bool("nvidia", false, "Use NVIDIA GPU support")
-	command.PersistentFlags().Bool("amd", false, "Use AMD GPU support")
-	command.PersistentFlags().Bool("intel", false, "Use Intel GPU support")
+	// Temporarily disabled GPU types
+	// command.PersistentFlags().Bool("amd", false, "Use AMD GPU support")
+	// command.PersistentFlags().Bool("intel", false, "Use Intel GPU support")
 	command.PersistentFlags().Bool("apple-silicon", false, "Use Apple Silicon GPU support")
 
 	// Add offline flag for airgapped environments
 	command.PersistentFlags().Bool("offline", false, "Use cached documentation (for airgapped environments)")
 
 	// Make GPU flags mutually exclusive and required
-	command.MarkFlagsOneRequired("nvidia", "amd", "intel", "apple-silicon")
-	command.MarkFlagsMutuallyExclusive("nvidia", "amd", "intel", "apple-silicon")
+	// Only require nvidia or apple-silicon for now
+	command.MarkFlagsOneRequired("nvidia", "apple-silicon")
+	command.MarkFlagsMutuallyExclusive("nvidia", "apple-silicon")
 
 	return command
 }
@@ -58,12 +62,13 @@ func getSelectedGPUType(cmd *cobra.Command) string {
 	if nvidia, _ := cmd.Flags().GetBool("nvidia"); nvidia {
 		return "nvidia"
 	}
-	if amd, _ := cmd.Flags().GetBool("amd"); amd {
-		return "amd"
-	}
-	if intel, _ := cmd.Flags().GetBool("intel"); intel {
-		return "intel"
-	}
+	// Temporarily disabled GPU types
+	// if amd, _ := cmd.Flags().GetBool("amd"); amd {
+	//	return "amd"
+	// }
+	// if intel, _ := cmd.Flags().GetBool("intel"); intel {
+	//	return "intel"
+	// }
 	if appleSilicon, _ := cmd.Flags().GetBool("apple-silicon"); appleSilicon {
 		return "apple-silicon"
 	}
@@ -85,7 +90,6 @@ Run 'krknctl lightspeed --help' to see available GPU types.
 
 Examples:
   krknctl lightspeed check --nvidia
-  krknctl lightspeed check --amd
   krknctl lightspeed check --apple-silicon`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -192,15 +196,14 @@ Run 'krknctl lightspeed --help' to see available GPU types.
 
 Examples:
   krknctl lightspeed run --nvidia          # Use live documentation
-  krknctl lightspeed run --apple-silicon --offline  # Use cached docs (airgapped)
-  krknctl lightspeed run --amd             # Auto-detect connectivity`,
+  krknctl lightspeed run --apple-silicon --offline  # Use cached docs (airgapped)`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get selected GPU type
 			gpuType := getSelectedGPUType(cmd)
 
-			// Get offline flag (for future use)
-			_, _ = cmd.Flags().GetBool("offline")
+			// Get offline flag
+			offlineFlag, _ := cmd.Flags().GetBool("offline")
 
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
@@ -244,10 +247,34 @@ Examples:
 
 			fmt.Println("✅ GPU support confirmed!")
 
-			// TODO: Implement RAG model deployment, health check, and interactive prompt
-			fmt.Println("✅ GPU support confirmed! RAG deployment coming soon...")
+			// Step 2: Deploy RAG model container
+			fmt.Println("\n🚀 Deploying AI assistance model...")
 			
-			return nil
+			ragResult, err := deployRAGModel(ctx, gpuType, offlineFlag, *scenarioOrchestrator, config, registry)
+			if err != nil {
+				return fmt.Errorf("failed to deploy RAG model: %w", err)
+			}
+
+			// Step 3: Health check
+			fmt.Println("\n🩺 Performing health check...")
+			
+			healthOK, err := performRAGHealthCheck(ragResult.containerID, ragResult.hostPort, *scenarioOrchestrator, ctx, config)
+			if err != nil {
+				return fmt.Errorf("health check failed: %w", err)
+			}
+			
+			if !healthOK {
+				return fmt.Errorf("RAG service is not responding properly")
+			}
+
+			fmt.Println("✅ AI assistance service is ready!")
+
+			// Step 4: Start interactive prompt
+			fmt.Printf("\n🤖 Starting interactive AI assistance on port %s...\n", ragResult.hostPort)
+			fmt.Println("Type your chaos engineering questions and get intelligent krknctl command suggestions!")
+			fmt.Println("Type 'exit' or 'quit' to stop.")
+
+			return startInteractivePrompt(ragResult.containerID, ragResult.hostPort, *scenarioOrchestrator, ctx, config)
 		},
 	}
 
