@@ -22,11 +22,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class DocumentationIndexer:
-    def __init__(self):
+    def __init__(self, home_dir: str = "/app"):
         self.model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight embedding model
         self.documents = []
         self.embeddings = None
         self.index = None
+        self.home_dir = home_dir
         
     def scrape_krkn_docs(self) -> List[Dict[str, Any]]:
         """Scrape documentation from krkn-chaos.dev"""
@@ -103,7 +104,7 @@ class DocumentationIndexer:
         docs = []
         
         try:
-            help_file = Path("/app/krknctl_help.txt")
+            help_file = Path(os.path.join(self.home_dir, "krknctl_help.txt"))
             if help_file.exists():
                 with open(help_file, 'r') as f:
                     content = f.read()
@@ -181,9 +182,11 @@ class DocumentationIndexer:
         
         logger.info(f"Index saved to {output_dir}")
         
-    def build_index(self, live_mode: bool = True, output_dir: str = "/app/docs_index"):
+    def build_index(self, live_mode: bool = True, output_dir: str = None):
         """Build the complete documentation index"""
-        logger.info("Building documentation index...")
+        if output_dir is None:
+            output_dir = os.path.join(self.home_dir, "docs_index")
+        logger.info(f"Building documentation index to {output_dir}...")
         
         # Collect documents
         all_docs = []
@@ -219,25 +222,36 @@ class DocumentationIndexer:
 
 def main():
     parser = argparse.ArgumentParser(description="Build krknctl documentation index")
+    parser.add_argument("--home", 
+                        default="/app",
+                        help="Base directory for RAG service files (default: /app for container, override for local testing)")
     parser.add_argument("--build-cached-index", action="store_true", 
                        help="Build cached index (for container build time)")
     parser.add_argument("--live-index", action="store_true",
                        help="Build live index with fresh documentation")
+    parser.add_argument("--output-dir",
+                       help="Output directory for the index (overrides default behavior)")
     
     args = parser.parse_args()
     
-    indexer = DocumentationIndexer()
+    # Ensure home directory exists
+    os.makedirs(args.home, exist_ok=True)
+    
+    indexer = DocumentationIndexer(home_dir=args.home)
     
     try:
         if args.build_cached_index:
             # Build cached index (used during container build)
-            indexer.build_index(live_mode=True, output_dir="/app/cached_docs")
+            output_dir = args.output_dir or os.path.join(args.home, "cached_docs")
+            indexer.build_index(live_mode=True, output_dir=output_dir)
         elif args.live_index:
             # Build live index (used at runtime)
-            indexer.build_index(live_mode=True, output_dir="/app/docs_index")
+            output_dir = args.output_dir or os.path.join(args.home, "docs_index")
+            indexer.build_index(live_mode=True, output_dir=output_dir)
         else:
             # Default: build live index
-            indexer.build_index(live_mode=True, output_dir="/app/docs_index")
+            output_dir = args.output_dir or os.path.join(args.home, "docs_index")
+            indexer.build_index(live_mode=True, output_dir=output_dir)
             
     except Exception as e:
         logger.error(f"Failed to build index: {e}")
