@@ -19,6 +19,24 @@ type Result struct {
 	HasGPUSupport bool
 	Output        string
 	Error         error
+	GPUType       string // Detected GPU type (nvidia, apple-silicon, etc.)
+}
+
+// GPUTypeDetector defines available GPU types for auto-detection
+type GPUTypeDetector struct {
+	Type        string
+	Description string
+}
+
+// GetSupportedGPUTypes returns the list of GPU types to test in order
+func GetSupportedGPUTypes() []GPUTypeDetector {
+	return []GPUTypeDetector{
+		{"apple-silicon", "Apple Silicon (M1, M2, M3, M4 with Metal)"},
+		{"nvidia", "NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)"},
+		// Future GPU types can be added here:
+		// {"amd", "AMD GPUs (Radeon, FirePro, Instinct with ROCm)"},
+		// {"intel", "Intel GPUs (Arc, Iris, UHD Graphics)"},
+	}
 }
 
 // GpuChecker provides functionality to check GPU support
@@ -117,7 +135,57 @@ func (gc *GpuChecker) CheckGPUSupportByType(ctx context.Context, gpuType string,
 	}
 
 	// Run container with GPU-specific device mounting
-	return gc.runGPUCheckWithDevices(ctx, image, gpuType, registry)
+	result, err := gc.runGPUCheckWithDevices(ctx, image, gpuType, registry)
+	if result != nil {
+		result.GPUType = gpuType
+	}
+	return result, err
+}
+
+// AutoDetectGPU automatically detects available GPU support by testing all supported GPU types
+func (gc *GpuChecker) AutoDetectGPU(ctx context.Context, registry *models.RegistryV2) (*Result, error) {
+	// Check if running on Docker runtime first
+	if gc.orchestrator.GetContainerRuntime() == orchestratormodels.Docker {
+		return &Result{
+			HasGPUSupport: false,
+			Error:         fmt.Errorf("lightspeed GPU features are not available with Docker runtime - requires Podman with GPU support"),
+		}, nil
+	}
+
+	supportedTypes := GetSupportedGPUTypes()
+	
+	for _, gpuTypeDetector := range supportedTypes {
+		fmt.Printf("🔍 Testing %s support...\n", gpuTypeDetector.Description)
+		
+		result, err := gc.CheckGPUSupportByType(ctx, gpuTypeDetector.Type, registry)
+		if err != nil {
+			fmt.Printf("⚠️  %s test failed: %v\n", gpuTypeDetector.Type, err)
+			continue
+		}
+		
+		if result.HasGPUSupport {
+			fmt.Printf("✅ %s support detected!\n", gpuTypeDetector.Description)
+			result.GPUType = gpuTypeDetector.Type
+			return result, nil
+		}
+		
+		fmt.Printf("❌ %s not available\n", gpuTypeDetector.Type)
+	}
+	
+	return &Result{
+		HasGPUSupport: false,
+		Error:         fmt.Errorf("no GPU support found - tested: %v", getSupportedGPUTypeNames()),
+	}, nil
+}
+
+// getSupportedGPUTypeNames returns a slice of supported GPU type names
+func getSupportedGPUTypeNames() []string {
+	types := GetSupportedGPUTypes()
+	names := make([]string, len(types))
+	for i, t := range types {
+		names[i] = t.Type
+	}
+	return names
 }
 
 // runGPUCheckWithDevices runs the GPU check container with appropriate device mounting for the GPU type

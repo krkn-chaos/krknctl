@@ -80,12 +80,10 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 		portMappings, // Port mappings
 	)
 
+	// The orchestrator closes the channel automatically, so we don't need to close it manually
 	if err != nil {
-		close(commChan) // Ensure goroutine exits
 		return nil, fmt.Errorf("failed to run RAG container: %w", err)
 	}
-
-	close(commChan) // Close channel to stop spinner goroutine
 	fmt.Printf("🚀 RAG container started: %s\n", *containerID)
 	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.RAGHost, hostPort, config.RAGServicePort)
 

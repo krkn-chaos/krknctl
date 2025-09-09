@@ -23,57 +23,32 @@ Available Commands:
   check    Check GPU support in container runtime
   run      Run AI-powered chaos engineering assistance
 
-GPU Types:
-  Use one of these flags with any lightspeed command to specify your GPU type:
+GPU Auto-Detection:
+  Lightspeed automatically detects your GPU type! No manual flags needed.
   
-  --nvidia         NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)
-  --apple-silicon Apple Silicon (M1, M2, M3, M4 with Metal)
+  Supported GPU Types:
+  • Apple Silicon (M1, M2, M3, M4 with Metal)
+  • NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)
   
-  Temporarily disabled:
-  --amd           AMD GPUs (Radeon, FirePro, Instinct with ROCm) [DISABLED]
-  --intel         Intel GPUs (Arc, Iris, UHD Graphics) [DISABLED]
+  Future support planned:
+  • AMD GPUs (Radeon, FirePro, Instinct with ROCm)
+  • Intel GPUs (Arc, Iris, UHD Graphics)
 
 Examples:
-  krknctl lightspeed check --nvidia
-  krknctl lightspeed run --apple-silicon
-  krknctl lightspeed run --nvidia --offline`,
+  krknctl lightspeed check
+  krknctl lightspeed run
+  krknctl lightspeed run --offline`,
 	}
 
-	// Add GPU type flags
-	command.PersistentFlags().Bool("nvidia", false, "Use NVIDIA GPU support")
-	// Temporarily disabled GPU types
-	// command.PersistentFlags().Bool("amd", false, "Use AMD GPU support")
-	// command.PersistentFlags().Bool("intel", false, "Use Intel GPU support")
-	command.PersistentFlags().Bool("apple-silicon", false, "Use Apple Silicon GPU support")
+	// GPU auto-detection - no manual flags needed anymore!
 
 	// Add offline flag for airgapped environments
 	command.PersistentFlags().Bool("offline", false, "Use cached documentation (for airgapped environments)")
 
-	// Make GPU flags mutually exclusive and required
-	// Only require nvidia or apple-silicon for now
-	command.MarkFlagsOneRequired("nvidia", "apple-silicon")
-	command.MarkFlagsMutuallyExclusive("nvidia", "apple-silicon")
-
 	return command
 }
 
-// getSelectedGPUType returns the selected GPU type from flags
-func getSelectedGPUType(cmd *cobra.Command) string {
-	if nvidia, _ := cmd.Flags().GetBool("nvidia"); nvidia {
-		return "nvidia"
-	}
-	// Temporarily disabled GPU types
-	// if amd, _ := cmd.Flags().GetBool("amd"); amd {
-	//	return "amd"
-	// }
-	// if intel, _ := cmd.Flags().GetBool("intel"); intel {
-	//	return "intel"
-	// }
-	if appleSilicon, _ := cmd.Flags().GetBool("apple-silicon"); appleSilicon {
-		return "apple-silicon"
-	}
-	return ""
-}
+// GPU auto-detection - no manual flag parsing needed anymore!
 
 func NewLightspeedCheckCommand(
 	providerFactory *factory.ProviderFactory,
@@ -85,17 +60,12 @@ func NewLightspeedCheckCommand(
 		Short: "Check GPU support in container runtime",
 		Long: `Check whether the container runtime (Podman or Docker) has GPU support available
 
-Required: Exactly one GPU type flag must be specified.
-Run 'krknctl lightspeed --help' to see available GPU types.
+Lightspeed automatically tests all supported GPU types to detect your hardware.
 
 Examples:
-  krknctl lightspeed check --nvidia
-  krknctl lightspeed check --apple-silicon`,
+  krknctl lightspeed check`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get selected GPU type
-			gpuType := getSelectedGPUType(cmd)
-
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
 
@@ -120,14 +90,19 @@ Examples:
 			// Create GPU checker
 			gpuChecker := gpucheck.NewGpuChecker(*scenarioOrchestrator, config)
 
-			// Run GPU check with GPU-specific image
-			result, err := gpuChecker.CheckGPUSupportByType(ctx, gpuType, registry)
+			// Auto-detect GPU support
+			fmt.Println("\n🔍 Auto-detecting GPU support...")
+			result, err := gpuChecker.AutoDetectGPU(ctx, registry)
 			if err != nil {
-				return fmt.Errorf("failed to check GPU support: %w", err)
+				return fmt.Errorf("failed to auto-detect GPU support: %w", err)
 			}
 
 			// Format and print result
-			fmt.Printf("GPU Type: %s\n\n", gpuType)
+			if result.HasGPUSupport {
+				fmt.Printf("\n✅ GPU support confirmed: %s\n", result.GPUType)
+			} else {
+				fmt.Printf("\n❌ No GPU support detected\n")
+			}
 			fmt.Println(gpuChecker.FormatResult(result))
 
 			return nil
@@ -183,25 +158,21 @@ func NewLightspeedRunCommand(
 		Short: "Run AI-powered chaos engineering assistance",
 		Long: `Run AI-powered chaos engineering assistance with Retrieval-Augmented Generation (RAG)
 
-This command deploys a lightweight AI model that can answer questions about krknctl usage,
-chaos engineering scenarios, and provide intelligent command suggestions based on natural language.
+This command automatically detects your GPU and deploys a lightweight AI model that can answer 
+questions about krknctl usage, chaos engineering scenarios, and provide intelligent command 
+suggestions based on natural language.
 
 The system uses:
+- Automatic GPU detection (Apple Silicon, NVIDIA)
 - GPU-accelerated inference for fast responses
 - Live documentation indexing (or cached for offline environments)
 - Llama 3.2:1B model optimized for chaos engineering domain
 
-Required: Exactly one GPU type flag must be specified.
-Run 'krknctl lightspeed --help' to see available GPU types.
-
 Examples:
-  krknctl lightspeed run --nvidia          # Use live documentation
-  krknctl lightspeed run --apple-silicon --offline  # Use cached docs (airgapped)`,
+  krknctl lightspeed run          # Auto-detect GPU, use live documentation
+  krknctl lightspeed run --offline  # Auto-detect GPU, use cached docs (airgapped)`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get selected GPU type
-			gpuType := getSelectedGPUType(cmd)
-
 			// Get offline flag
 			offlineFlag, _ := cmd.Flags().GetBool("offline")
 
@@ -220,37 +191,37 @@ Examples:
 				return fmt.Errorf("failed to connect to container runtime: %w", err)
 			}
 
-			// Step 1: Run GPU check first
-			fmt.Printf("🔍 Checking GPU support for %s...\n", gpuType)
-			
 			// Build lightspeed registry configuration from flags
 			registry, err := buildLightspeedRegistryFromFlags(cmd, config)
 			if err != nil {
 				return fmt.Errorf("failed to build lightspeed registry configuration: %w", err)
 			}
 
+			// Step 1: Auto-detect GPU support
+			fmt.Println("🔍 Auto-detecting GPU support...")
+			
 			// Create GPU checker
 			gpuChecker := gpucheck.NewGpuChecker(*scenarioOrchestrator, config)
 
-			// Run GPU check with GPU-specific image
-			result, err := gpuChecker.CheckGPUSupportByType(ctx, gpuType, registry)
+			// Auto-detect GPU support
+			result, err := gpuChecker.AutoDetectGPU(ctx, registry)
 			if err != nil {
-				return fmt.Errorf("failed to check GPU support: %w", err)
+				return fmt.Errorf("failed to auto-detect GPU support: %w", err)
 			}
 
 			// Check if GPU support is available
 			if !result.HasGPUSupport {
-				fmt.Printf("❌ GPU support check failed:\n\n")
+				fmt.Printf("❌ GPU auto-detection failed:\n\n")
 				fmt.Println(gpuChecker.FormatResult(result))
-				return fmt.Errorf("GPU support not available - cannot run lightspeed AI assistance")
+				return fmt.Errorf("no GPU support found - cannot run lightspeed AI assistance")
 			}
 
-			fmt.Println("✅ GPU support confirmed!")
+			fmt.Printf("✅ GPU support confirmed: %s\n", result.GPUType)
 
 			// Step 2: Deploy RAG model container
-			fmt.Println("\n🚀 Deploying AI assistance model...")
+			fmt.Println("\n🚀 Deploying lightspeed model...")
 			
-			ragResult, err := deployRAGModel(ctx, gpuType, offlineFlag, *scenarioOrchestrator, config, registry)
+			ragResult, err := deployRAGModel(ctx, result.GPUType, offlineFlag, *scenarioOrchestrator, config, registry)
 			if err != nil {
 				return fmt.Errorf("failed to deploy RAG model: %w", err)
 			}

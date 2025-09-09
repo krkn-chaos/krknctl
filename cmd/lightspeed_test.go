@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/gpucheck"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -134,26 +135,20 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	assert.Nil(t, registry)
 }
 
-func TestGetSelectedGPUType(t *testing.T) {
-	cmd := &cobra.Command{}
+func TestGPUAutoDetection(t *testing.T) {
+	// Test supported GPU types list
+	supportedTypes := gpucheck.GetSupportedGPUTypes()
 	
-	// Add GPU flags - only NVIDIA and Apple Silicon are currently supported
-	cmd.Flags().Bool("nvidia", false, "")
-	cmd.Flags().Bool("apple-silicon", false, "")
+	// Should have at least Apple Silicon and NVIDIA
+	assert.GreaterOrEqual(t, len(supportedTypes), 2)
 	
-	// Test NVIDIA selection
-	cmd.Flags().Set("nvidia", "true")
-	assert.Equal(t, "nvidia", getSelectedGPUType(cmd))
-	
-	// Reset and test Apple Silicon
-	cmd.Flags().Set("nvidia", "false")
-	cmd.Flags().Set("apple-silicon", "true")
-	assert.Equal(t, "apple-silicon", getSelectedGPUType(cmd))
-	
-	// Test no selection
-	cmd.Flags().Set("nvidia", "false")
-	cmd.Flags().Set("apple-silicon", "false")
-	assert.Equal(t, "", getSelectedGPUType(cmd))
+	// Check that Apple Silicon and NVIDIA are included
+	typeNames := make([]string, len(supportedTypes))
+	for i, gpuType := range supportedTypes {
+		typeNames[i] = gpuType.Type
+	}
+	assert.Contains(t, typeNames, "apple-silicon")
+	assert.Contains(t, typeNames, "nvidia")
 }
 
 // Test command creation and basic structure
