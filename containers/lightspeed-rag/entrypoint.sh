@@ -9,32 +9,14 @@ echo "Starting krknctl Lightspeed RAG service..."
 # Check if we should use offline mode (env var set by krknctl)
 USE_OFFLINE=${USE_OFFLINE:-"false"}
 
-# Start Ollama in background
-echo "Starting Ollama server..."
-ollama serve &
-OLLAMA_PID=$!
-
-# Wait for Ollama to be ready
-echo "Waiting for Ollama server to start..."
-for i in {1..30}; do
-    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
-        echo "Ollama server is ready"
-        break
-    fi
-    if [ $i -eq 30 ]; then
-        echo "Failed to start Ollama server"
-        exit 1
-    fi
-    sleep 2
-done
-
-# Verify the model is available (should be pre-installed)
+# Verify the model is available (should be pre-downloaded)
 echo "Verifying Llama 3.2:1B model..."
-if ! ollama list | grep -q "llama3.2:1b"; then
-    echo "WARNING: Llama 3.2:1B model not found, attempting emergency pull..."
-    ollama pull llama3.2:1b
+MODEL_PATH="/app/models/llama-3.2-1b-instruct-q4_0.gguf"
+if [ ! -f "$MODEL_PATH" ]; then
+    echo "WARNING: Model not found at $MODEL_PATH"
+    echo "Service will attempt to download it on first use"
 else
-    echo "Model verified: llama3.2:1b"
+    echo "Model verified: $(basename $MODEL_PATH)"
 fi
 
 # Handle documentation indexing based on online/offline mode

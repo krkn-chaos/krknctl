@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import faiss
 from sentence_transformers import SentenceTransformer
-import ollama
+from llama_cpp import Llama
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -66,8 +66,10 @@ class RAGService:
         self.index = None
         self.documents = []
         self.embeddings = None
-        self.ollama_client = ollama.Client()
+        self.llama_model = None
         self.home_dir = home_dir
+        # Model path relative to home_dir for flexibility
+        self.model_path = os.path.join(home_dir, "models", "llama-3.2-1b-instruct-q4_0.gguf")
         
     def load_index(self, index_dir: Optional[str] = None):
         """Load the pre-built documentation index"""
@@ -78,9 +80,27 @@ class RAGService:
         os.makedirs(index_dir, exist_ok=True)
         logger.info(f"Loading index from {index_dir}")
         
+        # Ensure the models directory exists
+        models_dir = os.path.dirname(self.model_path)
+        os.makedirs(models_dir, exist_ok=True)
+        
         try:
             # Load sentence transformer model
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            
+            # Load Llama model
+            if os.path.exists(self.model_path):
+                logger.info(f"Loading Llama model from {self.model_path}")
+                self.llama_model = Llama(
+                    model_path=self.model_path,
+                    n_ctx=4096,  # Context length
+                    n_gpu_layers=-1,  # Use all GPU layers (Vulkan)
+                    verbose=False
+                )
+                logger.info("Llama model loaded successfully")
+            else:
+                logger.warning(f"Llama model not found at {self.model_path}")
+                logger.info("Model will be downloaded on first use")
             
             # Load FAISS index
             index_path = os.path.join(index_dir, "index.faiss")
@@ -157,7 +177,7 @@ class RAGService:
     
     def generate_response(self, query: str, context_docs: List[Dict[str, Any]], 
                          stream: bool = False) -> str:
-        """Generate response using Ollama with RAG context"""
+        """Generate response using llama-cpp-python with RAG context"""
         
         # Build context from retrieved documents
         context_parts = []
@@ -197,35 +217,46 @@ RESPONSE FORMAT:
 Answer:"""
 
         try:
+            if not self.llama_model:
+                return "Llama model not loaded. Please check the model path and try again."
+                
             if stream:
                 # Return streaming generator for real-time responses
-                response = self.ollama_client.generate(
-                    model='llama3.2:1b',
-                    prompt=prompt,
+                response_generator = self.llama_model(
+                    prompt,
+                    max_tokens=512,
+                    temperature=0.7,
+                    top_p=0.9,
                     stream=True
                 )
-                return response
+                return response_generator
             else:
                 # Return complete response
-                response = self.ollama_client.generate(
-                    model='llama3.2:1b', 
-                    prompt=prompt,
-                    stream=False
+                response = self.llama_model(
+                    prompt,
+                    max_tokens=512,
+                    temperature=0.7,
+                    top_p=0.9,
+                    echo=False
                 )
-                return response['response']
+                return response['choices'][0]['text'].strip()
                 
         except Exception as e:
             logger.error(f"Error generating response: {e}")
-            return f"I encountered an error while processing your request. Please try again or check if the Ollama service is running properly."
+            return f"I encountered an error while processing your request. Please try again or check if the model is properly loaded."
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    model_status = "loaded" if rag_service.llama_model else "not_loaded"
+    model_path = os.path.basename(rag_service.model_path) if rag_service.model_path else "unknown"
+    
     return {
         "status": "healthy",
         "service": "krknctl-lightspeed-rag",
-        "model": "llama3.2:1b",
+        "model": f"llama-cpp-python:{model_path}",
+        "model_status": model_status,
         "documents_indexed": len(rag_service.documents) if rag_service.documents else 0
     }
 
@@ -289,8 +320,11 @@ async def query_rag_stream(request: QueryRequest):
             try:
                 response_stream = rag_service.generate_response(request.query, relevant_docs, stream=True)
                 for chunk in response_stream:
-                    if chunk.get('response'):
-                        yield f"data: {json.dumps({'text': chunk['response']})}\n\n"
+                    # llama-cpp-python streaming format: chunk['choices'][0]['text']
+                    if chunk.get('choices') and len(chunk['choices']) > 0:
+                        text = chunk['choices'][0].get('text', '')
+                        if text:
+                            yield f"data: {json.dumps({'text': text})}\n\n"
                         
                 # Send sources at the end
                 sources = []

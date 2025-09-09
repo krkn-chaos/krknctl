@@ -13,8 +13,7 @@ requests==2.32.3
 beautifulsoup4==4.12.3
 html2text==2024.2.26
 
-# Ollama client
-ollama==0.4.4
+# llama-cpp-python will be compiled separately with Vulkan support
 
 # Utilities
 pydantic==2.10.4
