@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -21,7 +22,31 @@ import ollama
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="krknctl Lightspeed RAG Service", version="1.0.0")
+# Global RAG service instance (will be initialized on startup)
+rag_service = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan (startup and shutdown)"""
+    global rag_service
+    
+    # Startup
+    logger.info("Starting RAG service...")
+    try:
+        # Initialize RAG service with default home directory
+        rag_service = RAGService(home_dir="/app")
+        rag_service.load_index()
+        logger.info("RAG service initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize RAG service: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown (cleanup if needed)
+    logger.info("RAG service shutting down...")
+
+app = FastAPI(title="krknctl Lightspeed RAG Service", version="1.0.0", lifespan=lifespan)
 
 class QueryRequest(BaseModel):
     query: str
@@ -154,22 +179,6 @@ Answer:"""
             logger.error(f"Error generating response: {e}")
             return f"I encountered an error while processing your request. Please try again or check if the Ollama service is running properly."
 
-# Global RAG service instance (will be initialized on startup)
-rag_service = None
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the RAG service on startup"""
-    global rag_service
-    logger.info("Starting RAG service...")
-    try:
-        # Initialize RAG service with default home directory
-        rag_service = RAGService(home_dir="/app")
-        rag_service.load_index()
-        logger.info("RAG service initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize RAG service: {e}")
-        raise
 
 @app.get("/health")
 async def health_check():
