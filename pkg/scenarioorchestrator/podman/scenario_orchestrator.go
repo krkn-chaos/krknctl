@@ -6,11 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+	
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
+	nettypes "github.com/containers/common/libnetwork/types"
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -20,12 +28,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"io"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
 )
 
 type ScenarioOrchestrator struct {
@@ -126,8 +128,36 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
-	s.NetNS = specgen.Namespace{
-		NSMode: "host",
+	// Handle port mappings if provided
+	if portMappings != nil && len(*portMappings) > 0 {
+		s.PortMappings = make([]nettypes.PortMapping, 0, len(*portMappings))
+		for hostPortStr, containerPortStr := range *portMappings {
+			// Convert string ports to uint16
+			hostPort, err := strconv.ParseUint(hostPortStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid host port %s: %w", hostPortStr, err)
+			}
+			containerPort, err := strconv.ParseUint(containerPortStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
+			}
+			
+			portMapping := nettypes.PortMapping{
+				HostPort:      uint16(hostPort),
+				ContainerPort: uint16(containerPort),
+				Protocol:      "tcp",
+				Range:         1,
+			}
+			s.PortMappings = append(s.PortMappings, portMapping)
+		}
+		// Use bridge network for port mapping
+		s.NetNS = specgen.Namespace{
+			NSMode: "bridge",
+		}
+	} else {
+		s.NetNS = specgen.Namespace{
+			NSMode: "host",
+		}
 	}
 	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
