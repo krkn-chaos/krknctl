@@ -8,11 +8,12 @@ import sys
 import json
 import logging
 import time
+import subprocess
+import shutil
+import tempfile
 from typing import List, Dict, Any
 from pathlib import Path
 
-import requests
-import base64
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
@@ -30,63 +31,81 @@ class DocumentationIndexer:
         self.home_dir = home_dir
         
     def scrape_krkn_docs(self) -> List[Dict[str, Any]]:
-        """Fetch documentation from GitHub repository using GitHub API"""
+        """Fetch documentation by cloning GitHub repository"""
         docs = []
-        github_api_base = "https://api.github.com/repos/krkn-chaos/website/contents"
+        repo_url = "https://github.com/krkn-chaos/website.git"
         docs_path = "content/en/docs"
         
         try:
-            # Recursively fetch all markdown files from the docs directory
-            docs = self._fetch_github_docs_recursive(github_api_base, docs_path)
-            logger.info(f"Found {len(docs)} documents from GitHub")
+            # Clone repository to temporary directory
+            docs = self._clone_and_extract_docs(repo_url, docs_path)
+            logger.info(f"Found {len(docs)} documents from GitHub repository")
             
         except Exception as e:
-            logger.error(f"Error during GitHub documentation fetching: {e}")
+            logger.error(f"Error during GitHub repository cloning: {e}")
             
         return docs
     
-    def _fetch_github_docs_recursive(self, api_base: str, path: str) -> List[Dict[str, Any]]:
-        """Recursively fetch markdown files from GitHub repository"""
+    def _clone_and_extract_docs(self, repo_url: str, docs_path: str) -> List[Dict[str, Any]]:
+        """Clone repository and extract markdown files from docs directory"""
+        docs = []
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            try:
+                # Clone repository with minimal depth for efficiency
+                logger.info(f"Cloning repository: {repo_url}")
+                result = subprocess.run([
+                    'git', 'clone', '--depth', '1', '--quiet', repo_url, temp_dir
+                ], check=True, capture_output=True, text=True)
+                
+                # Path to docs directory in cloned repo
+                full_docs_path = os.path.join(temp_dir, docs_path)
+                
+                if not os.path.exists(full_docs_path):
+                    logger.warning(f"Documentation path not found: {docs_path}")
+                    return docs
+                    
+                # Recursively find all markdown files
+                docs = self._extract_markdown_files(full_docs_path, docs_path)
+                
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to clone repository: {e.stderr}")
+                raise
+            except Exception as e:
+                logger.error(f"Error processing cloned repository: {e}")
+                raise
+                
+        return docs
+    
+    def _extract_markdown_files(self, base_path: str, relative_docs_path: str) -> List[Dict[str, Any]]:
+        """Recursively extract markdown files from directory"""
         docs = []
         
         try:
-            # Get directory contents from GitHub API
-            url = f"{api_base}/{path}"
-            logger.info(f"Fetching from GitHub API: {url}")
-            
-            response = requests.get(url, timeout=30)
-            response.raise_for_status()
-            
-            contents = response.json()
-            
-            for item in contents:
-                if item['type'] == 'file' and item['name'].endswith('.md'):
-                    # Fetch markdown file content
-                    doc = self._fetch_github_file(item)
-                    if doc:
-                        docs.append(doc)
-                        
-                elif item['type'] == 'dir':
-                    # Recursively process subdirectories
-                    subdocs = self._fetch_github_docs_recursive(api_base, item['path'])
-                    docs.extend(subdocs)
-                    
-        except requests.RequestException as e:
-            logger.warning(f"Failed to fetch from GitHub API {path}: {e}")
+            for root, dirs, files in os.walk(base_path):
+                for file in files:
+                    if file.endswith('.md'):
+                        file_path = os.path.join(root, file)
+                        doc = self._process_markdown_file(file_path, base_path, relative_docs_path)
+                        if doc:
+                            docs.append(doc)
+                            
+        except Exception as e:
+            logger.error(f"Error extracting markdown files: {e}")
             
         return docs
     
-    def _fetch_github_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Fetch individual markdown file from GitHub"""
+    def _process_markdown_file(self, file_path: str, base_path: str, relative_docs_path: str) -> Dict[str, Any]:
+        """Process individual markdown file"""
         try:
-            # Get file content from GitHub API
-            response = requests.get(file_info['download_url'], timeout=30)
-            response.raise_for_status()
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
             
-            content = response.text
+            # Get relative path from docs directory
+            rel_path = os.path.relpath(file_path, base_path)
             
             # Parse frontmatter if present
-            title = file_info['name'].replace('.md', '').replace('_', ' ').title()
+            title = os.path.basename(file_path).replace('.md', '').replace('_', ' ').title()
             
             # Try to extract title from frontmatter
             if content.startswith('---'):
@@ -107,9 +126,10 @@ class DocumentationIndexer:
                     # If frontmatter parsing fails, use original content
                     pass
             
-            # Generate documentation URL
-            github_url = f"https://github.com/krkn-chaos/website/blob/main/{file_info['path']}"
-            docs_url = f"https://krkn-chaos.dev/docs/{file_info['path'].replace('content/en/docs/', '').replace('.md', '/')}"
+            # Generate URLs
+            github_path = f"{relative_docs_path}/{rel_path}"
+            github_url = f"https://github.com/krkn-chaos/website/blob/main/{github_path}"
+            docs_url = f"https://krkn-chaos.dev/docs/{rel_path.replace('.md', '/')}"
             
             return {
                 "url": docs_url,
@@ -117,11 +137,11 @@ class DocumentationIndexer:
                 "content": content,
                 "source": "krkn-chaos/website",
                 "github_url": github_url,
-                "path": file_info['path']
+                "path": github_path
             }
             
         except Exception as e:
-            logger.warning(f"Failed to fetch file {file_info['name']}: {e}")
+            logger.warning(f"Failed to process file {file_path}: {e}")
             return None
     
     def load_krknctl_help(self) -> List[Dict[str, Any]]:
