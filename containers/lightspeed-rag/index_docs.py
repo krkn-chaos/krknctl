@@ -156,6 +156,110 @@ class DocumentationIndexer:
             logger.warning(f"Failed to process file {file_path}: {e}")
             return None
     
+    def scrape_krkn_hub_scenarios(self) -> List[Dict[str, Any]]:
+        """Fetch scenario definitions from krkn-hub repository"""
+        docs = []
+        repo_url = "https://github.com/krkn-chaos/krkn-hub.git"
+        
+        try:
+            # Clone krkn-hub repository to temporary directory
+            docs = self._clone_and_extract_scenarios(repo_url)
+            logger.info(f"Found {len(docs)} scenario definitions from krkn-hub")
+            
+        except Exception as e:
+            logger.error(f"Error during krkn-hub repository cloning: {e}")
+            
+        return docs
+    
+    def _clone_and_extract_scenarios(self, repo_url: str) -> List[Dict[str, Any]]:
+        """Clone krkn-hub repository and extract scenario definitions"""
+        docs = []
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            try:
+                # Clone repository with minimal depth for efficiency
+                logger.info(f"Cloning krkn-hub repository: {repo_url}")
+                result = subprocess.run([
+                    'git', 'clone', '--depth', '1', '--quiet', repo_url, temp_dir
+                ], check=True, capture_output=True, text=True)
+                
+                # Find all krknctl-input.json files
+                logger.info("Scanning for scenario definitions...")
+                scenario_count = 0
+                for root, dirs, files in os.walk(temp_dir):
+                    if "krknctl-input.json" in files:
+                        scenario_count += 1
+                        scenario_name = os.path.basename(root)
+                        json_path = os.path.join(root, "krknctl-input.json")
+                        logger.info(f"Processing scenario: {scenario_name}")
+                        doc = self._process_scenario_json(json_path, scenario_name)
+                        if doc:
+                            docs.append(doc)
+                
+                logger.info(f"Found {scenario_count} scenarios total, processed {len(docs)} successfully")
+                            
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to clone krkn-hub repository: {e.stderr}")
+                raise
+            except Exception as e:
+                logger.error(f"Error processing krkn-hub repository: {e}")
+                raise
+                
+        return docs
+    
+    def _process_scenario_json(self, json_path: str, scenario_name: str) -> Dict[str, Any]:
+        """Process individual krknctl-input.json file"""
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                parameters = json.load(f)
+            
+            # Build comprehensive scenario documentation
+            content_parts = [
+                f"Scenario: {scenario_name}",
+                f"Command: krknctl run {scenario_name} [flags]",
+                "",
+                "Available flags:"
+            ]
+            
+            for param in parameters:
+                flag_name = param.get("name", "")
+                description = param.get("description", "")
+                param_type = param.get("type", "string")
+                default = param.get("default", "")
+                required = param.get("required", "false")
+                
+                flag_line = f"--{flag_name}"
+                if param_type == "enum" and "allowed_values" in param:
+                    allowed = param["allowed_values"]
+                    flag_line += f" ({param_type}: {allowed})"
+                else:
+                    flag_line += f" ({param_type})"
+                
+                if default:
+                    flag_line += f" [default: {default}]"
+                if required == "true":
+                    flag_line += " [required]"
+                
+                content_parts.append(f"  {flag_line}")
+                if description:
+                    content_parts.append(f"    {description}")
+                content_parts.append("")
+            
+            content = "\n".join(content_parts)
+            
+            return {
+                "url": f"krkn-hub://{scenario_name}",
+                "title": f"krknctl {scenario_name} scenario",
+                "content": content,
+                "source": "krkn-hub",
+                "scenario_name": scenario_name,
+                "parameters": parameters
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to process scenario JSON {json_path}: {e}")
+            return None
+    
     def load_krknctl_help(self) -> List[Dict[str, Any]]:
         """Load krknctl help content"""
         docs = []
@@ -261,6 +365,13 @@ class DocumentationIndexer:
             all_docs.extend(github_docs)
             github_time = time.time() - github_start
             logger.info(f"📥 GitHub documentation fetched in {github_time:.2f}s")
+            
+            # Scrape krkn-hub scenario definitions
+            hub_start = time.time()
+            hub_docs = self.scrape_krkn_hub_scenarios()
+            all_docs.extend(hub_docs)
+            hub_time = time.time() - hub_start
+            logger.info(f"🎯 krkn-hub scenarios fetched in {hub_time:.2f}s")
         else:
             logger.info("Skipping live documentation scraping (offline mode)")
             
