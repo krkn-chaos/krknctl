@@ -8,6 +8,8 @@ RUN microdnf install -y \
     python3-pip \
     curl \
     bash \
+    tar \
+    gzip \
     && microdnf clean all
 
 # Install Ollama
