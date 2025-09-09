@@ -220,7 +220,7 @@ krknctl run custom-scenario --private-registry=my-registry.com \
 # Check GPU support
 krknctl lightspeed check --gpu-nvidia
 
-# Run AI assistance (requires GPU)
+# Run Lightspeed service (requires GPU)
 krknctl lightspeed run
 
 # Use offline mode for airgapped environments

@@ -213,7 +213,7 @@ Examples:
 			if !result.HasGPUSupport {
 				fmt.Printf("❌ GPU auto-detection failed:\n\n")
 				fmt.Println(gpuChecker.FormatResult(result))
-				return fmt.Errorf("no GPU support found - cannot run lightspeed AI assistance")
+				return fmt.Errorf("no GPU support found - cannot run Lightspeed service")
 			}
 
 			fmt.Printf("✅ GPU support confirmed: %s\n", result.GPUType)
@@ -235,13 +235,13 @@ Examples:
 			}
 			
 			if !healthOK {
-				return fmt.Errorf("Lightspeed service is not responding properly")
+				return fmt.Errorf("lightspeed service is not responding properly")
 			}
 
-			fmt.Println("✅ AI assistance service is ready!")
+			fmt.Println("✅ Lightspeed service is ready!")
 
 			// Step 4: Start interactive prompt
-			fmt.Printf("\n🤖 Starting interactive AI assistance on port %s...\n", ragResult.hostPort)
+			fmt.Printf("\n🤖 Starting interactive Lightspeed service on port %s...\n", ragResult.hostPort)
 			fmt.Println("Type your chaos engineering questions and get intelligent krknctl command suggestions!")
 			fmt.Println("Type 'exit' or 'quit' to stop.")
 
