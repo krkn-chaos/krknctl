@@ -11,8 +11,7 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
-import html2text
+import base64
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
@@ -30,74 +29,99 @@ class DocumentationIndexer:
         self.home_dir = home_dir
         
     def scrape_krkn_docs(self) -> List[Dict[str, Any]]:
-        """Scrape documentation from krkn-chaos.dev"""
+        """Fetch documentation from GitHub repository using GitHub API"""
         docs = []
-        base_url = "https://krkn-chaos.dev"
+        github_api_base = "https://api.github.com/repos/krkn-chaos/website/contents"
+        docs_path = "content/en/docs"
         
         try:
-            # Main documentation pages to scrape
-            doc_paths = [
-                "/",
-                "/docs/",
-                "/docs/installation/",
-                "/docs/scenarios/",
-                "/docs/scenarios/node_scenarios/",
-                "/docs/scenarios/pod_scenarios/", 
-                "/docs/scenarios/application_outages/",
-                "/docs/scenarios/zone_outages/",
-                "/docs/scenarios/litmus_scenarios/",
-                "/docs/config/",
-                "/docs/contribute/",
-                "/docs/krknctl/",
-            ]
+            # Recursively fetch all markdown files from the docs directory
+            docs = self._fetch_github_docs_recursive(github_api_base, docs_path)
+            logger.info(f"Found {len(docs)} documents from GitHub")
             
-            h = html2text.HTML2Text()
-            h.ignore_links = False
-            h.ignore_images = True
-            
-            for path in doc_paths:
-                try:
-                    url = f"{base_url}{path}"
-                    logger.info(f"Scraping {url}")
-                    
-                    response = requests.get(url, timeout=30)
-                    response.raise_for_status()
-                    
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    
-                    # Extract main content (adjust selector based on actual site structure)
-                    content_selectors = [
-                        'main', 'article', '.content', '.documentation', 
-                        '[role="main"]', '#content', '.markdown-body'
-                    ]
-                    
-                    content = None
-                    for selector in content_selectors:
-                        content_elem = soup.select_one(selector)
-                        if content_elem:
-                            content = h.handle(str(content_elem))
-                            break
-                    
-                    if not content:
-                        # Fallback: use body content
-                        content = h.handle(str(soup.body)) if soup.body else ""
-                    
-                    if content.strip():
-                        docs.append({
-                            "url": url,
-                            "title": soup.title.string if soup.title else path,
-                            "content": content.strip(),
-                            "source": "krkn-chaos.dev"
-                        })
-                        
-                except Exception as e:
-                    logger.warning(f"Failed to scrape {url}: {e}")
-                    continue
-                    
         except Exception as e:
-            logger.error(f"Error scraping krkn documentation: {e}")
+            logger.error(f"Error during GitHub documentation fetching: {e}")
             
         return docs
+    
+    def _fetch_github_docs_recursive(self, api_base: str, path: str) -> List[Dict[str, Any]]:
+        """Recursively fetch markdown files from GitHub repository"""
+        docs = []
+        
+        try:
+            # Get directory contents from GitHub API
+            url = f"{api_base}/{path}"
+            logger.info(f"Fetching from GitHub API: {url}")
+            
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            
+            contents = response.json()
+            
+            for item in contents:
+                if item['type'] == 'file' and item['name'].endswith('.md'):
+                    # Fetch markdown file content
+                    doc = self._fetch_github_file(item)
+                    if doc:
+                        docs.append(doc)
+                        
+                elif item['type'] == 'dir':
+                    # Recursively process subdirectories
+                    subdocs = self._fetch_github_docs_recursive(api_base, item['path'])
+                    docs.extend(subdocs)
+                    
+        except requests.RequestException as e:
+            logger.warning(f"Failed to fetch from GitHub API {path}: {e}")
+            
+        return docs
+    
+    def _fetch_github_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
+        """Fetch individual markdown file from GitHub"""
+        try:
+            # Get file content from GitHub API
+            response = requests.get(file_info['download_url'], timeout=30)
+            response.raise_for_status()
+            
+            content = response.text
+            
+            # Parse frontmatter if present
+            title = file_info['name'].replace('.md', '').replace('_', ' ').title()
+            
+            # Try to extract title from frontmatter
+            if content.startswith('---'):
+                try:
+                    parts = content.split('---', 2)
+                    if len(parts) >= 3:
+                        frontmatter = parts[1]
+                        content_body = parts[2].strip()
+                        
+                        # Extract title from frontmatter
+                        for line in frontmatter.split('\n'):
+                            if line.strip().startswith('title:'):
+                                title = line.split(':', 1)[1].strip().strip('"\'')
+                                break
+                        
+                        content = content_body
+                except:
+                    # If frontmatter parsing fails, use original content
+                    pass
+            
+            # Generate documentation URL
+            github_url = f"https://github.com/krkn-chaos/website/blob/main/{file_info['path']}"
+            docs_url = f"https://krkn-chaos.dev/docs/{file_info['path'].replace('content/en/docs/', '').replace('.md', '/')}"
+            
+            return {
+                "url": docs_url,
+                "title": title,
+                "content": content,
+                "source": "krkn-chaos/website",
+                "github_url": github_url,
+                "path": file_info['path']
+            }
+            
+        except Exception as e:
+            logger.warning(f"Failed to fetch file {file_info['name']}: {e}")
+            return None
     
     def load_krknctl_help(self) -> List[Dict[str, Any]]:
         """Load krknctl help content"""
