@@ -28,11 +28,13 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Pull the compact model if not already present
-echo "Checking for Llama 3.2:1B model..."
+# Verify the model is available (should be pre-installed)
+echo "Verifying Llama 3.2:1B model..."
 if ! ollama list | grep -q "llama3.2:1b"; then
-    echo "Pulling Llama 3.2:1B model..."
+    echo "WARNING: Llama 3.2:1B model not found, attempting emergency pull..."
     ollama pull llama3.2:1b
+else
+    echo "Model verified: llama3.2:1b"
 fi
 
 # Handle documentation indexing based on online/offline mode
@@ -50,4 +52,4 @@ fi
 
 # Start the RAG FastAPI service
 echo "Starting RAG service on port 8080..."
-exec uvicorn rag_service:app --host 0.0.0.0 --port 8080
+exec python3 rag_service.py --host 0.0.0.0 --port 8080

@@ -15,6 +15,21 @@ RUN microdnf install -y \
 # Install Ollama
 RUN curl -fsSL https://ollama.com/install.sh | sh
 
+# Start Ollama server temporarily to pull model during build
+RUN ollama serve & \
+    OLLAMA_PID=$! && \
+    sleep 5 && \
+    for i in {1..30}; do \
+        if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then \
+            echo "Ollama server ready, pulling model..." && \
+            ollama pull llama3.2:1b && \
+            break; \
+        fi; \
+        sleep 2; \
+    done && \
+    kill $OLLAMA_PID && \
+    wait $OLLAMA_PID 2>/dev/null || true
+
 # Set working directory
 WORKDIR /app
 

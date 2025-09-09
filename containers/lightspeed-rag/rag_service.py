@@ -154,16 +154,17 @@ Answer:"""
             logger.error(f"Error generating response: {e}")
             return f"I encountered an error while processing your request. Please try again or check if the Ollama service is running properly."
 
-# Global RAG service instance (will be initialized with proper home_dir)
+# Global RAG service instance (will be initialized on startup)
 rag_service = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the RAG service on startup"""
+    global rag_service
     logger.info("Starting RAG service...")
     try:
-        if rag_service is None:
-            raise RuntimeError("RAG service not initialized. Make sure to run with proper initialization.")
+        # Initialize RAG service with default home directory
+        rag_service = RAGService(home_dir="/app")
         rag_service.load_index()
         logger.info("RAG service initialized successfully")
     except Exception as e:
