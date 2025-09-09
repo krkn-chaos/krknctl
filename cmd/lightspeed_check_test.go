@@ -92,11 +92,11 @@ func TestNewLightspeedCommand(t *testing.T) {
 	assert.Contains(t, cmd.Short, "GPU and acceleration")
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
 	
-	// Test GPU flags are present - only NVIDIA and Apple Silicon are currently supported
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("nvidia"))
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("apple-silicon"))
+	// Test that GPU auto-detection is enabled (no manual GPU flags needed)
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("offline"))
-	// AMD and Intel are temporarily disabled
+	// Manual GPU flags should not exist (using auto-detection now)
+	assert.Nil(t, cmd.PersistentFlags().Lookup("nvidia"))
+	assert.Nil(t, cmd.PersistentFlags().Lookup("apple-silicon"))
 	assert.Nil(t, cmd.PersistentFlags().Lookup("amd"))
 	assert.Nil(t, cmd.PersistentFlags().Lookup("intel"))
 }
