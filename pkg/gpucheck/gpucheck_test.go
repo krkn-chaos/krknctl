@@ -24,8 +24,8 @@ func (m *MockOrchestrator) Connect(containerRuntimeURI string) (context.Context,
 	return args.Get(0).(context.Context), args.Error(1)
 }
 
-func (m *MockOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
-	args := m.Called(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
+func (m *MockOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+	args := m.Called(image, containerName, env, cache, volumeMounts, commChan, ctx, registry, portMappings)
 	return args.Get(0).(*string), args.Error(1)
 }
 
@@ -45,11 +45,13 @@ func (m *MockOrchestrator) GetConfig() config.Config {
 
 // Implement other required interface methods as no-ops for testing
 func (m *MockOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
-	return nil, nil
+	args := m.Called(image, containerName, env, cache, volumeMounts, stdout, stderr, commChan, ctx, registry)
+	return args.Get(0).(*string), args.Error(1)
 }
 
 func (m *MockOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
-	return false, nil
+	args := m.Called(containerID, signalChannel, stdout, stderr, ctx)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *MockOrchestrator) Kill(containerID *string, ctx context.Context) error {
@@ -77,7 +79,8 @@ func (m *MockOrchestrator) GetContainerRuntimeSocket(userID *int) (*string, erro
 }
 
 func (m *MockOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) {
-	return nil, nil
+	args := m.Called(container, ctx)
+	return args.Get(0).(*orchestratormodels.ScenarioContainer), args.Error(1)
 }
 
 func (m *MockOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int) {
@@ -255,19 +258,19 @@ func TestGpuChecker_struct(t *testing.T) {
 func TestCheckGPUSupportByType_DockerRuntime(t *testing.T) {
 	config := getTestConfig()
 	mockOrchestrator := &MockOrchestrator{}
-	
+
 	// Mock Docker runtime
 	mockOrchestrator.On("GetContainerRuntime").Return(orchestratormodels.Docker)
-	
+
 	checker := NewGpuChecker(mockOrchestrator, config)
-	
+
 	result, err := checker.CheckGPUSupportByType(context.Background(), "nvidia", nil)
-	
+
 	assert.NoError(t, err)
 	assert.False(t, result.HasGPUSupport)
 	assert.Contains(t, result.Error.Error(), "lightspeed GPU features are not available with Docker runtime")
 	assert.Contains(t, result.Error.Error(), "requires Podman with GPU support")
-	
+
 	mockOrchestrator.AssertExpectations(t)
 }
 
@@ -275,20 +278,37 @@ func TestCheckGPUSupportByType_DockerRuntime(t *testing.T) {
 func TestCheckGPUSupportByType_PodmanRuntime(t *testing.T) {
 	config := getTestConfig()
 	mockOrchestrator := &MockOrchestrator{}
-	
+
 	// Mock Podman runtime
 	mockOrchestrator.On("GetContainerRuntime").Return(orchestratormodels.Podman)
 	
+	// Mock both Run and Attach methods that are called by CommonRunAttached
+	containerID := "test-container-id"
+	// First CommonRunAttached calls Run
+	mockOrchestrator.On("Run", mock.AnythingOfType("string"), mock.AnythingOfType("string"), mock.AnythingOfType("map[string]string"), false, mock.AnythingOfType("map[string]string"), (*chan *string)(nil), mock.Anything, (*models.RegistryV2)(nil), (*map[string]string)(nil)).Return(&containerID, nil)
+	// Then CommonRunAttached calls Attach
+	mockOrchestrator.On("Attach", &containerID, mock.AnythingOfType("chan os.Signal"), mock.AnythingOfType("*bytes.Buffer"), mock.AnythingOfType("*bytes.Buffer"), mock.Anything).Return(true, nil)
+	// Finally CommonRunAttached calls InspectScenario
+	scenarioContainer := &orchestratormodels.ScenarioContainer{
+		Container: &orchestratormodels.Container{
+			ID:         containerID,
+			ExitStatus: 0, // Success exit status
+		},
+	}
+	mockOrchestrator.On("InspectScenario", mock.AnythingOfType("models.Container"), mock.Anything).Return(scenarioContainer, nil)
+
 	checker := NewGpuChecker(mockOrchestrator, config)
-	
-	// This test will fail at image URI construction since we're mocking
-	// but we can verify it gets past the Docker check
-	_, err := checker.CheckGPUSupportByType(context.Background(), "nvidia", nil)
-	
-	// Should not be a Docker runtime error
-	assert.Error(t, err) // Will error on image construction
-	assert.NotContains(t, err.Error(), "Docker runtime")
-	
+
+	// This test should now succeed with mocked RunAttached method
+	result, err := checker.CheckGPUSupportByType(context.Background(), "nvidia", nil)
+
+	// Should succeed with mocked methods
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	// The result should parse the output, but since we're mocking the container output as empty,
+	// it won't contain success indicators so HasGPUSupport will be false
+	assert.False(t, result.HasGPUSupport)
+
 	mockOrchestrator.AssertExpectations(t)
 }
 
@@ -296,7 +316,7 @@ func TestCheckGPUSupportByType_PodmanRuntime(t *testing.T) {
 func TestGetGPUDeviceMounts(t *testing.T) {
 	config := getTestConfig()
 	checker := NewGpuChecker(nil, config)
-	
+
 	tests := []struct {
 		name         string
 		gpuType      string
@@ -328,11 +348,11 @@ func TestGetGPUDeviceMounts(t *testing.T) {
 			expectedKeys: []string{},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mounts := checker.getGPUDeviceMounts(tt.gpuType)
-			
+
 			if len(tt.expectedKeys) == 0 {
 				assert.Empty(t, mounts)
 			} else {
@@ -348,7 +368,7 @@ func TestGetGPUDeviceMounts(t *testing.T) {
 // Test GPU type to image URI mapping
 func TestGpuCheckImageURIByType(t *testing.T) {
 	config := getTestConfig()
-	
+
 	tests := []struct {
 		name        string
 		gpuType     string
@@ -365,7 +385,7 @@ func TestGpuCheckImageURIByType(t *testing.T) {
 			expectedTag: "gpu-check-amd",
 		},
 		{
-			name:        "Intel GPU image", 
+			name:        "Intel GPU image",
 			gpuType:     "intel",
 			expectedTag: "gpu-check-intel",
 		},
@@ -375,11 +395,11 @@ func TestGpuCheckImageURIByType(t *testing.T) {
 			expectedTag: "gpu-check-apple-silicon",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uri, err := config.GetGpuCheckImageURIByType(tt.gpuType)
-			
+
 			assert.NoError(t, err)
 			assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-lightspeed")
 			assert.Contains(t, uri, tt.expectedTag)
@@ -390,9 +410,9 @@ func TestGpuCheckImageURIByType(t *testing.T) {
 // Test fallback to default image for unknown GPU type
 func TestGpuCheckImageURIByType_Fallback(t *testing.T) {
 	config := getTestConfig()
-	
+
 	uri, err := config.GetGpuCheckImageURIByType("unknown-gpu-type")
-	
+
 	assert.NoError(t, err)
 	assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-lightspeed")
 	assert.Contains(t, uri, "gpu-check") // Should fallback to base tag

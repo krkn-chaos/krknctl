@@ -91,12 +91,13 @@ func TestNewLightspeedCommand(t *testing.T) {
 	assert.Contains(t, cmd.Short, "GPU and acceleration")
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
 	
-	// Test GPU flags are present
+	// Test GPU flags are present - only NVIDIA and Apple Silicon are currently supported
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("nvidia"))
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("amd"))
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("intel"))
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("apple-silicon"))
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("offline"))
+	// AMD and Intel are temporarily disabled
+	assert.Nil(t, cmd.PersistentFlags().Lookup("amd"))
+	assert.Nil(t, cmd.PersistentFlags().Lookup("intel"))
 }
 
 func TestNewLightspeedCheckCommand(t *testing.T) {
@@ -136,32 +137,21 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 func TestGetSelectedGPUType(t *testing.T) {
 	cmd := &cobra.Command{}
 	
-	// Add GPU flags
+	// Add GPU flags - only NVIDIA and Apple Silicon are currently supported
 	cmd.Flags().Bool("nvidia", false, "")
-	cmd.Flags().Bool("amd", false, "")
-	cmd.Flags().Bool("intel", false, "")
 	cmd.Flags().Bool("apple-silicon", false, "")
 	
 	// Test NVIDIA selection
 	cmd.Flags().Set("nvidia", "true")
 	assert.Equal(t, "nvidia", getSelectedGPUType(cmd))
 	
-	// Reset and test AMD
-	cmd.Flags().Set("nvidia", "false")
-	cmd.Flags().Set("amd", "true")
-	assert.Equal(t, "amd", getSelectedGPUType(cmd))
-	
-	// Reset and test Intel
-	cmd.Flags().Set("amd", "false")
-	cmd.Flags().Set("intel", "true")
-	assert.Equal(t, "intel", getSelectedGPUType(cmd))
-	
 	// Reset and test Apple Silicon
-	cmd.Flags().Set("intel", "false")
+	cmd.Flags().Set("nvidia", "false")
 	cmd.Flags().Set("apple-silicon", "true")
 	assert.Equal(t, "apple-silicon", getSelectedGPUType(cmd))
 	
 	// Test no selection
+	cmd.Flags().Set("nvidia", "false")
 	cmd.Flags().Set("apple-silicon", "false")
 	assert.Equal(t, "", getSelectedGPUType(cmd))
 }
