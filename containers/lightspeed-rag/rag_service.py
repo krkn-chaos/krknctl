@@ -33,8 +33,10 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting RAG service...")
     try:
-        # Initialize RAG service with default home directory
-        rag_service = RAGService(home_dir="/app")
+        # Get home directory from global variable set by main
+        home_dir = getattr(app.state, 'home_dir', '/app')
+        logger.info(f"Using home directory: {home_dir}")
+        rag_service = RAGService(home_dir=home_dir)
         rag_service.load_index()
         logger.info("RAG service initialized successfully")
     except Exception as e:
@@ -355,8 +357,8 @@ if __name__ == "__main__":
     # Ensure home directory exists
     os.makedirs(args.home, exist_ok=True)
     
-    # Initialize global RAG service with specified home directory
-    rag_service = RAGService(home_dir=args.home)
+    # Set home directory in app state for lifespan to use
+    app.state.home_dir = args.home
     
     logger.info(f"Starting RAG service with home directory: {args.home}")
     
