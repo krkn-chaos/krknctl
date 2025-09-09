@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import logging
+import time
 from typing import List, Dict, Any
 from pathlib import Path
 
@@ -208,11 +209,14 @@ class DocumentationIndexer:
         
     def build_index(self, live_mode: bool = True, output_dir: str = None):
         """Build the complete documentation index"""
+        start_time = time.time()
+        
         if output_dir is None:
             output_dir = os.path.join(self.home_dir, "docs_index")
         logger.info(f"Building documentation index to {output_dir}...")
         
         # Collect documents
+        doc_start = time.time()
         all_docs = []
         
         # Load krknctl help (always available)
@@ -220,29 +224,46 @@ class DocumentationIndexer:
         
         # Scrape live documentation if in live mode
         if live_mode:
-            all_docs.extend(self.scrape_krkn_docs())
+            github_start = time.time()
+            github_docs = self.scrape_krkn_docs()
+            all_docs.extend(github_docs)
+            github_time = time.time() - github_start
+            logger.info(f"📥 GitHub documentation fetched in {github_time:.2f}s")
         else:
             logger.info("Skipping live documentation scraping (offline mode)")
             
         if not all_docs:
             raise Exception("No documents found to index")
             
-        logger.info(f"Found {len(all_docs)} documents")
+        doc_time = time.time() - doc_start
+        logger.info(f"📄 Found {len(all_docs)} documents in {doc_time:.2f}s")
         
         # Chunk documents
+        chunk_start = time.time()
         chunked_docs = self.chunk_documents(all_docs)
-        logger.info(f"Created {len(chunked_docs)} document chunks")
+        chunk_time = time.time() - chunk_start
+        logger.info(f"✂️  Created {len(chunked_docs)} document chunks in {chunk_time:.2f}s")
         
         # Create embeddings
+        embed_start = time.time()
         embeddings = self.create_embeddings(chunked_docs)
+        embed_time = time.time() - embed_start
+        logger.info(f"🧠 Generated embeddings in {embed_time:.2f}s")
         
         # Build FAISS index
+        index_start = time.time()
         index = self.build_faiss_index(embeddings)
+        index_time = time.time() - index_start
+        logger.info(f"🔍 Built FAISS index in {index_time:.2f}s")
         
         # Save everything
+        save_start = time.time()
         self.save_index(chunked_docs, embeddings, index, output_dir)
+        save_time = time.time() - save_start
+        logger.info(f"💾 Saved index in {save_time:.2f}s")
         
-        logger.info("Documentation index built successfully!")
+        total_time = time.time() - start_time
+        logger.info(f"✅ Documentation index built successfully in {total_time:.2f}s total!")
 
 def main():
     parser = argparse.ArgumentParser(description="Build krknctl documentation index")
