@@ -133,7 +133,7 @@ func performRAGHealthCheck(containerID string, hostPort string, orchestrator sce
 	maxRetries := config.RAGHealthMaxRetries
 	retryInterval := time.Duration(config.RAGHealthRetryIntervalSeconds) * time.Second
 
-	fmt.Printf("🩺 Health checking RAG service at %s...\n", healthURL)
+	fmt.Printf("🩺 Health checking Lightspeed service at %s...\n", healthURL)
 
 	for i := 0; i < maxRetries; i++ {
 		// Check if container is still running
@@ -190,21 +190,21 @@ func performRAGHealthCheck(containerID string, hostPort string, orchestrator sce
 	return false, fmt.Errorf("service did not become healthy within timeout")
 }
 
-// QueryRequest represents a request to the RAG service
+// QueryRequest represents a request to the Lightspeed service
 type QueryRequest struct {
 	Query      string `json:"query"`
 	MaxResults int    `json:"max_results"`
 	Stream     bool   `json:"stream"`
 }
 
-// QueryResponse represents a response from the RAG service
+// QueryResponse represents a response from the Lightspeed service
 type QueryResponse struct {
 	Response string                   `json:"response"`
 	Sources  []map[string]interface{} `json:"sources"`
 	Query    string                   `json:"query"`
 }
 
-// startInteractivePrompt starts an interactive chat session with the RAG service
+// startInteractivePrompt starts an interactive chat session with the Lightspeed service
 func startInteractivePrompt(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	
@@ -215,11 +215,11 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 	// Handle Ctrl+C in a goroutine
 	go func() {
 		<-signalChan
-		fmt.Println("\n\n🛑 Interrupted! Cleaning up RAG service...")
+		fmt.Println("\n\n🛑 Interrupted! Cleaning up Lightspeed service...")
 		if err := orchestrator.Kill(&containerID, ctx); err != nil {
-			fmt.Printf("⚠️  Warning: failed to stop RAG container: %v\n", err)
+			fmt.Printf("⚠️  Warning: failed to stop Lightspeed container: %v\n", err)
 		} else {
-			fmt.Println("✅ RAG service stopped successfully")
+			fmt.Println("✅ Lightspeed service stopped successfully")
 		}
 		os.Exit(0)
 	}()
@@ -245,7 +245,7 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			break
 		}
 		
-		// Send query to RAG service
+		// Send query to Lightspeed service
 		response, err := queryRAGService(hostPort, query, config)
 		if err != nil {
 			fmt.Printf("❌ Error: %v\n", err)
@@ -263,17 +263,17 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 	}
 	
 	// Clean up: stop the container
-	fmt.Println("\n🧹 Cleaning up RAG service...")
+	fmt.Println("\n🧹 Cleaning up Lightspeed service...")
 	if err := orchestrator.Kill(&containerID, ctx); err != nil {
-		fmt.Printf("⚠️  Warning: failed to stop RAG container: %v\n", err)
+		fmt.Printf("⚠️  Warning: failed to stop Lightspeed container: %v\n", err)
 	} else {
-		fmt.Println("✅ RAG service stopped successfully")
+		fmt.Println("✅ Lightspeed service stopped successfully")
 	}
 	
 	return nil
 }
 
-// queryRAGService sends a query to the RAG service and returns the response
+// queryRAGService sends a query to the Lightspeed service and returns the response
 func queryRAGService(hostPort string, query string, config config.Config) (*QueryResponse, error) {
 	// Query URL is constructed from trusted config values and validated port
 	url := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGQueryEndpoint)

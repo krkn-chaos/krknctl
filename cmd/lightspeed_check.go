@@ -235,7 +235,7 @@ Examples:
 			}
 			
 			if !healthOK {
-				return fmt.Errorf("RAG service is not responding properly")
+				return fmt.Errorf("Lightspeed service is not responding properly")
 			}
 
 			fmt.Println("✅ AI assistance service is ready!")
