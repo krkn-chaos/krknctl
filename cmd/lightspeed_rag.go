@@ -54,6 +54,19 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 		hostPort: config.RAGServicePort, // host:container
 	}
 
+	// Create spinner for pull progress (exactly like run.go)
+	spinner := NewSpinnerWithSuffix("pulling RAG model image...")
+	spinner.Start()
+
+	// Create communication channel for pull progress updates
+	commChan := make(chan *string)
+	go func() {
+		for msg := range commChan {
+			spinner.Suffix = *msg
+		}
+		spinner.Stop()
+	}()
+
 	// Run the RAG container in detached mode
 	containerID, err := orchestrator.Run(
 		ragImageURI,
@@ -61,16 +74,18 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 		env,
 		false,        // Don't cache
 		deviceMounts, // GPU device mounts
-		nil,          // No communication channel for detached
+		&commChan,    // Communication channel for pull progress
 		ctx,
 		registry,
 		portMappings, // Port mappings
 	)
 
 	if err != nil {
+		close(commChan) // Ensure goroutine exits
 		return nil, fmt.Errorf("failed to run RAG container: %w", err)
 	}
 
+	close(commChan) // Close channel to stop spinner goroutine
 	fmt.Printf("🚀 RAG container started: %s\n", *containerID)
 	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.RAGHost, hostPort, config.RAGServicePort)
 
