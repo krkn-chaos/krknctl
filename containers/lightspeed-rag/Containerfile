@@ -2,7 +2,7 @@
 # krknctl Lightspeed RAG Container with llama-cpp-python + Vulkan
 FROM registry.fedoraproject.org/fedora-minimal:40
 
-# Install system dependencies and Vulkan SDK
+# Install system dependencies and try to get Vulkan SDK
 RUN microdnf install -y \
     python3 \
     python3-pip \
@@ -16,13 +16,18 @@ RUN microdnf install -y \
     gcc \
     gcc-c++ \
     make \
-    vulkan-headers \
-    vulkan-loader-devel \
-    vulkan-tools \
-    glslang \
-    shaderc \
-    shaderc-devel \
+    wget \
     && microdnf clean all
+
+# Install Vulkan SDK manually since Fedora minimal lacks proper packages
+RUN wget -q https://sdk.lunarg.com/sdk/download/1.3.296.0/linux/vulkansdk-linux-x86_64-1.3.296.0.tar.xz && \
+    tar -xf vulkansdk-linux-x86_64-1.3.296.0.tar.xz && \
+    cp -r 1.3.296.0/x86_64/* /usr/local/ && \
+    rm -rf vulkansdk-linux-x86_64-1.3.296.0.tar.xz 1.3.296.0
+
+# Set Vulkan environment
+ENV VULKAN_SDK=/usr/local
+ENV PATH=$PATH:/usr/local/bin
 
 # Set working directory
 WORKDIR /app
