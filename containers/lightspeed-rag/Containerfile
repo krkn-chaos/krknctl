@@ -20,6 +20,8 @@ RUN microdnf install -y \
     vulkan-loader-devel \
     vulkan-tools \
     glslang \
+    shaderc \
+    shaderc-devel \
     && microdnf clean all
 
 # Set working directory
