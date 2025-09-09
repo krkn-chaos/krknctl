@@ -30,6 +30,7 @@ krknctl-*
 .env
 .idea
 bin/
+bin-linux/
 
 # Python
 __pycache__/
