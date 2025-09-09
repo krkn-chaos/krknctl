@@ -147,13 +147,17 @@ Context from krknctl documentation:
 
 User Question: {query}
 
-Please provide a helpful answer that includes:
-1. The specific krknctl command(s) to use
-2. Brief explanation of what it does
-3. Any relevant parameters or flags
-4. Example usage if appropriate
+Please provide a helpful answer using this format:
+- Use emojis to make the response friendly (🚀 ⚙️ 💡 ⚠️ etc.)
+- Provide a clear explanation of what the command does
+- List relevant parameters with emojis
+- End with the exact krknctl command in a box like this:
 
-Keep your response concise and focused on practical krknctl usage.
+┌─────────────────────────────────────────┐
+│ krknctl run scenario-name --flag=value │
+└─────────────────────────────────────────┘
+
+Keep your response concise and practical. Do not use markdown formatting, backticks, or **bold** text.
 
 Answer:"""
 
