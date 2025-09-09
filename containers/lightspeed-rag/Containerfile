@@ -17,6 +17,7 @@ RUN microdnf install -y \
     gcc-c++ \
     make \
     wget \
+    xz \
     && microdnf clean all
 
 # Install Vulkan SDK manually since Fedora minimal lacks proper packages
