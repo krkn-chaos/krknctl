@@ -31,16 +31,7 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) Run(
-	image string,
-	containerName string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	commChan *chan *string,
-	ctx context.Context,
-	registry *providermodels.RegistryV2,
-) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, portMappings *map[string]string) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {

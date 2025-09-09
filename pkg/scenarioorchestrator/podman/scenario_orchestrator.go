@@ -53,7 +53,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, portMappings *map[string]string) (*string, error) {
 	imageExists, err := images.Exists(ctx, image, nil)
 	if !cache || !imageExists {
 

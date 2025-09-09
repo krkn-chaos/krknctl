@@ -92,7 +92,7 @@ func CommonRunGraph(
 
 func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
 
-	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
+	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry, nil)
 	if err != nil {
 		return nil, err
 	}
