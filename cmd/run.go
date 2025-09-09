@@ -324,7 +324,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				scenarioDuration := time.Since(startTime)
 				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {
-				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings)
+				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings, nil)
 				if err != nil {
 					return err
 				}

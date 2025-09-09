@@ -118,7 +118,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	// lightspeed subcommands
 	lightspeedCmd := NewLightspeedCommand()
 	lightspeedCheckCmd := NewLightspeedCheckCommand(providerFactory, scenarioOrchestrator, config)
+	lightspeedRunCmd := NewLightspeedRunCommand(providerFactory, scenarioOrchestrator, config)
 	lightspeedCmd.AddCommand(lightspeedCheckCmd)
+	lightspeedCmd.AddCommand(lightspeedRunCmd)
 	rootCmd.AddCommand(lightspeedCmd)
 
 	// update and deprecation check
