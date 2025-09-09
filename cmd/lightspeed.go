@@ -12,7 +12,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -206,10 +208,26 @@ type QueryResponse struct {
 func startInteractivePrompt(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	
+	// Set up signal handling for Ctrl+C
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	
+	// Handle Ctrl+C in a goroutine
+	go func() {
+		<-signalChan
+		fmt.Println("\n\n🛑 Interrupted! Cleaning up RAG service...")
+		if err := orchestrator.Kill(&containerID, ctx); err != nil {
+			fmt.Printf("⚠️  Warning: failed to stop RAG container: %v\n", err)
+		} else {
+			fmt.Println("✅ RAG service stopped successfully")
+		}
+		os.Exit(0)
+	}()
+	
 	fmt.Printf("🤖 AI Assistant ready! Ask me about krknctl commands or chaos engineering:\n")
 	fmt.Printf("📍 Service available at: http://%s:%s\n", config.RAGHost, hostPort)
 	fmt.Printf("💡 Try asking: 'How do I run a pod deletion scenario?'\n")
-	fmt.Printf("🚪 Type 'exit' or 'quit' to stop.\n\n")
+	fmt.Printf("🚪 Type 'exit', 'quit', or press Ctrl+C to stop.\n\n")
 	
 	for {
 		fmt.Print("> ")
@@ -237,20 +255,6 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 		
 		// Display response
 		fmt.Printf("\n🤖 %s\n", response.Response)
-		
-		// Display sources if available
-		if len(response.Sources) > 0 {
-			fmt.Println("\n📚 Sources:")
-			for i, source := range response.Sources {
-				if title, ok := source["title"].(string); ok {
-					if url, ok := source["url"].(string); ok {
-						fmt.Printf("  %d. %s (%s)\n", i+1, title, url)
-					} else {
-						fmt.Printf("  %d. %s\n", i+1, title)
-					}
-				}
-			}
-		}
 		fmt.Println()
 	}
 	
