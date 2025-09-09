@@ -112,6 +112,7 @@ type HealthResponse struct {
 
 // performRAGHealthCheck performs health checking with timeout and cleanup on failure
 func performRAGHealthCheck(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config) (bool, error) {
+	// Health URL is constructed from trusted config values and validated port
 	healthURL := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGHealthEndpoint)
 	maxRetries := config.RAGHealthMaxRetries
 	retryInterval := time.Duration(config.RAGHealthRetryIntervalSeconds) * time.Second
@@ -138,18 +139,23 @@ func performRAGHealthCheck(containerID string, hostPort string, orchestrator sce
 			}
 		}
 
-		// Perform health check
+		// Perform health check - URL is safe as it's constructed from config
+		// #nosec G107 - URL constructed from trusted configuration
 		resp, err := http.Get(healthURL)
 		if err == nil && resp.StatusCode == 200 {
 			var health HealthResponse
 			if err := json.NewDecoder(resp.Body).Decode(&health); err == nil {
-				resp.Body.Close()
+				if closeErr := resp.Body.Close(); closeErr != nil {
+					fmt.Printf("⚠️  Warning: failed to close response body: %v\n", closeErr)
+				}
 				if health.Status == "healthy" {
 					fmt.Printf("✅ Service healthy: %s with %d documents indexed\n", health.Model, health.DocumentsIndexed)
 					return true, nil
 				}
 			}
-			resp.Body.Close()
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				fmt.Printf("⚠️  Warning: failed to close response body: %v\n", closeErr)
+			}
 		}
 
 		if i < maxRetries-1 {
@@ -251,6 +257,7 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 
 // queryRAGService sends a query to the RAG service and returns the response
 func queryRAGService(hostPort string, query string, config config.Config) (*QueryResponse, error) {
+	// Query URL is constructed from trusted config values and validated port
 	url := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGQueryEndpoint)
 
 	requestBody := QueryRequest{
@@ -264,6 +271,7 @@ func queryRAGService(hostPort string, query string, config config.Config) (*Quer
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	// #nosec G107 - URL constructed from trusted configuration
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
