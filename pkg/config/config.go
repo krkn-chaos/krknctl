@@ -56,9 +56,18 @@ type Config struct {
 	GithubReleaseAPI            string `json:"github_release_api"`
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
-	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
-	LightspeedRegistry          string `json:"lightspeed_registry"`
-	GpuCheckBaseTag             string `json:"gpu_check_base_tag"`
+	TableMaxStepScenarioLength     int    `json:"table_max_step_scenario_length"`
+	LightspeedRegistry             string `json:"lightspeed_registry"`
+	GpuCheckBaseTag                string `json:"gpu_check_base_tag"`
+	RAGModelTag                    string `json:"rag_model_tag"`
+	RAGContainerPrefix             string `json:"rag_container_prefix"`
+	RAGServicePort                 string `json:"rag_service_port"`
+	RAGHealthEndpoint              string `json:"rag_health_endpoint"`
+	RAGQueryEndpoint               string `json:"rag_query_endpoint"`
+	RAGHost                        string `json:"rag_host"`
+	RAGHealthMaxRetries            int    `json:"rag_health_max_retries"`
+	RAGHealthRetryIntervalSeconds  int    `json:"rag_health_retry_interval_seconds"`
+	RAGQueryMaxResults             int    `json:"rag_query_max_results"`
 }
 
 //go:embed config.json
@@ -148,5 +157,5 @@ func (c *Config) GetRAGModelImageURI() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return imageURI + ":rag-model", nil
+	return imageURI + ":" + c.RAGModelTag, nil
 }

@@ -50,5 +50,14 @@
   "table_field_max_length": 20,
   "table_max_step_scenario_length": 7,
   "lightspeed_registry": "krknctl-lightspeed",
-  "gpu_check_base_tag": "gpu-check"
+  "gpu_check_base_tag": "gpu-check",
+  "rag_model_tag": "rag-model",
+  "rag_container_prefix": "krknctl-lightspeed-rag",
+  "rag_service_port": "8080",
+  "rag_health_endpoint": "/health",
+  "rag_query_endpoint": "/query",
+  "rag_host": "localhost",
+  "rag_health_max_retries": 60,
+  "rag_health_retry_interval_seconds": 10,
+  "rag_query_max_results": 5
 }
