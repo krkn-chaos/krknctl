@@ -105,7 +105,7 @@ class RAGService:
             raise
             
     def search_documents(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
-        """Search for relevant documents using semantic similarity"""
+        """Search for relevant documents using semantic similarity with krkn-hub prioritization"""
         if not self.model or not self.index:
             raise RuntimeError("Index not loaded")
             
@@ -113,18 +113,45 @@ class RAGService:
         query_embedding = self.model.encode([query])
         faiss.normalize_L2(query_embedding)
         
-        # Search in FAISS index
-        scores, indices = self.index.search(query_embedding, max_results)
+        # Search in FAISS index with much larger result set to ensure we find krkn-hub data
+        search_limit = min(len(self.documents), max_results * 10)  # Cast a much wider net
+        scores, indices = self.index.search(query_embedding, search_limit)
         
-        # Retrieve matching documents
-        results = []
+        # Retrieve matching documents with source-based prioritization
+        all_results = []
         for score, idx in zip(scores[0], indices[0]):
             if idx < len(self.documents):
                 doc = self.documents[idx].copy()
                 doc["relevance_score"] = float(score)
-                results.append(doc)
-                
-        return results
+                all_results.append(doc)
+        
+        # Separate by source
+        krkn_hub_results = [doc for doc in all_results if doc.get("source") == "krkn-hub"]
+        website_results = [doc for doc in all_results if doc.get("source") != "krkn-hub"]
+        
+        logger.info(f"Search found {len(krkn_hub_results)} krkn-hub docs, {len(website_results)} website docs")
+        
+        # For scenario-related queries, aggressively prioritize krkn-hub
+        scenario_keywords = ["scenario", "run", "flag", "parameter", "command", "krknctl", "kill", "pod", "node"]
+        is_scenario_query = any(keyword in query.lower() for keyword in scenario_keywords)
+        
+        if is_scenario_query and krkn_hub_results:
+            logger.info(f"Scenario query detected, prioritizing {len(krkn_hub_results)} krkn-hub results")
+            # Massively boost krkn-hub relevance scores for scenario queries
+            for doc in krkn_hub_results:
+                doc["relevance_score"] = min(doc["relevance_score"] * 3.0, 1.0)  # Major boost
+            
+            # Always put krkn-hub results first for scenario queries
+            prioritized_results = krkn_hub_results + website_results[:max_results-len(krkn_hub_results)]
+        else:
+            # For general queries, use normal ordering but still boost krkn-hub slightly
+            for doc in krkn_hub_results:
+                doc["relevance_score"] = min(doc["relevance_score"] * 1.2, 1.0)
+            prioritized_results = all_results
+        
+        # Sort by relevance score (higher is better) and return top results
+        prioritized_results.sort(key=lambda x: x["relevance_score"], reverse=True)
+        return prioritized_results[:max_results]
     
     def generate_response(self, query: str, context_docs: List[Dict[str, Any]], 
                          stream: bool = False) -> str:
@@ -144,29 +171,26 @@ class RAGService:
 
 COMMAND SYNTAX: krknctl run <scenario_name> <scenario_flags>
 
-KNOWLEDGE SOURCES:
-- AUTHORITATIVE: krkn-hub JSON definitions (exact flags, types, defaults)  
-- CONTEXTUAL: Website documentation (usage patterns, examples)
+PRIORITY: When you see "source: krkn-hub" in the context, that is AUTHORITATIVE scenario data. Use it over website docs.
 
-Context (authoritative scenario definitions + usage patterns):
+Context with authoritative scenario definitions:
 {context}
 
 User Question: {query}
 
-STRICT RULES:
+CRITICAL RULES:
 1. If NOT about krknctl scenarios, respond: "I can only help with krknctl chaos engineering scenarios."
-2. Use ONLY scenario names found in the context
-3. Use ONLY flags defined in the authoritative krkn-hub JSON data
-4. Extract user context (pod names, namespaces, labels) into real flags
-5. Prioritize krkn-hub JSON data over website docs for flag accuracy
-6. Keep response under 3 lines total
-7. Always use exact syntax: krknctl run <scenario> <flags>
+2. ALWAYS prioritize "source: krkn-hub" data over "source: krkn-chaos/website" 
+3. Use ONLY scenario names and flags from krkn-hub sources when available
+4. Extract user input (pod names, namespaces, labels) into the exact flag names from krkn-hub
+5. Never invent flags - only use those defined in krkn-hub JSON data
+6. Keep response brief and practical
 
-FORMAT:
-🎯 [Brief description]
-┌─────────────────────────────────────────────────────┐
-│ krknctl run scenario-name --flag=value             │
-└─────────────────────────────────────────────────────┘
+RESPONSE FORMAT:
+🎯 [What this does in 5 words]
+┌────────────────────────────────────────────────────┐
+│ krknctl run scenario-name --flag=value            │
+└────────────────────────────────────────────────────┘
 
 Answer:"""
 
