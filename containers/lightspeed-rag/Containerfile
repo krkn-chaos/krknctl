@@ -18,6 +18,8 @@ RUN microdnf install -y \
     make \
     vulkan-headers \
     vulkan-loader-devel \
+    vulkan-tools \
+    glslang \
     && microdnf clean all
 
 # Set working directory
