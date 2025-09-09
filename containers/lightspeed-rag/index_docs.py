@@ -58,11 +58,16 @@ class DocumentationIndexer:
                     'git', 'clone', '--depth', '1', '--quiet', repo_url, temp_dir
                 ], check=True, capture_output=True, text=True)
                 
+                # Debug: List what was cloned
+                logger.info(f"Clone completed. Temp dir contents: {os.listdir(temp_dir)}")
+                
                 # Path to docs directory in cloned repo
                 full_docs_path = os.path.join(temp_dir, docs_path)
+                logger.info(f"Looking for docs at: {full_docs_path}")
                 
                 if not os.path.exists(full_docs_path):
                     logger.warning(f"Documentation path not found: {docs_path}")
+                    logger.info(f"Available paths in temp_dir: {os.listdir(temp_dir)}")
                     return docs
                     
                 # Recursively find all markdown files
@@ -82,13 +87,20 @@ class DocumentationIndexer:
         docs = []
         
         try:
+            logger.info(f"Extracting markdown files from: {base_path}")
+            markdown_count = 0
             for root, dirs, files in os.walk(base_path):
+                logger.info(f"Scanning directory: {root}, found {len(files)} files")
                 for file in files:
                     if file.endswith('.md'):
+                        markdown_count += 1
                         file_path = os.path.join(root, file)
+                        logger.info(f"Processing markdown file: {file}")
                         doc = self._process_markdown_file(file_path, base_path, relative_docs_path)
                         if doc:
                             docs.append(doc)
+            
+            logger.info(f"Found {markdown_count} markdown files total, processed {len(docs)} successfully")
                             
         except Exception as e:
             logger.error(f"Error extracting markdown files: {e}")
