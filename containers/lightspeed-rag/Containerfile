@@ -59,12 +59,21 @@ RUN which glslc && glslc --version
 # Compile and install llama-cpp-python with Vulkan support
 RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
-# Download Llama 3.2:1B model in GGUF format with retry and verification
+# Install huggingface-hub for reliable model downloads
+RUN pip3 install --no-cache-dir huggingface-hub
+
+# Download Llama 3.2:1B model in GGUF format using huggingface-hub
 RUN mkdir -p /app/models && \
-    curl -L --retry 3 --retry-delay 5 -C - -o /app/models/llama-3.2-1b-instruct-q4_0.gguf \
-    "https://huggingface.co/lmstudio-community/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf" && \
+    python3 -c "
+import huggingface_hub
+huggingface_hub.hf_hub_download(
+    repo_id='lmstudio-community/Llama-3.2-1B-Instruct-GGUF',
+    filename='Llama-3.2-1B-Instruct-Q4_0.gguf',
+    local_dir='/app/models',
+    local_dir_use_symlinks=False
+)" && \
     ls -la /app/models/ && \
-    [ $(stat -c%s /app/models/llama-3.2-1b-instruct-q4_0.gguf) -gt 1000000000 ] || (echo "Model download failed - file too small" && exit 1)
+    [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_0.gguf) -gt 1000000000 ] || (echo "Model download failed - file too small" && exit 1)
 
 # Copy application files
 COPY rag_service.py .
