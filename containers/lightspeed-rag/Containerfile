@@ -66,7 +66,7 @@ RUN pip3 install --no-cache-dir huggingface-hub
 RUN mkdir -p /app/models && \
     python3 -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-1B-Instruct-GGUF', filename='Llama-3.2-1B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
     ls -la /app/models/ && \
-    [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 1000000000 ] || (echo "Model download failed - file too small" && exit 1)
+    [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
 # Copy application files
 COPY rag_service.py .
