@@ -6,6 +6,15 @@ set -e
 
 echo "Starting krknctl Lightspeed RAG service..."
 
+# Create /dev/dri structure if GPU devices are mapped to different paths
+if [ -c "/dev/card0" ] && [ -c "/dev/renderD128" ]; then
+    echo "Creating /dev/dri structure for GPU access..."
+    mkdir -p /dev/dri
+    ln -sf /dev/card0 /dev/dri/card0
+    ln -sf /dev/renderD128 /dev/dri/renderD128
+    ls -la /dev/dri/
+fi
+
 # Check if we should use offline mode (env var set by krknctl)
 USE_OFFLINE=${USE_OFFLINE:-"false"}
 

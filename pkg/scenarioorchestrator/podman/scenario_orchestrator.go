@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	
+
+	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
-	nettypes "github.com/containers/common/libnetwork/types"
 
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -141,7 +141,7 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 			if err != nil {
 				return nil, fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
 			}
-			
+
 			portMapping := nettypes.PortMapping{
 				HostPort:      uint16(hostPort),
 				ContainerPort: uint16(containerPort),
@@ -159,6 +159,17 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 			NSMode: "host",
 		}
 	}
+
+	// Add GPU device access for Lightspeed RAG containers
+	if strings.Contains(image, "krknctl-lightspeed") {
+		// Add /dev/dri device
+		driDevice := specs.LinuxDevice{
+			Path: "/dev/dri",
+			Type: "c",
+		}
+		s.Devices = append(s.Devices, driDevice)
+	}
+
 	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
 		return nil, err

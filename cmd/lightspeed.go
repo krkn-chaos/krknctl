@@ -111,8 +111,8 @@ func getRAGGPUDeviceMounts(gpuType string) map[string]string {
 	//	// AMD and Intel GPUs use DRI devices
 	//	deviceMounts["/dev/dri"] = "/dev/dri"
 	case "apple-silicon":
-		// Apple Silicon GPUs (via libkrun) use DRI devices
-		deviceMounts["/dev/dri"] = "/dev/dri"
+		// Apple Silicon GPUs are handled via device mapping in scenario_orchestrator.go
+		// No volume mounts needed - using proper Linux device mapping instead
 	}
 
 	return deviceMounts
