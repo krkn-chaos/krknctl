@@ -15,18 +15,31 @@ RUN microdnf install -y \
     cmake \
     gcc \
     gcc-c++ \
+    cmake \
+    ninja \
     make \
     wget \
     xz \
     && microdnf clean all
 
-# Install Vulkan SDK manually since Fedora minimal lacks proper packages
+# Build glslc from source (native ARM64)
+RUN export SOURCE_DIR=$(pwd)/shaderc && \
+    export BUILD_DIR=$(pwd)/shaderc_build && \
+    git clone https://github.com/google/shaderc $SOURCE_DIR && \
+    cd $SOURCE_DIR && \
+    ./utils/git-sync-deps && \
+    mkdir -p $BUILD_DIR && cd $BUILD_DIR && \
+    cmake -GNinja -DCMAKE_BUILD_TYPE=Release $SOURCE_DIR && \
+    ninja && \
+    ninja install
+
+# Install Vulkan headers (lightweight, arch-independent)
 RUN wget -q https://sdk.lunarg.com/sdk/download/1.3.296.0/linux/vulkansdk-linux-x86_64-1.3.296.0.tar.xz && \
     tar -xf vulkansdk-linux-x86_64-1.3.296.0.tar.xz && \
-    cp -r 1.3.296.0/x86_64/* /usr/local/ && \
+    cp -r 1.3.296.0/x86_64/include/* /usr/local/include/ && \
     rm -rf vulkansdk-linux-x86_64-1.3.296.0.tar.xz 1.3.296.0
 
-# Set Vulkan environment
+# Set Vulkan environment  
 ENV VULKAN_SDK=/usr/local
 ENV PATH=$PATH:/usr/local/bin
 
@@ -39,8 +52,11 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+# Verify glslc is available
+RUN which glslc && glslc --version
+
 # Compile and install llama-cpp-python with Vulkan support
-RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir llama-cpp-python
+RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
 # Download Llama 3.2:1B model in GGUF format
 RUN mkdir -p /app/models && \
