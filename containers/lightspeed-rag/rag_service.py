@@ -91,13 +91,23 @@ class RAGService:
             # Load Llama model
             if os.path.exists(self.model_path):
                 logger.info(f"Loading Llama model from {self.model_path}")
+                
+                # Enable verbose mode temporarily to see GPU detection
                 self.llama_model = Llama(
                     model_path=self.model_path,
                     n_ctx=4096,  # Context length
                     n_gpu_layers=-1,  # Use all GPU layers (Vulkan)
-                    verbose=False
+                    verbose=True  # Enable to see Vulkan/GPU detection logs
                 )
+                
+                # Log GPU info after model loading
                 logger.info("Llama model loaded successfully")
+                logger.info(f"Model using GPU layers: {self.llama_model.n_gpu_layers if hasattr(self.llama_model, 'n_gpu_layers') else 'unknown'}")
+                
+                # Test a small inference to trigger GPU usage logging
+                logger.info("Testing GPU inference...")
+                test_response = self.llama_model("Test", max_tokens=1, echo=False)
+                logger.info("GPU inference test completed")
             else:
                 logger.warning(f"Llama model not found at {self.model_path}")
                 logger.info("Model will be downloaded on first use")
