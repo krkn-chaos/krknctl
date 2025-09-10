@@ -52,6 +52,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
 
+RUN microdnf install -y which
 # Verify glslc is available
 RUN which glslc && glslc --version
 
