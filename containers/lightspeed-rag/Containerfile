@@ -75,5 +75,9 @@ EXPOSE 8080
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
+# Add NVIDIA Vulkan support (optional - will skip if not available)
+RUN (dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda || echo "NVIDIA drivers not available, skipping") && \
+    (ls -la /usr/share/vulkan/icd.d/ || echo "Vulkan ICD check")
+
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
