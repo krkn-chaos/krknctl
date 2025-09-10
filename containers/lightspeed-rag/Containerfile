@@ -68,13 +68,11 @@ RUN mkdir -p /app/models && \
     ls -la /app/models/ && \
     [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
-# Install MoltenVK for Apple Silicon GPU support (Vulkan-to-Metal translation)
-RUN wget -q https://github.com/KhronosGroup/MoltenVK/releases/download/v1.2.10/MoltenVK-all.tar && \
-    tar -xf MoltenVK-all.tar && \
-    cp MoltenVK/dylib/macOS/libMoltenVK.dylib /usr/local/lib/ && \
+# Install Mesa Vulkan drivers for broad GPU compatibility (including Apple Silicon via virtualization)
+RUN microdnf install -y mesa-vulkan-drivers mesa-dri-drivers && \
     mkdir -p /usr/share/vulkan/icd.d && \
-    echo '{"file_format_version": "1.0.0", "ICD": {"library_path": "/usr/local/lib/libMoltenVK.dylib", "api_version": "1.3.283"}}' > /usr/share/vulkan/icd.d/MoltenVK_icd.json && \
-    rm -rf MoltenVK* *.tar
+    # Ensure Vulkan loader can find available drivers
+    ls -la /usr/share/vulkan/icd.d/ || echo "No ICD files found, but mesa drivers installed"
 
 # Copy application files
 COPY rag_service.py .
