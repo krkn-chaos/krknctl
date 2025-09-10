@@ -69,7 +69,7 @@ class RAGService:
         self.llama_model = None
         self.home_dir = home_dir
         # Model path relative to home_dir for flexibility
-        self.model_path = os.path.join(home_dir, "models", "llama-3.2-1b-instruct-q4_0.gguf")
+        self.model_path = os.path.join(home_dir, "models", "Llama-3.2-1B-Instruct-Q4_K_M.gguf")
         
     def load_index(self, index_dir: Optional[str] = None):
         """Load the pre-built documentation index"""
