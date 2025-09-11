@@ -15,40 +15,19 @@ log() {
 check_apple_gpu() {
     log "Checking for Apple Silicon GPU support..."
     
+    # Check for DRI devices (the real indicator for Apple Silicon GPU in containers)
+    if [ -c /dev/dri/card0 ] || [ -c /dev/dri/renderD128 ]; then
+        log "Apple Silicon/DRI device files detected in /dev/dri"
+        return 0
+    fi
+    
     # Check for Metal framework indicators (macOS specific)
     if [ -n "${METAL_DEVICE_WRAPPER_TYPE:-}" ]; then
         log "Metal GPU framework detected"
         return 0
     fi
     
-    # Check specifically for Apple GPU in lspci/lshw
-    if command -v lshw >/dev/null 2>&1; then
-        if lshw -C display 2>/dev/null | grep -i "apple" >/dev/null 2>&1; then
-            log "Apple GPU detected via lshw"
-            return 0
-        fi
-    fi
-    
-    # Check for DRI devices (libkrun virtualized GPU) with Apple-specific validation
-    if [ -c /dev/dri/card0 ] || [ -c /dev/dri/renderD128 ]; then
-        # Only consider DRI devices valid for Apple Silicon if we can confirm it's Apple
-        if [ "$(uname -s)" = "Darwin" ] || [ -n "${METAL_DEVICE_WRAPPER_TYPE:-}" ]; then
-            log "Apple Silicon/DRI device files detected in /dev/dri"
-            return 0
-        fi
-    fi
-    
-    # Check for Vulkan support with Apple-specific context
-    if command -v vulkaninfo >/dev/null 2>&1; then
-        # Only consider Vulkan valid if we're in a Darwin context or have Metal indicators
-        if [ "$(uname -s)" = "Darwin" ] || [ -n "${METAL_DEVICE_WRAPPER_TYPE:-}" ]; then
-            if vulkaninfo >/dev/null 2>&1; then
-                log "Vulkan support detected in Apple context"
-                return 0
-            fi
-        fi
-    fi
-    
+    log "No Apple Silicon GPU indicators found"
     return 1
 }
 
