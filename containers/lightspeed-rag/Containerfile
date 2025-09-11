@@ -32,10 +32,16 @@ RUN dnf -y install dnf-plugins-core && \
     && (dnf versionlock mesa-vulkan-drivers || echo "Mesa versionlock not available, skipping") \
     && dnf clean all
 
-# Install NVIDIA CUDA support 
-RUN dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
-    && dnf -y install cuda-toolkit cuda-devel \
-    && dnf clean all
+# Install NVIDIA CUDA support (multiplatform)
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+        dnf config-manager --add-repo --from-repofile https://developer.download.nvidia.com/compute/cuda/repos/fedora42/x86_64/cuda-fedora42.repo; \
+    elif [ "$(uname -m)" = "aarch64" ]; then \
+        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel10/sbsa/cuda-rhel10.repo; \
+    fi \
+    && dnf -y install cuda-toolkit-13-0 \
+    && dnf clean all \
+    && echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /etc/environment \
+    && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /etc/environment
 
 # Verify glslc and GPU setup
 RUN which glslc && glslc --version && \
