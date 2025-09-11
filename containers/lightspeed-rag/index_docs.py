@@ -349,6 +349,17 @@ class DocumentationIndexer:
         
         if output_dir is None:
             output_dir = os.path.join(self.home_dir, "docs_index")
+            
+        # Check if index already exists and remove it
+        if os.path.exists(output_dir):
+            logger.info(f"Existing index found at {output_dir}, removing it...")
+            try:
+                shutil.rmtree(output_dir)
+                logger.info(f"✅ Existing index removed successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to remove existing index: {e}")
+                raise
+                
         logger.info(f"Building documentation index to {output_dir}...")
         
         # Collect documents
