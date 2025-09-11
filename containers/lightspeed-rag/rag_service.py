@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -24,6 +25,38 @@ logger = logging.getLogger(__name__)
 
 # Global RAG service instance (will be initialized on startup)
 rag_service = None
+
+def detect_gpu_type():
+    """Detect the type of GPU available and return appropriate llama.cpp parameters"""
+    logger.info("Detecting GPU type for optimal llama.cpp backend...")
+    
+    # Check for NVIDIA GPU devices
+    if os.path.exists('/dev/nvidia0') or os.path.exists('/dev/nvidiactl'):
+        logger.info("NVIDIA GPU devices detected - using CUDA backend")
+        return {
+            'backend': 'cuda',
+            'n_gpu_layers': -1,  # Use all layers on GPU
+            'main_gpu': 0,
+            'verbose': True
+        }
+    
+    # Check for DRI devices (Apple Silicon or other GPUs with Vulkan)
+    if os.path.exists('/dev/dri/card0') or os.path.exists('/dev/dri/renderD128'):
+        logger.info("DRI devices detected - using Vulkan backend")
+        return {
+            'backend': 'vulkan',
+            'n_gpu_layers': -1,  # Use all layers on GPU
+            'verbose': True
+        }
+    
+    # Fallback to CPU
+    logger.info("No GPU detected - using CPU backend")
+    return {
+        'backend': 'cpu',
+        'n_gpu_layers': 0,  # CPU only
+        'n_threads': os.cpu_count(),
+        'verbose': True
+    }
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -92,13 +125,25 @@ class RAGService:
             if os.path.exists(self.model_path):
                 logger.info(f"Loading Llama model from {self.model_path}")
                 
-                # Enable verbose mode temporarily to see GPU detection
-                self.llama_model = Llama(
-                    model_path=self.model_path,
-                    n_ctx=4096,  # Context length
-                    n_gpu_layers=-1,  # Use all GPU layers (Vulkan)
-                    verbose=True  # Enable to see Vulkan/GPU detection logs
-                )
+                # Detect GPU type and get optimal parameters
+                gpu_config = detect_gpu_type()
+                logger.info(f"Using GPU backend: {gpu_config['backend']}")
+                
+                # Create Llama model with auto-detected GPU configuration
+                llama_params = {
+                    'model_path': self.model_path,
+                    'n_ctx': 4096,  # Context length
+                    'n_gpu_layers': gpu_config['n_gpu_layers'],
+                    'verbose': gpu_config['verbose']
+                }
+                
+                # Add backend-specific parameters
+                if gpu_config['backend'] == 'cuda':
+                    llama_params['main_gpu'] = gpu_config['main_gpu']
+                elif gpu_config['backend'] == 'cpu':
+                    llama_params['n_threads'] = gpu_config['n_threads']
+                
+                self.llama_model = Llama(**llama_params)
                 
                 # Log GPU info after model loading
                 logger.info("Llama model loaded successfully")

@@ -2,7 +2,7 @@
 # krknctl Lightspeed RAG Container with llama-cpp-python + GPU acceleration for macOS/Podman
 FROM registry.fedoraproject.org/fedora:40
 
-# Install all system dependencies in one layer (following proven approach from Medium article)
+# Install all system dependencies in one layer (multi-backend support: CUDA + Vulkan)
 RUN dnf -y install dnf-plugins-core && \
     dnf -y install dnf-plugin-versionlock && \
     dnf -y install \
@@ -20,15 +20,20 @@ RUN dnf -y install dnf-plugins-core && \
     make \
     wget \
     which \
+    # Vulkan support (for Apple Silicon)
     mesa-vulkan-drivers \
     vulkan-loader-devel \
     vulkan-headers \
     vulkan-tools \
     vulkan-loader \
     glslc \
-    && dnf -y copr enable slp/mesa-krunkit fedora-40-aarch64 \
-    && dnf -y downgrade mesa-vulkan-drivers.aarch64 --repo=copr:copr.fedorainfracloud.org:slp:mesa-krunkit \
-    && dnf versionlock mesa-vulkan-drivers \
+    # CUDA support (for NVIDIA)
+    cuda-devel \
+    cuda-cudart-devel \
+    cuda-cublas-devel \
+    && (dnf -y copr enable slp/mesa-krunkit fedora-40-aarch64 || echo "Mesa krunkit copr not available, skipping") \
+    && (dnf -y downgrade mesa-vulkan-drivers.aarch64 --repo=copr:copr.fedorainfracloud.org:slp:mesa-krunkit || echo "Mesa downgrade not available, skipping") \
+    && (dnf versionlock mesa-vulkan-drivers || echo "Mesa versionlock not available, skipping") \
     && dnf clean all
 
 # Verify glslc and GPU setup
@@ -42,8 +47,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Compile and install llama-cpp-python with Vulkan support
-RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
+# Compile and install llama-cpp-python with multi-backend support (CUDA + Vulkan)
+RUN CMAKE_ARGS="-DGGML_VULKAN=on -DGGML_CUDA=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
 # Install huggingface-hub for reliable model downloads
 RUN pip3 install --no-cache-dir huggingface-hub
