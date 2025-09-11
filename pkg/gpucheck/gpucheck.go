@@ -53,68 +53,6 @@ func NewGpuChecker(orchestrator scenarioorchestrator.ScenarioOrchestrator, confi
 	}
 }
 
-// CheckGPUSupport runs a container to check GPU support in the container runtime
-func (gc *GpuChecker) CheckGPUSupport(ctx context.Context, customImage string, registry *models.RegistryV2) (*Result, error) {
-	// Determine which image to use
-	image := customImage
-	if image == "" {
-		defaultImage, err := gc.config.GetGpuCheckImageURI()
-		if err != nil {
-			return &Result{
-				HasGPUSupport: false,
-				Error:         fmt.Errorf("failed to get default GPU check image URI: %w", err),
-			}, err
-		}
-		image = defaultImage
-	}
-
-	// Generate unique container name
-	containerName := fmt.Sprintf("krknctl-gpu-check-%d", time.Now().Unix())
-
-	// Create buffers to capture container output
-	var stdout, stderr bytes.Buffer
-
-	// Run the GPU check container with output capture
-	_, err := scenarioorchestrator.CommonRunAttached(
-		image,
-		containerName,
-		map[string]string{}, // No special environment variables needed
-		false,               // Don't cache
-		map[string]string{}, // No volume mounts needed
-		&stdout,
-		&stderr,
-		gc.orchestrator,
-		nil, // No communication channel needed for this use case
-		ctx,
-		registry,
-	)
-
-	if err != nil {
-		return &Result{
-			HasGPUSupport: false,
-			Error:         fmt.Errorf("failed to run GPU check container: %w", err),
-		}, err
-	}
-
-	// Combine stdout and stderr
-	output := stdout.String()
-	if stderr.Len() > 0 {
-		if output != "" {
-			output += "\n"
-		}
-		output += stderr.String()
-	}
-
-	// Parse the output to determine GPU support
-	hasGPU := parseGPUCheckOutput(output)
-
-	return &Result{
-		HasGPUSupport: hasGPU,
-		Output:        output,
-		Error:         nil,
-	}, nil
-}
-
 // CheckGPUSupportByType runs a container to check GPU support using the GPU-type-specific image with appropriate device mounting
 func (gc *GpuChecker) CheckGPUSupportByType(ctx context.Context, gpuType string, registry *models.RegistryV2) (*Result, error) {
 	// Check if running on Docker runtime
@@ -153,25 +91,25 @@ func (gc *GpuChecker) AutoDetectGPU(ctx context.Context, registry *models.Regist
 	}
 
 	supportedTypes := GetSupportedGPUTypes()
-	
+
 	for _, gpuTypeDetector := range supportedTypes {
 		fmt.Printf("🔍 Testing %s support...\n", gpuTypeDetector.Description)
-		
+
 		result, err := gc.CheckGPUSupportByType(ctx, gpuTypeDetector.Type, registry)
 		if err != nil {
 			fmt.Printf("⚠️  %s test failed: %v\n", gpuTypeDetector.Type, err)
 			continue
 		}
-		
+
 		if result.HasGPUSupport {
 			fmt.Printf("✅ %s support detected!\n", gpuTypeDetector.Description)
 			result.GPUType = gpuTypeDetector.Type
 			return result, nil
 		}
-		
+
 		fmt.Printf("❌ %s not available\n", gpuTypeDetector.Type)
 	}
-	
+
 	return &Result{
 		HasGPUSupport: false,
 		Error:         fmt.Errorf("no GPU support found - tested: %v", getSupportedGPUTypeNames()),
@@ -201,19 +139,9 @@ func (gc *GpuChecker) runGPUCheckWithDevices(ctx context.Context, image string, 
 
 	// Run the GPU check container with device mounts as volume mounts
 	// Note: This is a workaround since the current orchestrator doesn't support proper device mounting
-	_, err := scenarioorchestrator.CommonRunAttached(
-		image,
-		containerName,
-		map[string]string{}, // No special environment variables needed
-		false,               // Don't cache
-		deviceMounts,        // Use device mounts as volume mounts
-		&stdout,
-		&stderr,
-		gc.orchestrator,
-		nil, // No communication channel needed for this use case
-		ctx,
-		registry,
-	)
+
+	_, err := gc.orchestrator.RunAttached(image, containerName, map[string]string{}, false,
+		map[string]string{}, &deviceMounts, &stdout, &stderr, nil, ctx, registry)
 
 	if err != nil {
 		return &Result{
@@ -249,7 +177,7 @@ func (gc *GpuChecker) getGPUDeviceMounts(gpuType string) map[string]string {
 	case "nvidia":
 		// NVIDIA GPU devices
 		deviceMounts["/dev/nvidia0"] = "/dev/nvidia0"
-		deviceMounts["/dev/nvidiactl"] = "/dev/nvidiactl" 
+		deviceMounts["/dev/nvidiactl"] = "/dev/nvidiactl"
 		deviceMounts["/dev/nvidia-uvm"] = "/dev/nvidia-uvm"
 	case "amd", "intel":
 		// AMD and Intel GPUs use DRI devices

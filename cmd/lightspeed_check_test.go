@@ -40,12 +40,12 @@ func (m *MockScenarioOrchestrator) Connect(containerRuntimeURI string) (context.
 	return context.Background(), nil
 }
 
-func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
 
-func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
+func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
@@ -76,22 +76,35 @@ func (m *MockScenarioOrchestrator) CleanContainers(ctx context.Context) (*int, e
 }
 
 // Implement other required interface methods as no-ops
-func (m *MockScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int) {}
-func (m *MockScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) { return false, nil }
-func (m *MockScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[int64]orchestratormodels.Container, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int) {
+}
+func (m *MockScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+	return false, nil
+}
+func (m *MockScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*map[int64]orchestratormodels.Container, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) ListRunningScenarios(ctx context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) InspectScenario(container orchestratormodels.Container, ctx context.Context) (*orchestratormodels.ScenarioContainer, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) ResolveContainerName(containerName string, ctx context.Context) (*string, error) {
+	return nil, nil
+}
 
 func TestNewLightspeedCommand(t *testing.T) {
 	cmd := NewLightspeedCommand()
-	
+
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "lightspeed", cmd.Use)
 	assert.Contains(t, cmd.Short, "GPU and acceleration")
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
-	
+
 	// Test that GPU auto-detection is enabled (no manual GPU flags needed)
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("offline"))
 	// Manual GPU flags should not exist (using auto-detection now)
@@ -105,9 +118,9 @@ func TestNewLightspeedCheckCommand(t *testing.T) {
 	config := getTestConfig(t)
 	providerFactory := getTestProviderFactory(t)
 	orchestrator := getTestOrchestrator(t)
-	
+
 	cmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
-	
+
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "check", cmd.Use)
 	assert.Contains(t, cmd.Short, "Check GPU support")
@@ -119,7 +132,7 @@ func TestNewLightspeedCheckCommand(t *testing.T) {
 func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	cmd := &cobra.Command{}
 	config := getTestConfig(t)
-	
+
 	// Add all the required flags but don't set private-registry
 	cmd.Flags().String("private-registry", "", "")
 	cmd.Flags().String("private-registry-lightspeed", "", "")
@@ -128,9 +141,9 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	cmd.Flags().String("private-registry-token", "", "")
 	cmd.Flags().Bool("private-registry-insecure", false, "")
 	cmd.Flags().Bool("private-registry-skip-tls", false, "")
-	
+
 	registry, err := buildLightspeedRegistryFromFlags(cmd, config)
-	
+
 	assert.NoError(t, err)
 	assert.Nil(t, registry)
 }
@@ -138,10 +151,10 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 func TestGPUAutoDetection(t *testing.T) {
 	// Test supported GPU types list
 	supportedTypes := gpucheck.GetSupportedGPUTypes()
-	
+
 	// Should have at least Apple Silicon and NVIDIA
 	assert.GreaterOrEqual(t, len(supportedTypes), 2)
-	
+
 	// Check that Apple Silicon and NVIDIA are included
 	typeNames := make([]string, len(supportedTypes))
 	for i, gpuType := range supportedTypes {
@@ -156,18 +169,18 @@ func TestLightspeedCommands_Structure(t *testing.T) {
 	config := getTestConfig(t)
 	providerFactory := getTestProviderFactory(t)
 	orchestrator := getTestOrchestrator(t)
-	
+
 	// Test lightspeed command creation
 	lightspeedCmd := NewLightspeedCommand()
 	assert.NotNil(t, lightspeedCmd)
 	assert.Equal(t, "lightspeed", lightspeedCmd.Use)
-	
+
 	// Test check command creation
 	checkCmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
 	assert.NotNil(t, checkCmd)
 	assert.Equal(t, "check", checkCmd.Use)
 	assert.NotNil(t, checkCmd.RunE)
-	
+
 	// Add check command to lightspeed
 	lightspeedCmd.AddCommand(checkCmd)
 	assert.Equal(t, 1, len(lightspeedCmd.Commands()))

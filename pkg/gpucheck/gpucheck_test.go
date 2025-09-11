@@ -24,7 +24,7 @@ func (m *MockOrchestrator) Connect(containerRuntimeURI string) (context.Context,
 	return args.Get(0).(context.Context), args.Error(1)
 }
 
-func (m *MockOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+func (m *MockOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
 	args := m.Called(image, containerName, env, cache, volumeMounts, commChan, ctx, registry, portMappings)
 	return args.Get(0).(*string), args.Error(1)
 }
@@ -44,7 +44,7 @@ func (m *MockOrchestrator) GetConfig() config.Config {
 }
 
 // Implement other required interface methods as no-ops for testing
-func (m *MockOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
+func (m *MockOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
 	args := m.Called(image, containerName, env, cache, volumeMounts, stdout, stderr, commChan, ctx, registry)
 	return args.Get(0).(*string), args.Error(1)
 }
@@ -281,7 +281,7 @@ func TestCheckGPUSupportByType_PodmanRuntime(t *testing.T) {
 
 	// Mock Podman runtime
 	mockOrchestrator.On("GetContainerRuntime").Return(orchestratormodels.Podman)
-	
+
 	// Mock both Run and Attach methods that are called by CommonRunAttached
 	containerID := "test-container-id"
 	// First CommonRunAttached calls Run

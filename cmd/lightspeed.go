@@ -48,10 +48,10 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 	}
 
 	// Set up GPU device mounts
-	deviceMounts := getRAGGPUDeviceMounts(gpuType)
+	devices := getRAGGPUDeviceMounts(gpuType)
 
 	// Set up port mapping using config
-	hostPort := config.RAGServicePort    // Host port (e.g., "8080")
+	hostPort := config.RAGServicePort      // Host port (e.g., "8080")
 	containerPort := config.RAGServicePort // Container port (e.g., "8080")
 	portMappings := &map[string]string{
 		hostPort: containerPort, // host port -> container port
@@ -71,17 +71,8 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 	}()
 
 	// Run the RAG container in detached mode
-	containerID, err := orchestrator.Run(
-		ragImageURI,
-		containerName,
-		env,
-		false,        // Don't cache
-		deviceMounts, // GPU device mounts
-		&commChan,    // Communication channel for pull progress
-		ctx,
-		registry,
-		portMappings, // Port mappings
-	)
+	containerID, err := orchestrator.Run(ragImageURI, containerName, env, false, nil, &devices,
+		&commChan, ctx, registry, portMappings)
 
 	// The orchestrator closes the channel automatically, so we don't need to close it manually
 	if err != nil {
@@ -111,8 +102,7 @@ func getRAGGPUDeviceMounts(gpuType string) map[string]string {
 	//	// AMD and Intel GPUs use DRI devices
 	//	deviceMounts["/dev/dri"] = "/dev/dri"
 	case "apple-silicon":
-		// Apple Silicon GPUs are handled via device mapping in scenario_orchestrator.go
-		// No volume mounts needed - using proper Linux device mapping instead
+		deviceMounts["/dev/dri"] = "/dev/dri"
 	}
 
 	return deviceMounts
@@ -207,11 +197,11 @@ type QueryResponse struct {
 // startInteractivePrompt starts an interactive chat session with the Lightspeed service
 func startInteractivePrompt(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config) error {
 	scanner := bufio.NewScanner(os.Stdin)
-	
+
 	// Set up signal handling for Ctrl+C
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	
+
 	// Handle Ctrl+C in a goroutine
 	go func() {
 		<-signalChan
@@ -223,28 +213,28 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 		}
 		os.Exit(0)
 	}()
-	
+
 	fmt.Printf("🤖 AI Assistant ready! Ask me about krknctl commands or chaos engineering:\n")
 	fmt.Printf("📍 Service available at: http://%s:%s\n", config.RAGHost, hostPort)
 	fmt.Printf("💡 Try asking: 'How do I run a pod deletion scenario?'\n")
 	fmt.Printf("🚪 Type 'exit', 'quit', or press Ctrl+C to stop.\n\n")
-	
+
 	for {
 		fmt.Print("> ")
 		if !scanner.Scan() {
 			break
 		}
-		
+
 		query := strings.TrimSpace(scanner.Text())
 		if query == "" {
 			continue
 		}
-		
+
 		if strings.ToLower(query) == "exit" || strings.ToLower(query) == "quit" {
 			fmt.Println("👋 Goodbye!")
 			break
 		}
-		
+
 		// Send query to Lightspeed service
 		response, err := queryRAGService(hostPort, query, config)
 		if err != nil {
@@ -252,16 +242,16 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			fmt.Printf("💡 Tip: Make sure the service is fully initialized. Large models may take a few minutes.\n")
 			continue
 		}
-		
+
 		// Display response
 		fmt.Printf("\n🤖 %s\n", response.Response)
 		fmt.Println()
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("error reading input: %w", err)
 	}
-	
+
 	// Clean up: stop the container
 	fmt.Println("\n🧹 Cleaning up Lightspeed service...")
 	if err := orchestrator.Kill(&containerID, ctx); err != nil {
@@ -269,7 +259,7 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 	} else {
 		fmt.Println("✅ Lightspeed service stopped successfully")
 	}
-	
+
 	return nil
 }
 

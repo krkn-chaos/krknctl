@@ -55,7 +55,16 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, portMappings *map[string]string) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image,
+	containerName string,
+	env map[string]string, cache bool,
+	volumeMounts map[string]string,
+	devices *map[string]string,
+	commChan *chan *string,
+	ctx context.Context,
+	registry *providermodels.RegistryV2,
+	portMappings *map[string]string) (*string, error) {
+
 	imageExists, err := images.Exists(ctx, image, nil)
 	if !cache || !imageExists {
 
@@ -128,6 +137,16 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
+	if devices != nil {
+		for _, v := range *devices {
+			driDevice := specs.LinuxDevice{
+				Path: v,
+				Type: "c",
+			}
+			s.Devices = append(s.Devices, driDevice)
+		}
+	}
+
 	// Handle port mappings if provided
 	if portMappings != nil && len(*portMappings) > 0 {
 		s.PortMappings = make([]nettypes.PortMapping, 0, len(*portMappings))
@@ -160,16 +179,6 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 		}
 	}
 
-	// Add GPU device access for Lightspeed RAG containers
-	if strings.Contains(image, "krknctl-lightspeed") {
-		// Add /dev/dri device
-		driDevice := specs.LinuxDevice{
-			Path: "/dev/dri",
-			Type: "c",
-		}
-		s.Devices = append(s.Devices, driDevice)
-	}
-
 	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
 		return nil, err
@@ -180,7 +189,12 @@ func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]s
 	return &createResponse.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerID *string,
+	signalChannel chan os.Signal,
+	stdout io.Writer,
+	stderr io.Writer,
+	ctx context.Context,
+) (bool, error) {
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 
@@ -380,20 +394,9 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 
 // common functions
 
-func (c *ScenarioOrchestrator) RunAttached(
-	image string,
-	containerName string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	stdout io.Writer,
-	stderr io.Writer,
-	commChan *chan *string,
-	ctx context.Context,
-	registry *providermodels.RegistryV2,
-) (*string, error) {
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
 
-	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, nil, stdout, stderr, c, commChan, ctx, registry)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
