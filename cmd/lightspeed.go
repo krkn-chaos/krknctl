@@ -94,9 +94,7 @@ func getRAGGPUDeviceMounts(gpuType string) map[string]string {
 	switch gpuType {
 	case "nvidia":
 		// NVIDIA GPU devices
-		deviceMounts["/dev/nvidia0"] = "/dev/nvidia0"
-		deviceMounts["/dev/nvidiactl"] = "/dev/nvidiactl"
-		deviceMounts["/dev/nvidia-uvm"] = "/dev/nvidia-uvm"
+		deviceMounts["nvidia.com/gpu=all"] = "nvidia.com/gpu=all"
 	// Temporarily disabled GPU types
 	// case "amd", "intel":
 	//	// AMD and Intel GPUs use DRI devices
