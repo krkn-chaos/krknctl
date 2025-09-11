@@ -32,9 +32,9 @@ RUN dnf -y install dnf-plugins-core && \
     && (dnf versionlock mesa-vulkan-drivers || echo "Mesa versionlock not available, skipping") \
     && dnf clean all
 
-# Install NVIDIA CUDA support (optional - will be available if NVIDIA drivers are mounted)
-RUN (dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora39/x86_64/cuda-fedora39.repo || echo "CUDA repo not available") \
-    && (dnf -y install cuda-devel cuda-cudart-devel cuda-cublas-devel || echo "CUDA packages not available, will use runtime CUDA if available") \
+# Install NVIDIA CUDA support 
+RUN dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/fedora40/x86_64/cuda-fedora40.repo \
+    && dnf -y install cuda-toolkit cuda-devel \
     && dnf clean all
 
 # Verify glslc and GPU setup
