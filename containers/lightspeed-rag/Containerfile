@@ -38,7 +38,7 @@ RUN if [ "$(uname -m)" = "x86_64" ]; then \
     elif [ "$(uname -m)" = "aarch64" ]; then \
         dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel10/sbsa/cuda-rhel10.repo; \
     fi \
-    && dnf -y install cuda-toolkit-13-0 \
+    && dnf -y install cuda-toolkit-13-0 cuda-compiler-13-0 cuda-nvcc-13-0 \
     && dnf clean all \
     && echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /etc/environment \
     && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /etc/environment
