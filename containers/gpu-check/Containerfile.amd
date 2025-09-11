@@ -17,8 +17,8 @@ RUN microdnf install -y \
     mesa-libGL \
     && microdnf clean all
 
-# Copy the GPU check script
-COPY gpu-check.sh /usr/local/bin/gpu-check.sh
+# Copy the AMD-specific GPU check script
+COPY gpu-check-amd.sh /usr/local/bin/gpu-check.sh
 
 # Make the script executable
 RUN chmod +x /usr/local/bin/gpu-check.sh

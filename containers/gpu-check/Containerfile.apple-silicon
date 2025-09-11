@@ -26,8 +26,8 @@ RUN dnf -y install 'dnf5-command(copr)' \
     && dnf -y downgrade mesa-vulkan-drivers --repo=copr:copr.fedorainfracloud.org:slp:mesa-krunkit \
     && dnf clean all
 
-# Copy the GPU check script
-COPY gpu-check.sh /usr/local/bin/gpu-check.sh
+# Copy the Apple Silicon-specific GPU check script
+COPY gpu-check-apple-silicon.sh /usr/local/bin/gpu-check.sh
 
 # Make the script executable
 RUN chmod +x /usr/local/bin/gpu-check.sh

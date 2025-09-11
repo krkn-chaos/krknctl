@@ -18,8 +18,8 @@ RUN microdnf install -y \
     libva-utils \
     && microdnf clean all
 
-# Copy the GPU check script
-COPY gpu-check.sh /usr/local/bin/gpu-check.sh
+# Copy the Intel-specific GPU check script
+COPY gpu-check-intel.sh /usr/local/bin/gpu-check.sh
 
 # Make the script executable
 RUN chmod +x /usr/local/bin/gpu-check.sh

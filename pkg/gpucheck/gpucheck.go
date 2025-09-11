@@ -33,9 +33,6 @@ func GetSupportedGPUTypes() []GPUTypeDetector {
 	return []GPUTypeDetector{
 		{"apple-silicon", "Apple Silicon (M1, M2, M3, M4 with Metal)"},
 		{"nvidia", "NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)"},
-		// Future GPU types can be added here:
-		// {"amd", "AMD GPUs (Radeon, FirePro, Instinct with ROCm)"},
-		// {"intel", "Intel GPUs (Arc, Iris, UHD Graphics)"},
 	}
 }
 
@@ -72,8 +69,8 @@ func (gc *GpuChecker) CheckGPUSupportByType(ctx context.Context, gpuType string,
 		}, err
 	}
 
-	// Run container with GPU-specific device mounting
-	result, err := gc.runGPUCheckWithDevices(ctx, image, gpuType, registry)
+	// Run platform-specific GPU check using the working pattern (no device mounting to avoid macOS issues)
+	result, err := gc.runPlatformGPUCheck(ctx, image, gpuType, registry)
 	if result != nil {
 		result.GPUType = gpuType
 	}
@@ -190,6 +187,83 @@ func (gc *GpuChecker) getGPUDeviceMounts(gpuType string) map[string]string {
 	return deviceMounts
 }
 
+// runPlatformGPUCheck runs the platform-specific GPU check container using the working pattern
+func (gc *GpuChecker) runPlatformGPUCheck(ctx context.Context, image string, gpuType string, registry *models.RegistryV2) (*Result, error) {
+	// Generate unique container name
+	containerName := fmt.Sprintf("krknctl-gpu-check-%s-%d", gpuType, time.Now().Unix())
+
+	// Create buffers to capture container output
+	var stdout, stderr bytes.Buffer
+
+	// Use the working pattern (no device mounting to avoid macOS issues)
+	emptyDevices := make(map[string]string)
+	_, err := scenarioorchestrator.CommonRunAttached(
+		image,
+		containerName,
+		map[string]string{}, // No special environment variables needed
+		false,               // Don't cache
+		map[string]string{}, // No volume mounts 
+		&emptyDevices,       // Empty devices to avoid macOS issues
+		&stdout,
+		&stderr,
+		gc.orchestrator,
+		nil, // No communication channel needed
+		ctx,
+		registry,
+	)
+
+	if err != nil {
+		return &Result{
+			HasGPUSupport: false,
+			Error:         fmt.Errorf("failed to run %s GPU check container: %w", gpuType, err),
+		}, err
+	}
+
+	// Combine stdout and stderr
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		if output != "" {
+			output += "\n"
+		}
+		output += stderr.String()
+	}
+
+	// Parse the output to determine GPU support
+	hasGPU := parseGPUCheckOutput(output)
+	
+	// Extract GPU type from output manually
+	detectedGPUType := ""
+	if hasGPU {
+		lines := strings.Split(output, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "GPU_TYPE=") {
+				detectedGPUType = strings.TrimPrefix(line, "GPU_TYPE=")
+				detectedGPUType = strings.ToLower(detectedGPUType)
+				// Convert script GPU types to our naming convention
+				switch detectedGPUType {
+				case "nvidia":
+					detectedGPUType = "nvidia"
+				case "apple":
+					detectedGPUType = "apple-silicon"
+				case "amd":
+					detectedGPUType = "amd"
+				case "intel":
+					detectedGPUType = "intel"
+				}
+				break
+			}
+		}
+	}
+
+	return &Result{
+		HasGPUSupport: hasGPU,
+		Output:        output,
+		Error:         nil,
+		GPUType:       detectedGPUType,
+	}, nil
+}
+
 // parseGPUCheckOutput parses the container output to determine if GPU support is available
 func parseGPUCheckOutput(output string) bool {
 	// Look for success indicators in the output
@@ -214,6 +288,23 @@ func parseGPUCheckOutput(output string) bool {
 	return false
 }
 
+// getGPUDescription returns a human-readable description for a GPU type
+func getGPUDescription(gpuType string) string {
+	descriptions := map[string]string{
+		"nvidia":        "NVIDIA GPU (CUDA, GeForce, Quadro, Tesla)",
+		"amd":           "AMD GPU (Radeon, FirePro, Instinct with ROCm)",
+		"intel":         "Intel GPU (Arc, Iris, UHD Graphics)",
+		"apple-silicon": "Apple Silicon GPU (M1, M2, M3, M4 with Metal)",
+		"generic":       "Generic GPU support",
+		"runtime":       "GPU support via runtime environment",
+	}
+	
+	if desc, exists := descriptions[gpuType]; exists {
+		return desc
+	}
+	return fmt.Sprintf("Unknown GPU type: %s", gpuType)
+}
+
 // FormatResult formats the GPU check result for CLI output
 func (gc *GpuChecker) FormatResult(result *Result) string {
 	if result.Error != nil {
@@ -221,7 +312,12 @@ func (gc *GpuChecker) FormatResult(result *Result) string {
 	}
 
 	if result.HasGPUSupport {
-		return "GPU Support: Yes\n\n✅ Container runtime has GPU acceleration available.\nThis environment is suitable for running krknctl lightspeed workloads."
+		gpuInfo := ""
+		if result.GPUType != "" {
+			gpuDescription := getGPUDescription(result.GPUType)
+			gpuInfo = fmt.Sprintf("\nDetected GPU: %s", gpuDescription)
+		}
+		return fmt.Sprintf("GPU Support: Yes%s\n\n✅ Container runtime has GPU acceleration available.\nThis environment is suitable for running krknctl lightspeed workloads.", gpuInfo)
 	}
 
 	return "GPU Support: No\n\n⚠️  Container runtime does not support GPU acceleration.\nThis environment is not suitable for running krknctl lightspeed workloads.\n\nTo enable GPU support:\n• For NVIDIA GPUs: Install nvidia-container-toolkit and configure your container runtime\n• For AMD GPUs: Install ROCm and configure appropriate device access\n• For Intel GPUs: Ensure proper device permissions and Intel GPU drivers\n• For Apple Silicon (M1/M2/M3): Create Podman machine with libkrun for virtualized GPU\n  Note: Only supports Vulkan compute shaders, not Metal framework\n  See: https://podman-desktop.io/docs/podman/gpu\n\nFor more information, refer to your container runtime's GPU configuration documentation."
