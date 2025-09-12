@@ -32,18 +32,6 @@ RUN dnf -y install dnf-plugins-core && \
     && (dnf versionlock mesa-vulkan-drivers || echo "Mesa versionlock not available, skipping") \
     && dnf clean all
 
-# Install NVIDIA CUDA support (multiplatform)
-RUN if [ "$(uname -m)" = "x86_64" ]; then \
-        dnf config-manager --add-repo --from-repofile https://developer.download.nvidia.com/compute/cuda/repos/fedora42/x86_64/cuda-fedora42.repo; \
-    elif [ "$(uname -m)" = "aarch64" ]; then \
-        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel10/sbsa/cuda-rhel10.repo; \
-    fi \
-    && dnf -y install cuda-toolkit-13-0 cuda-compiler-13-0 cuda-nvcc-13-0 \
-    && dnf clean all \
-    && echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /etc/environment \
-    && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /etc/environment \
-    && echo 'export CUDACXX=/usr/local/cuda/bin/nvcc' >> /etc/environment \
-    && echo 'export CUDA_HOME=/usr/local/cuda' >> /etc/environment
 
 # Verify glslc and GPU setup
 RUN which glslc && glslc --version && \
@@ -56,12 +44,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Compile and install llama-cpp-python with multi-backend support (CUDA + Vulkan)
-RUN export PATH=/usr/local/cuda/bin:$PATH && \
-    export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH && \
-    export CUDACXX=/usr/local/cuda/bin/nvcc && \
-    export CUDA_HOME=/usr/local/cuda && \
-    CMAKE_ARGS="-DGGML_VULKAN=on -DGGML_CUDA=on" pip3 install --no-cache-dir --verbose llama-cpp-python
+# Compile and install llama-cpp-python with Vulkan support (Apple Silicon optimized)
+RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
 # Install huggingface-hub for reliable model downloads
 RUN pip3 install --no-cache-dir huggingface-hub
