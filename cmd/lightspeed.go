@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/gpucheck"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 )
@@ -28,12 +29,12 @@ type RAGDeploymentResult struct {
 	hostPort    string
 }
 
-// deployRAGModel deploys the RAG model container in detached mode with proper port mapping
-func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2) (*RAGDeploymentResult, error) {
-	// Get RAG model image URI
-	ragImageURI, err := config.GetRAGModelImageURI()
+// deployRAGModelWithGPUType deploys the RAG model container using the new GPU detection system
+func deployRAGModelWithGPUType(ctx context.Context, gpuType gpucheck.GPUAcceleration, offline bool, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, detector *gpucheck.PlatformGPUDetector) (*RAGDeploymentResult, error) {
+	// Get the appropriate lightspeed image for the detected GPU type
+	ragImageURI, err := detector.GetLightspeedImageURI(gpuType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get RAG model image URI: %w", err)
+		return nil, fmt.Errorf("failed to get lightspeed image URI: %w", err)
 	}
 
 	// Generate unique container name using config
@@ -47,8 +48,8 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 		env["USE_OFFLINE"] = "false"
 	}
 
-	// Set up GPU device mounts
-	devices := getRAGGPUDeviceMounts(gpuType)
+	// Get device mounts from detector
+	devices := detector.GetDeviceMounts(gpuType)
 
 	// Set up port mapping using config
 	hostPort := config.RAGServicePort      // Host port (e.g., "8080")
@@ -87,24 +88,74 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 	}, nil
 }
 
-// getRAGGPUDeviceMounts returns device mounts for RAG container (similar to GPU check)
-func getRAGGPUDeviceMounts(gpuType string) map[string]string {
-	deviceMounts := make(map[string]string)
-
-	switch gpuType {
-	case "nvidia":
-		// NVIDIA GPU devices
-		deviceMounts["nvidia.com/gpu=all"] = "nvidia.com/gpu=all"
-	// Temporarily disabled GPU types
-	// case "amd", "intel":
-	//	// AMD and Intel GPUs use DRI devices
-	//	deviceMounts["/dev/dri"] = "/dev/dri"
-	case "apple-silicon":
-		deviceMounts["/dev/dri"] = "/dev/dri"
+// deployRAGModel deploys the RAG model container in detached mode with proper port mapping
+// DEPRECATED: Use deployRAGModelWithGPUType instead
+func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2) (*RAGDeploymentResult, error) {
+	// Get RAG model image URI
+	ragImageURI, err := config.GetRAGModelImageURI()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get RAG model image URI: %w", err)
 	}
 
-	return deviceMounts
+	// Generate unique container name using config
+	containerName := fmt.Sprintf("%s-%d", config.RAGContainerPrefix, time.Now().Unix())
+
+	// Set up environment variables
+	env := map[string]string{}
+	if offline {
+		env["USE_OFFLINE"] = "true"
+	} else {
+		env["USE_OFFLINE"] = "false"
+	}
+
+	// Set up GPU device mounts (legacy approach)
+	devices := make(map[string]string)
+	switch gpuType {
+	case "nvidia":
+		devices["/dev/nvidia0"] = "/dev/nvidia0"
+		devices["/dev/nvidiactl"] = "/dev/nvidiactl"
+		devices["/dev/nvidia-uvm"] = "/dev/nvidia-uvm"
+	case "apple-silicon":
+		devices["/dev/dri"] = "/dev/dri"
+	}
+
+	// Set up port mapping using config
+	hostPort := config.RAGServicePort      // Host port (e.g., "8080")
+	containerPort := config.RAGServicePort // Container port (e.g., "8080")
+	portMappings := &map[string]string{
+		hostPort: containerPort, // host port -> container port
+	}
+
+	// Create spinner for pull progress (exactly like run.go)
+	spinner := NewSpinnerWithSuffix("pulling RAG model image...")
+	spinner.Start()
+
+	// Create communication channel for pull progress updates
+	commChan := make(chan *string)
+	go func() {
+		for msg := range commChan {
+			spinner.Suffix = *msg
+		}
+		spinner.Stop()
+	}()
+
+	// Run the RAG container in detached mode
+	containerID, err := orchestrator.Run(ragImageURI, containerName, env, false, nil, &devices,
+		&commChan, ctx, registry, portMappings)
+
+	// The orchestrator closes the channel automatically, so we don't need to close it manually
+	if err != nil {
+		return nil, fmt.Errorf("failed to run RAG container: %w", err)
+	}
+	fmt.Printf("🚀 RAG container started: %s\n", *containerID)
+	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.RAGHost, hostPort, config.RAGServicePort)
+
+	return &RAGDeploymentResult{
+		containerID: *containerID,
+		hostPort:    hostPort,
+	}, nil
 }
+
 
 // HealthResponse represents the health check response
 type HealthResponse struct {

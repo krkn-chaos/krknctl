@@ -10,6 +10,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/spf13/cobra"
 )
 
@@ -44,6 +45,9 @@ Examples:
 
 	// Add offline flag for airgapped environments
 	command.PersistentFlags().Bool("offline", false, "Use cached documentation (for airgapped environments)")
+	
+	// Add no-gpu flag for CPU-only mode
+	command.PersistentFlags().Bool("no-gpu", false, "Use CPU-only mode (no GPU acceleration)")
 
 	return command
 }
@@ -68,6 +72,11 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
+			
+			// Check if Docker is being used - Lightspeed only supports Podman
+			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
+				return fmt.Errorf("❌ Lightspeed requires Podman container runtime. Docker is not supported for GPU acceleration")
+			}
 
 			// Get container runtime socket
 			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
@@ -81,29 +90,30 @@ Examples:
 				return fmt.Errorf("failed to connect to container runtime: %w", err)
 			}
 
-			// Build lightspeed registry configuration from flags
-			registry, err := buildLightspeedRegistryFromFlags(cmd, config)
-			if err != nil {
-				return fmt.Errorf("failed to build lightspeed registry configuration: %w", err)
-			}
+			// Get no-gpu flag
+			noGPU, _ := cmd.Flags().GetBool("no-gpu")
 
-			// Create GPU checker
-			gpuChecker := gpucheck.NewGpuChecker(*scenarioOrchestrator, config)
+			// Create platform GPU detector
+			detector := gpucheck.NewPlatformGPUDetector(config)
 
-			// Auto-detect GPU support
-			fmt.Println("\n🔍 Auto-detecting GPU support...")
-			result, err := gpuChecker.AutoDetectGPU(ctx, registry)
+			// Auto-detect GPU acceleration
+			fmt.Println("\n🔍 Detecting GPU acceleration...")
+			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
+			
+			// Get configuration
+			imageURI, _, deviceMounts, err := detector.AutoSelectLightspeedConfig(ctx, noGPU)
 			if err != nil {
-				return fmt.Errorf("failed to auto-detect GPU support: %w", err)
+				return fmt.Errorf("failed to get lightspeed configuration: %w", err)
 			}
 
 			// Format and print result
-			if result.HasGPUSupport {
-				fmt.Printf("\n✅ GPU support confirmed: %s\n", result.GPUType)
+			fmt.Printf("\n✅ GPU acceleration: %s\n", detector.GetGPUDescription(gpuType))
+			fmt.Printf("📦 Container image: %s\n", imageURI)
+			if len(deviceMounts) > 0 {
+				fmt.Printf("🔗 Device mounts: %v\n", deviceMounts)
 			} else {
-				fmt.Printf("\n❌ No GPU support detected\n")
+				fmt.Printf("🔗 Device mounts: none (CPU-only)\n")
 			}
-			fmt.Println(gpuChecker.FormatResult(result))
 
 			return nil
 		},
@@ -173,11 +183,17 @@ Examples:
   krknctl lightspeed run --offline  # Auto-detect GPU, use cached docs (airgapped)`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get offline flag
+			// Get flags
 			offlineFlag, _ := cmd.Flags().GetBool("offline")
+			noGPU, _ := cmd.Flags().GetBool("no-gpu")
 
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
+			
+			// Check if Docker is being used - Lightspeed only supports Podman
+			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
+				return fmt.Errorf("❌ Lightspeed requires Podman container runtime. Docker is not supported for GPU acceleration")
+			}
 
 			// Get container runtime socket
 			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
@@ -197,33 +213,23 @@ Examples:
 				return fmt.Errorf("failed to build lightspeed registry configuration: %w", err)
 			}
 
-			// Step 1: Auto-detect GPU support
-			fmt.Println("🔍 Auto-detecting GPU support...")
+			// Step 1: Auto-detect GPU acceleration
+			fmt.Println("🔍 Detecting GPU acceleration...")
 			
-			// Create GPU checker
-			gpuChecker := gpucheck.NewGpuChecker(*scenarioOrchestrator, config)
-
-			// Auto-detect GPU support
-			result, err := gpuChecker.AutoDetectGPU(ctx, registry)
-			if err != nil {
-				return fmt.Errorf("failed to auto-detect GPU support: %w", err)
-			}
-
-			// Check if GPU support is available
-			if !result.HasGPUSupport {
-				fmt.Printf("❌ GPU auto-detection failed:\n\n")
-				fmt.Println(gpuChecker.FormatResult(result))
-				return fmt.Errorf("no GPU support found - cannot run Lightspeed service")
-			}
-
-			fmt.Printf("✅ GPU support confirmed: %s\n", result.GPUType)
+			// Create platform GPU detector
+			detector := gpucheck.NewPlatformGPUDetector(config)
+			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
+			
+			fmt.Printf("✅ GPU acceleration: %s\n", detector.GetGPUDescription(gpuType))
 
 			// Step 2: Deploy RAG model container
 			fmt.Println("\n🚀 Deploying lightspeed model...")
 			
-			ragResult, err := deployRAGModel(ctx, result.GPUType, offlineFlag, *scenarioOrchestrator, config, registry)
+			ragResult, err := deployRAGModelWithGPUType(ctx, gpuType, offlineFlag, *scenarioOrchestrator, config, registry, detector)
 			if err != nil {
-				return fmt.Errorf("failed to deploy RAG model: %w", err)
+				// Handle GPU-related errors with helpful suggestions
+				enhancedErr := detector.HandleContainerError(err, gpuType)
+				return fmt.Errorf("failed to deploy RAG model: %w", enhancedErr)
 			}
 
 			// Step 3: Health check

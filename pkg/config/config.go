@@ -159,3 +159,27 @@ func (c *Config) GetRAGModelImageURI() (string, error) {
 	}
 	return imageURI + ":" + c.RAGModelTag, nil
 }
+
+// GetLightspeedImageURI returns the lightspeed RAG image URI for a specific GPU type
+func (c *Config) GetLightspeedImageURI(gpuType string) (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	
+	// Construct tag using rag_model_tag from config + architecture suffix
+	var tag string
+	switch gpuType {
+	case "nvidia":
+		tag = c.RAGModelTag + "-nvidia"
+	case "apple-silicon":
+		tag = c.RAGModelTag + "-apple-silicon" 
+	case "generic":
+		tag = c.RAGModelTag + "-generic"
+	default:
+		// Default to generic for unknown types
+		tag = c.RAGModelTag + "-generic"
+	}
+	
+	return imageURI + ":" + tag, nil
+}

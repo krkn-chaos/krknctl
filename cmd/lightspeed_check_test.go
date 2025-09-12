@@ -149,19 +149,25 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 }
 
 func TestGPUAutoDetection(t *testing.T) {
-	// Test supported GPU types list
-	supportedTypes := gpucheck.GetSupportedGPUTypes()
+	config := getTestConfig(t)
+	detector := gpucheck.NewPlatformGPUDetector(config)
 
-	// Should have at least Apple Silicon and NVIDIA
-	assert.GreaterOrEqual(t, len(supportedTypes), 2)
-
-	// Check that Apple Silicon and NVIDIA are included
-	typeNames := make([]string, len(supportedTypes))
-	for i, gpuType := range supportedTypes {
-		typeNames[i] = gpuType.Type
-	}
-	assert.Contains(t, typeNames, "apple-silicon")
-	assert.Contains(t, typeNames, "nvidia")
+	// Test GPU detection types
+	ctx := context.Background()
+	
+	// Test with --no-gpu flag
+	gpuType := detector.DetectGPUAcceleration(ctx, true)
+	assert.Equal(t, gpucheck.GPUAccelerationGeneric, gpuType)
+	
+	// Test description generation
+	description := detector.GetGPUDescription(gpucheck.GPUAccelerationAppleSilicon)
+	assert.Contains(t, description, "Apple Silicon")
+	
+	description = detector.GetGPUDescription(gpucheck.GPUAccelerationNVIDIA)
+	assert.Contains(t, description, "NVIDIA")
+	
+	description = detector.GetGPUDescription(gpucheck.GPUAccelerationGeneric)
+	assert.Contains(t, description, "CPU-only")
 }
 
 // Test command creation and basic structure
