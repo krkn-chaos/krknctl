@@ -21,20 +21,19 @@ RUN microdnf -y install \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install ALL Python dependencies in builder stage
+# Create and activate virtual environment
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Copy requirements and install ALL Python dependencies in venv
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install llama-cpp-python (standard version from PyPI)
-RUN pip3 install --no-cache-dir llama-cpp-python
+RUN pip install --no-cache-dir llama-cpp-python
 
 # Install huggingface-hub for reliable model downloads
-RUN pip3 install --no-cache-dir huggingface-hub
-
-# Debug: Show where Python packages are installed
-RUN python3 -c "import sys; print('Python paths:'); [print(p) for p in sys.path]" && \
-    find /usr -name "numpy*" 2>/dev/null | head -10 && \
-    find /usr/local -name "numpy*" 2>/dev/null | head -10
+RUN pip install --no-cache-dir huggingface-hub
 
 # Download model in builder stage
 RUN mkdir -p /app/models && \
@@ -65,12 +64,12 @@ RUN microdnf -y install \
 # Set working directory
 WORKDIR /app
 
-# Copy Python site-packages from builder (all installed packages)
-# First check what Python paths exist in builder and copy them all
-COPY --from=builder /usr/local/lib/ /usr/local/lib/
-COPY --from=builder /usr/local/bin/ /usr/local/bin/
-COPY --from=builder /usr/lib/python3.13/ /usr/lib/python3.13/
-COPY --from=builder /usr/lib64/python3.13/ /usr/lib64/python3.13/
+# Copy the complete virtual environment from builder
+COPY --from=builder /app/venv/ /app/venv/
+
+# Activate virtual environment for all subsequent commands
+ENV PATH="/app/venv/bin:$PATH"
+ENV VIRTUAL_ENV="/app/venv"
 
 # Copy application files and pre-built model/indices from builder
 COPY --from=builder /app/models/ /app/models/
@@ -82,6 +81,8 @@ RUN mkdir -p /app/docs_index
 # Copy application files
 COPY rag_service.py .
 COPY entrypoint.sh .
+COPY index_docs.py .
+COPY krknctl_help.txt .
 
 # Make scripts executable
 RUN chmod +x entrypoint.sh
