@@ -29,9 +29,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Install llama-cpp-python with pre-built CUDA wheel (force binary, no compilation!)
-RUN pip3 install --no-cache-dir --only-binary=llama-cpp-python llama-cpp-python \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
+# Install llama-cpp-python (standard version from PyPI)
+RUN pip3 install --no-cache-dir llama-cpp-python
 
 # Install huggingface-hub for reliable model downloads
 RUN pip3 install --no-cache-dir huggingface-hub
