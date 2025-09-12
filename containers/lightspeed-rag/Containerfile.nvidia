@@ -25,14 +25,9 @@ WORKDIR /app
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# Copy requirements and install Python dependencies in venv
+# Copy requirements and install ALL Python dependencies in venv
 COPY requirements.txt .
-
-# Install PyTorch CPU-only version first (much smaller)
-RUN pip install --no-cache-dir torch==2.8.0+cpu torchvision==0.20.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
-
-# Install other requirements (excluding torch to avoid CUDA version)
-RUN pip install --no-cache-dir fastapi uvicorn sentence-transformers faiss-cpu numpy requests beautifulsoup4 html2text pydantic python-multipart
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install llama-cpp-python (standard version from PyPI)
 RUN pip install --no-cache-dir llama-cpp-python
