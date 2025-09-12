@@ -25,15 +25,32 @@ WORKDIR /app
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# Copy requirements and install ALL Python dependencies in venv
+# Copy requirements and install Python dependencies in venv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Install PyTorch CPU-only version first (much smaller)
+RUN pip install --no-cache-dir torch==2.8.0+cpu torchvision==0.20.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# Install other requirements (excluding torch to avoid CUDA version)
+RUN pip install --no-cache-dir fastapi uvicorn sentence-transformers faiss-cpu numpy requests beautifulsoup4 html2text pydantic python-multipart
 
 # Install llama-cpp-python (standard version from PyPI)
 RUN pip install --no-cache-dir llama-cpp-python
 
 # Install huggingface-hub for reliable model downloads
 RUN pip install --no-cache-dir huggingface-hub
+
+# Aggressive cleanup: remove pip cache, test files, and unnecessary data
+RUN find /app/venv -name "*.pyc" -delete && \
+    find /app/venv -name "__pycache__" -delete && \
+    find /app/venv -name "*.pyo" -delete && \
+    find /app/venv -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/venv -name "test" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find /app/venv -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    rm -rf /app/venv/lib/python*/site-packages/torch/test && \
+    rm -rf /app/venv/lib/python*/site-packages/torch/share && \
+    rm -rf /app/venv/lib/python*/site-packages/transformers/tests && \
+    rm -rf /root/.cache /tmp/* 2>/dev/null || true
 
 # Download model in builder stage
 RUN mkdir -p /app/models && \
