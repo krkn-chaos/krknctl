@@ -1,4 +1,5 @@
 // Package config provides all the string constraints and options for the krknctl tool
+// Assisted by Claude Sonnet 4
 package config
 
 import (
@@ -55,7 +56,18 @@ type Config struct {
 	GithubReleaseAPI            string `json:"github_release_api"`
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
-	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
+	TableMaxStepScenarioLength     int    `json:"table_max_step_scenario_length"`
+	LightspeedRegistry             string `json:"lightspeed_registry"`
+	GpuCheckBaseTag                string `json:"gpu_check_base_tag"`
+	RAGModelTag                    string `json:"rag_model_tag"`
+	RAGContainerPrefix             string `json:"rag_container_prefix"`
+	RAGServicePort                 string `json:"rag_service_port"`
+	RAGHealthEndpoint              string `json:"rag_health_endpoint"`
+	RAGQueryEndpoint               string `json:"rag_query_endpoint"`
+	RAGHost                        string `json:"rag_host"`
+	RAGHealthMaxRetries            int    `json:"rag_health_max_retries"`
+	RAGHealthRetryIntervalSeconds  int    `json:"rag_health_retry_interval_seconds"`
+	RAGQueryMaxResults             int    `json:"rag_query_max_results"`
 }
 
 //go:embed config.json
@@ -102,4 +114,72 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 		return "", err
 	}
 	return repositoryURI, nil
+}
+
+func (c *Config) GetGpuCheckImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.GpuCheckBaseTag, nil
+}
+
+// GetGpuCheckImageURIByType returns the GPU check image URI for a specific GPU type
+func (c *Config) GetGpuCheckImageURIByType(gpuType string) (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	
+	// Check for known GPU types
+	knownGpuTypes := map[string]bool{
+		"nvidia":        true,
+		"amd":           true,
+		"intel":         true,
+		"apple-silicon": true,
+	}
+	
+	var tag string
+	if knownGpuTypes[gpuType] {
+		// Construct tag by appending GPU type to base tag
+		tag = c.GpuCheckBaseTag + "-" + gpuType
+	} else {
+		// Fall back to base tag for unknown GPU types
+		tag = c.GpuCheckBaseTag
+	}
+	
+	return imageURI + ":" + tag, nil
+}
+
+// GetRAGModelImageURI returns the RAG model image URI
+func (c *Config) GetRAGModelImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.RAGModelTag, nil
+}
+
+// GetLightspeedImageURI returns the lightspeed RAG image URI for a specific GPU type
+func (c *Config) GetLightspeedImageURI(gpuType string) (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.LightspeedRegistry)
+	if err != nil {
+		return "", err
+	}
+	
+	// Construct tag using rag_model_tag from config + architecture suffix
+	var tag string
+	switch gpuType {
+	case "nvidia":
+		tag = c.RAGModelTag + "-nvidia"
+	case "apple-silicon":
+		tag = c.RAGModelTag + "-apple-silicon" 
+	case "generic":
+		tag = c.RAGModelTag + "-generic"
+	default:
+		// Default to generic for unknown types
+		tag = c.RAGModelTag + "-generic"
+	}
+	
+	return imageURI + ":" + tag, nil
 }
