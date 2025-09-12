@@ -7,6 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+
+	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
@@ -190,8 +198,14 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
-	s.NetNS = specgen.Namespace{
-		NSMode: "host",
+	if devices != nil {
+		for _, v := range *devices {
+			driDevice := specs.LinuxDevice{
+				Path: v,
+				Type: "c",
+			}
+			s.Devices = append(s.Devices, driDevice)
+		}
 	}
 	if podmanCreate != nil {
 		if podmanCreate.ImagePlatform != "" {
@@ -215,7 +229,12 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	return &createResponse.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerID *string,
+	signalChannel chan os.Signal,
+	stdout io.Writer,
+	stderr io.Writer,
+	ctx context.Context,
+) (bool, error) {
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 

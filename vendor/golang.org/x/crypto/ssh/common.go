@@ -316,6 +316,18 @@ func InsecureAlgorithms() Algorithms {
 	}
 }
 
+// InsecureAlgorithms returns algorithms currently implemented by this package
+// and which have security issues.
+func InsecureAlgorithms() Algorithms {
+	return Algorithms{
+		KeyExchanges:   slices.Clone(insecureKexAlgos),
+		Ciphers:        slices.Clone(insecureCiphers),
+		MACs:           slices.Clone(insecureMACs),
+		HostKeys:       slices.Clone(insecureHostKeyAlgos),
+		PublicKeyAuths: slices.Clone(insecurePubKeyAuthAlgos),
+	}
+}
+
 var supportedCompressions = []string{compressionNone}
 
 // algorithmsForKeyFormat returns the supported signature algorithms for a given
