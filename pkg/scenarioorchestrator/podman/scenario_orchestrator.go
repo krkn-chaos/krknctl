@@ -6,6 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
+
+	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
@@ -20,12 +28,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"io"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
 )
 
 type ScenarioOrchestrator struct {
@@ -53,7 +55,16 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image,
+	containerName string,
+	env map[string]string, cache bool,
+	volumeMounts map[string]string,
+	devices *map[string]string,
+	commChan *chan *string,
+	ctx context.Context,
+	registry *providermodels.RegistryV2,
+	portMappings *map[string]string) (*string, error) {
+
 	imageExists, err := images.Exists(ctx, image, nil)
 	if !cache || !imageExists {
 
@@ -126,9 +137,48 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
-	s.NetNS = specgen.Namespace{
-		NSMode: "host",
+	if devices != nil {
+		for _, v := range *devices {
+			driDevice := specs.LinuxDevice{
+				Path: v,
+				Type: "c",
+			}
+			s.Devices = append(s.Devices, driDevice)
+		}
 	}
+
+	// Handle port mappings if provided
+	if portMappings != nil && len(*portMappings) > 0 {
+		s.PortMappings = make([]nettypes.PortMapping, 0, len(*portMappings))
+		for hostPortStr, containerPortStr := range *portMappings {
+			// Convert string ports to uint16
+			hostPort, err := strconv.ParseUint(hostPortStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid host port %s: %w", hostPortStr, err)
+			}
+			containerPort, err := strconv.ParseUint(containerPortStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
+			}
+
+			portMapping := nettypes.PortMapping{
+				HostPort:      uint16(hostPort),
+				ContainerPort: uint16(containerPort),
+				Protocol:      "tcp",
+				Range:         1,
+			}
+			s.PortMappings = append(s.PortMappings, portMapping)
+		}
+		// Use bridge network for port mapping
+		s.NetNS = specgen.Namespace{
+			NSMode: "bridge",
+		}
+	} else {
+		s.NetNS = specgen.Namespace{
+			NSMode: "host",
+		}
+	}
+
 	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
 		return nil, err
@@ -139,7 +189,12 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	return &createResponse.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerID *string,
+	signalChannel chan os.Signal,
+	stdout io.Writer,
+	stderr io.Writer,
+	ctx context.Context,
+) (bool, error) {
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 
@@ -339,20 +394,9 @@ func (c *ScenarioOrchestrator) ResolveContainerName(containerName string, ctx co
 
 // common functions
 
-func (c *ScenarioOrchestrator) RunAttached(
-	image string,
-	containerName string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	stdout io.Writer,
-	stderr io.Writer,
-	commChan *chan *string,
-	ctx context.Context,
-	registry *providermodels.RegistryV2,
-) (*string, error) {
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
 
-	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, nil, stdout, stderr, c, commChan, ctx, registry)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
