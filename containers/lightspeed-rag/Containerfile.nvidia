@@ -31,6 +31,11 @@ RUN pip3 install --no-cache-dir llama-cpp-python
 # Install huggingface-hub for reliable model downloads
 RUN pip3 install --no-cache-dir huggingface-hub
 
+# Debug: Show where Python packages are installed
+RUN python3 -c "import sys; print('Python paths:'); [print(p) for p in sys.path]" && \
+    find /usr -name "numpy*" 2>/dev/null | head -10 && \
+    find /usr/local -name "numpy*" 2>/dev/null | head -10
+
 # Download model in builder stage
 RUN mkdir -p /app/models && \
     python3 -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-1B-Instruct-GGUF', filename='Llama-3.2-1B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
@@ -61,8 +66,11 @@ RUN microdnf -y install \
 WORKDIR /app
 
 # Copy Python site-packages from builder (all installed packages)
-COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
+# First check what Python paths exist in builder and copy them all
+COPY --from=builder /usr/local/lib/ /usr/local/lib/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY --from=builder /usr/lib/python3.13/ /usr/lib/python3.13/
+COPY --from=builder /usr/lib64/python3.13/ /usr/lib64/python3.13/
 
 # Copy application files and pre-built model/indices from builder
 COPY --from=builder /app/models/ /app/models/
