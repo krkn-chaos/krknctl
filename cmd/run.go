@@ -394,7 +394,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -405,7 +405,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				scenarioDuration := time.Since(startTime)
 				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {
-				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings)
+				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, nil, conn, registrySettings, nil)
 				if err != nil {
 					return err
 				}
