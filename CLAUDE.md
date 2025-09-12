@@ -113,3 +113,115 @@ The tool auto-detects and supports both Podman and Docker:
 - Runtime configuration via CLI flags and environment variables
 - Kubeconfig path resolution for Kubernetes integration
 - Custom alerts and metrics profile support
+
+## Lightspeed AI-Powered Assistance
+
+### Overview
+Lightspeed is krknctl's AI-powered chaos engineering assistance feature that provides intelligent command suggestions and documentation search using Retrieval-Augmented Generation (RAG) with GPU acceleration.
+
+### Major Implementation Tasks Completed
+
+#### 1. GPU Detection System Redesign
+**Previous System**: Complex container-based GPU detection using test images
+- Removed complex GPU check implementation using container images
+- Eliminated `GetSupportedGPUTypes()` and container-based testing approach
+
+**New System**: Platform-based automatic detection
+- **macOS arm64**: Automatically assumes Apple Silicon GPU support (Metal via libkrun)
+- **Linux with NVIDIA devices**: Detects physical NVIDIA devices (`/dev/nvidia0`, `/dev/nvidiactl`, `/dev/nvidia-uvm`)
+- **Generic fallback**: CPU-only mode for all other platforms
+- Added `--no-gpu` flag to force CPU-only mode without device mounting
+
+#### 2. Container Runtime Support
+- **Podman Only**: Lightspeed exclusively supports Podman container runtime
+- **Docker Blocking**: Commands fail gracefully with helpful error messages when Docker is detected
+- **Error Handling**: Provides links to Podman GPU documentation (https://podman-desktop.io/docs/podman/gpu)
+
+#### 3. Container Architecture
+**Three Specialized Containers**:
+- **Apple Silicon** (`rag-model-apple-silicon`): Vulkan backend for Apple M1/M2/M3/M4 GPUs
+- **NVIDIA** (`rag-model-nvidia`): CUDA backend for NVIDIA GPUs  
+- **Generic** (`rag-model-generic`): CPU-only fallback for all other platforms
+
+**Container Selection Logic**:
+- Uses `PlatformGPUDetector.GetLightspeedImageURI()` to select appropriate container
+- Tag construction follows `{rag_model_tag}-{architecture}` pattern from config
+- Device mounting handled by `PlatformGPUDetector.GetDeviceMounts()`
+
+#### 4. Configuration Integration
+- **Config-Based Tags**: Uses `rag_model_tag` from `pkg/config/config.json` to construct container tags
+- **Centralized Settings**: All RAG service parameters (ports, endpoints, timeouts) in configuration
+- **Private Registry Support**: Full integration with existing private registry authentication
+
+#### 5. Multi-Stage Container Build Fix
+**Problem**: Documentation indexing failed in builder stage of multi-stage builds
+- **Root Cause**: Git and Python dependencies not fully available during builder stage
+- **Solution**: Moved documentation indexing from builder stage to runtime stage
+- **Impact**: Fixed NVIDIA and Generic containers (Apple single-stage already worked)
+
+**Fixed Containers**:
+- **NVIDIA** (`Containerfile.nvidia`): Multi-stage build with runtime indexing
+- **Generic** (`Containerfile.generic`): Multi-stage build with runtime indexing  
+- **Apple Silicon** (`Containerfile.apple-silicon`): Single-stage build (already working)
+
+#### 6. Documentation Indexing System
+**Sources Indexed**:
+- Local krknctl help documentation
+- Live krkn-chaos/website repository (chaos engineering guides)
+- Live krkn-chaos/krkn-hub repository (scenario definitions)
+
+**Indexing Process**:
+- **Build Time**: Creates cached indices for offline/airgapped environments
+- **Runtime**: Can rebuild indices with fresh documentation or use cached versions
+- **Verification**: Automatic validation of indexed document sources and counts
+
+#### 7. User Experience Improvements
+**Progress Feedback**:
+- Spinner with dynamic progress messages during container image pulls
+- Real-time feedback during RAG model deployment
+- Health checking with automatic retry and timeout handling
+
+**Error Handling**:
+- Platform-specific error messages with actionable solutions
+- Automatic fallback from live indexing to cached documentation
+- Container cleanup on deployment failures
+
+### Technical Implementation
+
+#### Core Components
+- **`pkg/gpucheck/gpucheck.go`**: Platform-based GPU detection logic
+- **`cmd/lightspeed_check.go`**: Lightspeed commands with Docker runtime blocking
+- **`cmd/lightspeed.go`**: RAG model deployment with GPU-specific container selection
+- **`pkg/config/config.go`**: Enhanced with Lightspeed-specific configuration methods
+
+#### Container Files
+- **`containers/lightspeed-rag/Containerfile.apple-silicon`**: Single-stage Vulkan build
+- **`containers/lightspeed-rag/Containerfile.nvidia`**: Multi-stage CUDA build  
+- **`containers/lightspeed-rag/Containerfile.generic`**: Multi-stage CPU-only build
+
+#### Key Functions
+- **`DetectGPUAcceleration()`**: Platform-based GPU type detection
+- **`deployRAGModelWithGPUType()`**: GPU-aware container deployment
+- **`HandleContainerError()`**: Enhanced error reporting with helpful suggestions
+
+### Usage Examples
+
+```bash
+# Automatic GPU detection and deployment
+krknctl lightspeed check
+
+# AI-powered assistance with auto-detected GPU
+krknctl lightspeed run
+
+# Force CPU-only mode (no GPU acceleration)
+krknctl lightspeed run --no-gpu
+
+# Offline mode for airgapped environments  
+krknctl lightspeed run --offline
+```
+
+### Development Notes
+- **Testing**: Updated test suite to use new `PlatformGPUDetector` API
+- **Backwards Compatibility**: Maintains existing CLI interface while simplifying internals
+- **Build System**: All containers build successfully with proper documentation indexing
+- **Error Recovery**: Graceful degradation when GPU features are unavailable
