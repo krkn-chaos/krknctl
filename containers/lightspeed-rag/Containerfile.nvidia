@@ -40,7 +40,9 @@ RUN mkdir -p /app/models && \
 # Pre-build cached documentation index
 COPY index_docs.py .
 COPY krknctl_help.txt .
-RUN python3 index_docs.py --build-cached-index
+RUN python3 index_docs.py --build-cached-index && \
+    ls -la /app/ && \
+    ls -la /app/cached_docs/ || echo "cached_docs directory check"
 
 #############################################
 # Runtime stage - minimal runtime dependencies
@@ -64,8 +66,10 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy application files and pre-built model/indices from builder
 COPY --from=builder /app/models/ /app/models/
-COPY --from=builder /app/docs_index/ /app/docs_index/
 COPY --from=builder /app/cached_docs/ /app/cached_docs/
+
+# Create docs_index directory for runtime index generation
+RUN mkdir -p /app/docs_index
 
 # Copy application files
 COPY rag_service.py .
