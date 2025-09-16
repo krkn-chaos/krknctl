@@ -38,7 +38,7 @@ RUN pip install --no-cache-dir llama-cpp-python
 # Install huggingface-hub for reliable model downloads
 RUN pip install --no-cache-dir huggingface-hub
 
-# Aggressive cleanup: remove pip cache, test files, and unnecessary data
+# Aggressive cleanup: remove pip cache, test files, and unnecessary data (but keep model cache)
 RUN find /app/venv -name "*.pyc" -delete && \
     find /app/venv -name "__pycache__" -delete && \
     find /app/venv -name "*.pyo" -delete && \
@@ -48,13 +48,26 @@ RUN find /app/venv -name "*.pyc" -delete && \
     rm -rf /app/venv/lib/python*/site-packages/torch/test && \
     rm -rf /app/venv/lib/python*/site-packages/torch/share && \
     rm -rf /app/venv/lib/python*/site-packages/transformers/tests && \
-    rm -rf /root/.cache /tmp/* 2>/dev/null || true
+    rm -rf /tmp/* 2>/dev/null || true
 
-# Download model in builder stage
+# Download LLM and embedding models in builder stage  
 RUN mkdir -p /app/models && \
     python3 -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-1B-Instruct-GGUF', filename='Llama-3.2-1B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
     ls -la /app/models/ && \
     [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
+
+# Pre-download embedding models to avoid runtime downloads
+RUN mkdir -p /root/.cache/huggingface/transformers && \
+    python3 -c "
+from sentence_transformers import SentenceTransformer
+print('Downloading Qwen embedding model...')
+model = SentenceTransformer('Qwen/Qwen3-Embedding-0.6B')
+print('Qwen model cached successfully')
+print('Downloading fallback embedding model...')
+fallback = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+print('Fallback model cached successfully')
+" && \
+    echo "Embedding models pre-downloaded successfully"
 
 # Clone krkn-lightspeed repository and checkout krknctl_lightspeed branch
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
@@ -87,10 +100,11 @@ COPY --from=builder /app/venv/ /app/venv/
 ENV PATH="/app/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/venv"
 
-# Copy application files and pre-built model from builder
+# Copy application files and pre-built models from builder
 COPY --from=builder /app/models/ /app/models/
 COPY --from=builder /app/krkn-lightspeed/ /app/krkn-lightspeed/
 COPY --from=builder /app/krknctl_help.txt /app/krknctl_help.txt
+COPY --from=builder /root/.cache/huggingface/ /root/.cache/huggingface/
 
 # Create docs_index directory for runtime index generation
 RUN mkdir -p /app/docs_index /app/cached_docs
