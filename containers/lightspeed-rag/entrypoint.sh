@@ -28,8 +28,9 @@ else
     echo "Model verified: $(basename $MODEL_PATH)"
 fi
 
-# Set environment variable for the krkn-lightspeed service
+# Set environment variables for the krkn-lightspeed service
 export MODEL_PATH="$MODEL_PATH"
+export CONTAINER_ENV="true"
 
 # Change to krkn-lightspeed directory
 cd /app/krkn-lightspeed
