@@ -61,15 +61,7 @@ RUN mkdir -p /app/models && \
 
 # Pre-download embedding models to avoid runtime downloads
 RUN mkdir -p /root/.cache/huggingface/transformers && \
-    python3 -c "
-from sentence_transformers import SentenceTransformer
-print('Downloading Qwen embedding model...')
-model = SentenceTransformer('Qwen/Qwen3-Embedding-0.6B')
-print('Qwen model cached successfully')
-print('Downloading fallback embedding model...')
-fallback = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-print('Fallback model cached successfully')
-" && \
+    python3 -c "from sentence_transformers import SentenceTransformer; print('Downloading Qwen embedding model...'); model = SentenceTransformer('Qwen/Qwen3-Embedding-0.6B'); print('Qwen model cached successfully'); print('Downloading fallback embedding model...'); fallback = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Fallback model cached successfully')" && \
     echo "Embedding models pre-downloaded successfully"
 
 # Clone krkn-lightspeed repository and checkout krknctl_lightspeed branch
