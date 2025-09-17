@@ -68,8 +68,18 @@ RUN mkdir -p /app/models && \
     ls -la /app/models/ && \
     [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
-# Copy krknctl help for documentation indexing
+# Copy krknctl help for documentation indexing and prebuild script
 COPY krknctl_help.txt .
+COPY prebuild_chromadb.py .
+
+# Pre-build ChromaDB collection with document embeddings during build time
+RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed-build && \
+    cd /tmp/krkn-lightspeed-build && \
+    git checkout krknctl_lightspeed && \
+    cp -r /tmp/krkn-lightspeed-build /app/krkn-lightspeed && \
+    /app/venv/bin/python /app/prebuild_chromadb.py && \
+    rm -rf /tmp/krkn-lightspeed-build && \
+    echo "ChromaDB pre-build completed successfully"
 
 #############################################
 # Runtime stage - minimal runtime dependencies
@@ -98,9 +108,10 @@ ENV VIRTUAL_ENV="/app/venv"
 COPY --from=builder /app/models/ /app/models/
 COPY --from=builder /app/krknctl_help.txt /app/krknctl_help.txt
 COPY --from=builder /root/.cache/huggingface/ /root/.cache/huggingface/
+COPY --from=builder /app/docs_index/ /app/docs_index/
 
-# Create docs_index directory for runtime index generation
-RUN mkdir -p /app/docs_index /app/cached_docs
+# Create cached_docs directory for runtime use
+RUN mkdir -p /app/cached_docs
 
 # Copy entrypoint script
 COPY entrypoint.sh .
