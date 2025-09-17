@@ -61,12 +61,6 @@ RUN mkdir -p /app/models && \
     ls -la /app/models/ && \
     [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
-# Clone krkn-lightspeed repository and checkout krknctl_lightspeed branch
-RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
-    cd /app/krkn-lightspeed && \
-    git checkout krknctl_lightspeed && \
-    echo "Repository cloned and checked out successfully"
-
 # Copy krknctl help for documentation indexing
 COPY krknctl_help.txt .
 
@@ -93,9 +87,8 @@ COPY --from=builder /app/venv/ /app/venv/
 ENV PATH="/app/venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/venv"
 
-# Copy application files and pre-built models from builder
+# Copy application files and pre-built models from builder (but NOT the source code)
 COPY --from=builder /app/models/ /app/models/
-COPY --from=builder /app/krkn-lightspeed/ /app/krkn-lightspeed/
 COPY --from=builder /app/krknctl_help.txt /app/krknctl_help.txt
 COPY --from=builder /root/.cache/huggingface/ /root/.cache/huggingface/
 
@@ -111,15 +104,21 @@ RUN chmod +x entrypoint.sh
 # Install git in runtime stage for documentation indexing
 RUN microdnf -y install git && microdnf clean all
 
-# Pre-build cached documentation index using the cloned repository
-RUN cd /app/krkn-lightspeed && \
-    echo "Documentation index preparation completed"
-
 # Expose port for FastAPI service
 EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
+# CACHE INVALIDATION POINT: Change this ARG to force fresh code checkout
+ARG CODE_VERSION=latest
+RUN echo "Building with code version: $CODE_VERSION"
+
+# Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
+RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
+    cd /app/krkn-lightspeed && \
+    git checkout krknctl_lightspeed && \
+    echo "Repository cloned and checked out successfully at version: $CODE_VERSION"
 
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
