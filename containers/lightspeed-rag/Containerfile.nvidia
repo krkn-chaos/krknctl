@@ -113,13 +113,7 @@ RUN microdnf -y install git && microdnf clean all
 
 # Pre-build cached documentation index using the cloned repository
 RUN cd /app/krkn-lightspeed && \
-    python3 -c "
-import sys
-sys.path.append('/app/krkn-lightspeed')
-# Use the existing index_docs.py from krknctl for documentation indexing
-sys.path.append('/app')
-exec(open('/app/krknctl_help.txt').read())
-" && \
+    python3 index_docs.py --build-cached-index --home /app && \
     echo "Documentation index preparation completed"
 
 # Expose port for FastAPI service
