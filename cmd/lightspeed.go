@@ -30,7 +30,7 @@ type RAGDeploymentResult struct {
 }
 
 // deployRAGModelWithGPUType deploys the RAG model container using the new GPU detection system
-func deployRAGModelWithGPUType(ctx context.Context, gpuType gpucheck.GPUAcceleration, offline bool, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, detector *gpucheck.PlatformGPUDetector) (*RAGDeploymentResult, error) {
+func deployRAGModelWithGPUType(ctx context.Context, gpuType gpucheck.GPUAcceleration, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, detector *gpucheck.PlatformGPUDetector) (*RAGDeploymentResult, error) {
 	// Get the appropriate lightspeed image for the detected GPU type
 	ragImageURI, err := detector.GetLightspeedImageURI(gpuType)
 	if err != nil {
@@ -42,11 +42,6 @@ func deployRAGModelWithGPUType(ctx context.Context, gpuType gpucheck.GPUAccelera
 
 	// Set up environment variables
 	env := map[string]string{}
-	if offline {
-		env["USE_OFFLINE"] = "true"
-	} else {
-		env["USE_OFFLINE"] = "false"
-	}
 
 	// Get device mounts from detector
 	devices := detector.GetDeviceMounts(gpuType)
@@ -90,7 +85,7 @@ func deployRAGModelWithGPUType(ctx context.Context, gpuType gpucheck.GPUAccelera
 
 // deployRAGModel deploys the RAG model container in detached mode with proper port mapping
 // DEPRECATED: Use deployRAGModelWithGPUType instead
-func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2) (*RAGDeploymentResult, error) {
+func deployRAGModel(ctx context.Context, gpuType string, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2) (*RAGDeploymentResult, error) {
 	// Get RAG model image URI
 	ragImageURI, err := config.GetRAGModelImageURI()
 	if err != nil {
@@ -102,11 +97,6 @@ func deployRAGModel(ctx context.Context, gpuType string, offline bool, orchestra
 
 	// Set up environment variables
 	env := map[string]string{}
-	if offline {
-		env["USE_OFFLINE"] = "true"
-	} else {
-		env["USE_OFFLINE"] = "false"
-	}
 
 	// Set up GPU device mounts (legacy approach)
 	devices := make(map[string]string)
@@ -229,18 +219,43 @@ func performRAGHealthCheck(containerID string, hostPort string, orchestrator sce
 	return false, fmt.Errorf("service did not become healthy within timeout")
 }
 
-// QueryRequest represents a request to the Lightspeed service
-type QueryRequest struct {
-	Query      string `json:"query"`
-	MaxResults int    `json:"max_results"`
-	Stream     bool   `json:"stream"`
+// ChatMessage represents a message in OpenAI format
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
-// QueryResponse represents a response from the Lightspeed service
+// QueryRequest represents an OpenAI-compatible chat completion request
+type QueryRequest struct {
+	Model       string        `json:"model"`
+	Messages    []ChatMessage `json:"messages"`
+	Temperature float64       `json:"temperature,omitempty"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
+	Stream      bool          `json:"stream,omitempty"`
+}
+
+// QueryChoice represents a choice in OpenAI response format
+type QueryChoice struct {
+	Index   int `json:"index"`
+	Message struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"message"`
+	FinishReason string `json:"finish_reason"`
+}
+
+// QueryResponse represents an OpenAI-compatible response
 type QueryResponse struct {
-	Response string                   `json:"response"`
-	Sources  []map[string]interface{} `json:"sources"`
-	Query    string                   `json:"query"`
+	ID      string        `json:"id"`
+	Object  string        `json:"object"`
+	Created int64         `json:"created"`
+	Model   string        `json:"model"`
+	Choices []QueryChoice `json:"choices"`
+	Usage   struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
+	} `json:"usage"`
 }
 
 // startInteractivePrompt starts an interactive chat session with the Lightspeed service
@@ -293,7 +308,11 @@ func startInteractivePrompt(containerID string, hostPort string, orchestrator sc
 		}
 
 		// Display response
-		fmt.Printf("\n🤖 %s\n", response.Response)
+		if len(response.Choices) > 0 {
+			fmt.Printf("\n🤖 %s\n", response.Choices[0].Message.Content)
+		} else {
+			fmt.Printf("\n🤖 No response received\n")
+		}
 		fmt.Println()
 	}
 
@@ -318,9 +337,16 @@ func queryRAGService(hostPort string, query string, config config.Config) (*Quer
 	url := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGQueryEndpoint)
 
 	requestBody := QueryRequest{
-		Query:      query,
-		MaxResults: config.RAGQueryMaxResults,
-		Stream:     false,
+		Model: "llama",
+		Messages: []ChatMessage{
+			{
+				Role:    "user",
+				Content: query,
+			},
+		},
+		Temperature: 0.7,
+		MaxTokens:   512,
+		Stream:      false,
 	}
 
 	jsonData, err := json.Marshal(requestBody)

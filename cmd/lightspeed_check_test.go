@@ -106,7 +106,7 @@ func TestNewLightspeedCommand(t *testing.T) {
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
 
 	// Test that GPU auto-detection is enabled (no manual GPU flags needed)
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("offline"))
+	assert.NotNil(t, cmd.PersistentFlags().Lookup("no-gpu"))
 	// Manual GPU flags should not exist (using auto-detection now)
 	assert.Nil(t, cmd.PersistentFlags().Lookup("nvidia"))
 	assert.Nil(t, cmd.PersistentFlags().Lookup("apple-silicon"))

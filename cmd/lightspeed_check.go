@@ -38,14 +38,11 @@ GPU Auto-Detection:
 Examples:
   krknctl lightspeed check
   krknctl lightspeed run
-  krknctl lightspeed run --offline`,
+  krknctl lightspeed run --no-gpu`,
 	}
 
 	// GPU auto-detection - no manual flags needed anymore!
 
-	// Add offline flag for airgapped environments
-	command.PersistentFlags().Bool("offline", false, "Use cached documentation (for airgapped environments)")
-	
 	// Add no-gpu flag for CPU-only mode
 	command.PersistentFlags().Bool("no-gpu", false, "Use CPU-only mode (no GPU acceleration)")
 
@@ -175,16 +172,15 @@ suggestions based on natural language.
 The system uses:
 - Automatic GPU detection (Apple Silicon, NVIDIA)
 - GPU-accelerated inference for fast responses
-- Live documentation indexing (or cached for offline environments)
+- Live documentation indexing
 - Llama 3.2:1B model optimized for chaos engineering domain
 
 Examples:
-  krknctl lightspeed run          # Auto-detect GPU, use live documentation
-  krknctl lightspeed run --offline  # Auto-detect GPU, use cached docs (airgapped)`,
+  krknctl lightspeed run          # Auto-detect GPU
+  krknctl lightspeed run --no-gpu # Force CPU-only mode`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flags
-			offlineFlag, _ := cmd.Flags().GetBool("offline")
 			noGPU, _ := cmd.Flags().GetBool("no-gpu")
 
 			// Print container runtime info
@@ -225,7 +221,7 @@ Examples:
 			// Step 2: Deploy RAG model container
 			fmt.Println("\n🚀 Deploying lightspeed model...")
 			
-			ragResult, err := deployRAGModelWithGPUType(ctx, gpuType, offlineFlag, *scenarioOrchestrator, config, registry, detector)
+			ragResult, err := deployRAGModelWithGPUType(ctx, gpuType, *scenarioOrchestrator, config, registry, detector)
 			if err != nil {
 				// Handle GPU-related errors with helpful suggestions
 				enhancedErr := detector.HandleContainerError(err, gpuType)
