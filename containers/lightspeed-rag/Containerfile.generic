@@ -113,6 +113,10 @@ EXPOSE 8080
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
+# Set CPU optimization environment variables
+ENV OMP_NUM_THREADS=4
+ENV MKL_NUM_THREADS=4
+
 # CACHE INVALIDATION POINT: Change this ARG to force fresh code checkout
 ARG CODE_VERSION=latest
 RUN echo "Building with code version: $CODE_VERSION"

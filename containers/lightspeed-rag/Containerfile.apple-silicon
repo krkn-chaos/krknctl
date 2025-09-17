@@ -47,6 +47,9 @@ RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lights
     pip3 install --no-cache-dir -r requirements.txt && \
     rm -rf /tmp/krkn-lightspeed
 
+# Install PyTorch with Metal Performance Shaders (MPS) support for Apple Silicon
+RUN pip3 install --no-cache-dir torch torchvision torchaudio
+
 # Compile and install llama-cpp-python with Vulkan support (Apple Silicon optimized)
 RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
@@ -79,6 +82,10 @@ EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
+# Set Metal/MPS environment variables for Apple Silicon GPU acceleration
+ENV PYTORCH_ENABLE_MPS_FALLBACK=1
+ENV PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 
 # Add NVIDIA Vulkan support (optional - will skip if not available)
 RUN (dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda || echo "NVIDIA drivers not available, skipping") && \

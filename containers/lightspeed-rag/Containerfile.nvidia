@@ -32,6 +32,9 @@ RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lights
     /app/venv/bin/pip install --no-cache-dir -r requirements.txt && \
     rm -rf /tmp/krkn-lightspeed
 
+# Install PyTorch with CUDA support (override CPU-only version from requirements.txt)
+RUN /app/venv/bin/pip install --no-cache-dir --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+
 # Install llama-cpp-python (standard version from PyPI)
 RUN /app/venv/bin/pip install --no-cache-dir llama-cpp-python
 
@@ -113,6 +116,11 @@ EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+
+# Set CUDA environment variables for automatic GPU detection by PyTorch/sentence-transformers
+ENV CUDA_VISIBLE_DEVICES=0
+ENV TORCH_USE_CUDA_DSA=1
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 
 # CACHE INVALIDATION POINT: Change this ARG to force fresh code checkout
 ARG CODE_VERSION=latest
