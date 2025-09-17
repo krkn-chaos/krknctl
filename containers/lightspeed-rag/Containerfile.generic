@@ -38,19 +38,23 @@ RUN /app/venv/bin/pip install --no-cache-dir llama-cpp-python
 # Install huggingface-hub for reliable model downloads
 RUN /app/venv/bin/pip install --no-cache-dir huggingface-hub
 
-# Aggressive cleanup: remove pip cache, test files, and unnecessary data (but keep model cache)
+# Careful cleanup: remove pip cache and unnecessary files but preserve numpy core tests
 RUN find /app/venv -name "*.pyc" -delete && \
     find /app/venv -name "__pycache__" -delete && \
     find /app/venv -name "*.pyo" -delete && \
-    find /app/venv -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/venv -name "test" -type d -exec rm -rf {} + 2>/dev/null || true && \
     find /app/venv -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true && \
     rm -rf /app/venv/lib/python*/site-packages/torch/test && \
     rm -rf /app/venv/lib/python*/site-packages/torch/share && \
     rm -rf /app/venv/lib/python*/site-packages/transformers/tests && \
+    rm -rf /app/venv/lib/python*/site-packages/sklearn/tests && \
+    rm -rf /app/venv/lib/python*/site-packages/scipy/*/tests && \
     rm -rf /tmp/* 2>/dev/null || true
 
-# Download LLM and embedding models in builder stage  
+# Verify that numpy and sentence-transformers work correctly after cleanup
+RUN /app/venv/bin/python -c "import numpy; print(f'numpy version: {numpy.__version__}')" && \
+    /app/venv/bin/python -c "import sentence_transformers; print(f'sentence-transformers version: {sentence_transformers.__version__}')"
+
+# Download LLM and embedding models in builder stage
 RUN mkdir -p /app/models && \
     /app/venv/bin/python -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-1B-Instruct-GGUF', filename='Llama-3.2-1B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
     ls -la /app/models/ && \
