@@ -55,7 +55,7 @@
   "rag_container_prefix": "krknctl-lightspeed-rag",
   "rag_service_port": "8080",
   "rag_health_endpoint": "/health",
-  "rag_query_endpoint": "/query",
+  "rag_query_endpoint": "/v1/chat/completions",
   "rag_host": "localhost",
   "rag_health_max_retries": 60,
   "rag_health_retry_interval_seconds": 10,
