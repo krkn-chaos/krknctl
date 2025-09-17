@@ -63,3 +63,16 @@ podman build --build-arg CODE_VERSION=$CODE_VERSION -f Containerfile.generic -t 
 ```
 
 This strategy reduces build times from ~15-20 minutes to ~2-3 minutes when only code changes are needed.
+
+## Dependencies
+
+The following packages are explicitly installed in all containers to ensure proper RAG functionality:
+
+- `huggingface-hub` - For reliable model downloads
+- `sentence-transformers` - For embedding model support (required by langchain-huggingface)
+- `llama-cpp-python` - For LLM inference (with GPU-specific optimizations per container)
+
+## Troubleshooting
+
+### ImportError: Could not import sentence_transformers
+If you see this error, it means `sentence-transformers` is not properly installed. This has been fixed in the current Containerfiles by explicitly installing it alongside other dependencies.
