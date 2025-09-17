@@ -37,6 +37,20 @@ func DeployLightspeedModelWithGPUType(ctx context.Context, gpuType GPUAccelerati
 	// Set up environment variables
 	env := map[string]string{}
 
+	// Add GPU-specific environment variables for optimal performance
+	switch gpuType {
+	case GPUAccelerationNVIDIA:
+		env["CUDA_VISIBLE_DEVICES"] = "0"
+		env["TORCH_USE_CUDA_DSA"] = "1"
+		env["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
+	case GPUAccelerationAppleSilicon:
+		env["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+		env["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+	case GPUAccelerationGeneric:
+		env["OMP_NUM_THREADS"] = "4"
+		env["MKL_NUM_THREADS"] = "4"
+	}
+
 	// Get device mounts from detector
 	devices := detector.GetDeviceMounts(gpuType)
 
