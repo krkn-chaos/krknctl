@@ -72,7 +72,7 @@ Subcommands:
 - krknctl lightspeed run                   Run AI-powered assistance
 
 Flags:
---offline         Use cached documentation (for airgapped environments)
+--no-gpu          Force CPU-only mode (disable GPU acceleration)
 --private-registry-lightspeed string  Private registry for lightspeed images
 
 #### krknctl graph
@@ -223,8 +223,8 @@ krknctl lightspeed check --gpu-nvidia
 # Run Lightspeed service (requires GPU)
 krknctl lightspeed run
 
-# Use offline mode for airgapped environments
-krknctl lightspeed run --offline
+# Force CPU-only mode (no GPU acceleration)
+krknctl lightspeed run --no-gpu
 ```
 
 #### Graph Workflows
