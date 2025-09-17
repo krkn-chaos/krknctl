@@ -31,9 +31,14 @@ type GitHubRelease struct {
 	Body    string `json:"body"`
 }
 
-func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
+func NewSpinnerWithSuffix(suffix string, charSet ...int) *spinner.Spinner {
 	var s *spinner.Spinner = nil
-	s = spinner.New(spinner.CharSets[39], 100*time.Millisecond)
+	// Default to charset 39 if no charset provided
+	charset := 39
+	if len(charSet) > 0 {
+		charset = charSet[0]
+	}
+	s = spinner.New(spinner.CharSets[charset], 100*time.Millisecond)
 	s.Suffix = suffix
 	return s
 }
