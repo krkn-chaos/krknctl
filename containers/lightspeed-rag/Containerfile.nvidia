@@ -43,17 +43,21 @@ RUN mkdir -p /root/.cache/huggingface/transformers && \
     /app/venv/bin/python -c "from sentence_transformers import SentenceTransformer; print('Downloading Qwen embedding model...'); model = SentenceTransformer('Qwen/Qwen3-Embedding-0.6B'); print('Qwen model cached successfully'); print('Downloading fallback embedding model...'); fallback = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Fallback model cached successfully')" && \
     echo "Embedding models pre-downloaded successfully"
 
-# Aggressive cleanup: remove pip cache, test files, and unnecessary data (but keep model cache)
+# Careful cleanup: remove pip cache and unnecessary files but preserve numpy core tests
 RUN find /app/venv -name "*.pyc" -delete && \
     find /app/venv -name "__pycache__" -delete && \
     find /app/venv -name "*.pyo" -delete && \
-    find /app/venv -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find /app/venv -name "test" -type d -exec rm -rf {} + 2>/dev/null || true && \
     find /app/venv -name "*.egg-info" -type d -exec rm -rf {} + 2>/dev/null || true && \
     rm -rf /app/venv/lib/python*/site-packages/torch/test && \
     rm -rf /app/venv/lib/python*/site-packages/torch/share && \
     rm -rf /app/venv/lib/python*/site-packages/transformers/tests && \
+    rm -rf /app/venv/lib/python*/site-packages/sklearn/tests && \
+    rm -rf /app/venv/lib/python*/site-packages/scipy/*/tests && \
     rm -rf /tmp/* 2>/dev/null || true
+
+# Verify that numpy and sentence-transformers work correctly after cleanup
+RUN /app/venv/bin/python -c "import numpy; print(f'numpy version: {numpy.__version__}')" && \
+    /app/venv/bin/python -c "import sentence_transformers; print(f'sentence-transformers version: {sentence_transformers.__version__}')"
 
 # Download LLM and embedding models in builder stage
 RUN mkdir -p /app/models && \
