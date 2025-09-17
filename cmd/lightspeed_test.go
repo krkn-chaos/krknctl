@@ -3,12 +3,12 @@ package cmd
 
 import (
 	"context"
+	"github.com/krkn-chaos/krknctl/pkg/lightspeed"
 	"io"
 	"os"
 	"testing"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/gpucheck"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -150,23 +150,23 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 
 func TestGPUAutoDetection(t *testing.T) {
 	config := getTestConfig(t)
-	detector := gpucheck.NewPlatformGPUDetector(config)
+	detector := lightspeed.NewPlatformGPUDetector(config)
 
 	// Test GPU detection types
 	ctx := context.Background()
-	
+
 	// Test with --no-gpu flag
 	gpuType := detector.DetectGPUAcceleration(ctx, true)
-	assert.Equal(t, gpucheck.GPUAccelerationGeneric, gpuType)
-	
+	assert.Equal(t, lightspeed.GPUAccelerationGeneric, gpuType)
+
 	// Test description generation
-	description := detector.GetGPUDescription(gpucheck.GPUAccelerationAppleSilicon)
+	description := detector.GetGPUDescription(lightspeed.GPUAccelerationAppleSilicon)
 	assert.Contains(t, description, "Apple Silicon")
-	
-	description = detector.GetGPUDescription(gpucheck.GPUAccelerationNVIDIA)
+
+	description = detector.GetGPUDescription(lightspeed.GPUAccelerationNVIDIA)
 	assert.Contains(t, description, "NVIDIA")
-	
-	description = detector.GetGPUDescription(gpucheck.GPUAccelerationGeneric)
+
+	description = detector.GetGPUDescription(lightspeed.GPUAccelerationGeneric)
 	assert.Contains(t, description, "CPU-only")
 }
 
