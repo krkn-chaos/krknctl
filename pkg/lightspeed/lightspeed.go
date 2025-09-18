@@ -219,6 +219,11 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			continue
 		}
 
+		// Debug: Print the full JSON response
+		if responseBytes, err := json.MarshalIndent(response, "", "  "); err == nil {
+			fmt.Printf("\n🔍 DEBUG - Full JSON response:\n%s\n", string(responseBytes))
+		}
+
 		// Display response
 		if len(response.Choices) > 0 {
 			fmt.Printf("\n🤖 %s\n", response.Choices[0].Message.Content)
