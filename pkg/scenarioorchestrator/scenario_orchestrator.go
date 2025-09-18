@@ -13,29 +13,9 @@ import (
 type ScenarioOrchestrator interface {
 	Connect(containerRuntimeURI string) (context.Context, error)
 
-	Run(
-		image string,
-		containerName string,
-		env map[string]string,
-		cache bool,
-		volumeMounts map[string]string,
-		commChan *chan *string,
-		ctx context.Context,
-		registry *models.RegistryV2,
-	) (*string, error)
+	Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error)
 
-	RunAttached(
-		image string,
-		containerName string,
-		env map[string]string,
-		cache bool,
-		volumeMounts map[string]string,
-		stdout io.Writer,
-		stderr io.Writer,
-		commChan *chan *string,
-		ctx context.Context,
-		registry *models.RegistryV2,
-	) (*string, error)
+	RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error)
 
 	RunGraph(
 		scenarios orchestrator_models.ScenarioSet,

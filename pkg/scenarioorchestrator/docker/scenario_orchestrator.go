@@ -31,16 +31,7 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
-func (c *ScenarioOrchestrator) Run(
-	image string,
-	containerName string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	commChan *chan *string,
-	ctx context.Context,
-	registry *providermodels.RegistryV2,
-) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, portMappings *map[string]string) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
@@ -441,19 +432,9 @@ func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer,
 	return &interrupted, nil
 }
 
-func (c *ScenarioOrchestrator) RunAttached(
-	image string,
-	containerName string,
-	env map[string]string,
-	cache bool,
-	volumeMounts map[string]string,
-	stdout io.Writer,
-	stderr io.Writer,
-	commChan *chan *string,
-	ctx context.Context,
-	registry *providermodels.RegistryV2,
-) (*string, error) {
-	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+func (c *ScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache,
+		volumeMounts, devices, stdout, stderr, c, commChan, ctx, registry)
 	return containerID, err
 }
 

@@ -30,5 +30,17 @@ krknctl-*
 .env
 .idea
 bin/
+bin-linux/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
 
 .DS_Store
