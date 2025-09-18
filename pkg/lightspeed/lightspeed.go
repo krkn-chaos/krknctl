@@ -18,10 +18,14 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/text"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/rodaine/table"
 )
 
 // DeployLightspeedModelWithGPUType deploys the RAG model container using the new GPU detection system
@@ -219,11 +223,6 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			continue
 		}
 
-		// Debug: Print the full JSON response
-		if responseBytes, err := json.MarshalIndent(response, "", "  "); err == nil {
-			fmt.Printf("\n🔍 DEBUG - Full JSON response:\n%s\n", string(responseBytes))
-		}
-
 		// Display response
 		if len(response.Choices) > 0 {
 			fmt.Printf("\n🤖 %s\n", response.Choices[0].Message.Content)
@@ -239,8 +238,7 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			if err != nil {
 				fmt.Printf("⚠️  Could not fetch scenario details: %v\n", err)
 			} else if scenarioDetail != nil {
-				fmt.Printf("\n📋 %s\n", scenarioDetail.Title)
-				fmt.Printf("   %s\n", scenarioDetail.Description)
+				printScenarioDetail(scenarioDetail)
 			}
 		}
 
@@ -303,4 +301,35 @@ func queryLightspeedService(hostPort string, query string, config config.Config)
 	}
 
 	return &response, nil
+}
+
+// printScenarioDetail prints scenario details in the same format as cmd/describe.go
+func printScenarioDetail(scenarioDetail *models.ScenarioDetail) {
+	fmt.Print("\n")
+	_, _ = color.New(color.FgGreen, color.Underline).Println(scenarioDetail.Title)
+	justifiedText := text.Justify(scenarioDetail.Description, 65)
+	for _, line := range justifiedText {
+		fmt.Println(line)
+	}
+	fmt.Print("\n")
+	argumentTable := newArgumentTable(scenarioDetail.Fields)
+	argumentTable.Print()
+	fmt.Print("\n")
+}
+
+// newArgumentTable creates argument table in same style as cmd/tables.go
+func newArgumentTable(inputFields []typing.InputField) table.Table {
+	var headerFmt = color.New(color.FgGreen, color.Underline).SprintfFunc()
+	var columnFmt = color.New(color.FgYellow).SprintfFunc()
+
+	tbl := table.New("Name", "Type", "Description", "Required", "Default")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	for _, inputField := range inputFields {
+		defaultValue := ""
+		if inputField.Default != nil {
+			defaultValue = *inputField.Default
+		}
+		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, defaultValue)
+	}
+	return tbl
 }
