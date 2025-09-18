@@ -70,14 +70,15 @@ type QueryChoice struct {
 
 // QueryResponse represents an OpenAI-compatible response
 type QueryResponse struct {
-	ID      string        `json:"id"`
-	Object  string        `json:"object"`
-	Created int64         `json:"created"`
-	Model   string        `json:"model"`
-	Choices []QueryChoice `json:"choices"`
-	Usage   struct {
+	ID           string        `json:"id"`
+	Object       string        `json:"object"`
+	Created      int64         `json:"created"`
+	Model        string        `json:"model"`
+	Choices      []QueryChoice `json:"choices"`
+	Usage        struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
+	ScenarioName *string       `json:"scenario_name,omitempty"` // krknctl scenario name if detected
 }
