@@ -7,6 +7,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/lightspeed"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -251,7 +252,10 @@ Examples:
 			fmt.Println("Type your chaos engineering questions and get intelligent krknctl command suggestions!")
 			fmt.Println("Type 'exit' or 'quit' to stop.")
 
-			return lightspeed.StartInteractivePrompt(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config, thinkingSpinner)
+			// Create scenario provider for describe functionality
+			scenarioProvider := providerFactory.NewInstance(provider.Quay)
+
+			return lightspeed.StartInteractivePrompt(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config, thinkingSpinner, scenarioProvider)
 		},
 	}
 
