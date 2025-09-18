@@ -19,6 +19,7 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 )
@@ -162,7 +163,7 @@ func PerformLightspeedHealthCheck(containerID string, hostPort string, orchestra
 }
 
 // StartInteractivePrompt starts an interactive chat session with the Lightspeed service
-func StartInteractivePrompt(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config, thinkingSpinner *spinner.Spinner) error {
+func StartInteractivePrompt(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config, thinkingSpinner *spinner.Spinner, scenarioProvider provider.ScenarioDataProvider) error {
 	scanner := bufio.NewScanner(os.Stdin)
 
 	// Set up signal handling for Ctrl+C
@@ -224,6 +225,20 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 		} else {
 			fmt.Printf("\n🤖 No response received\n")
 		}
+
+		// If a scenario was detected, show scenario details
+		if response.ScenarioName != nil && *response.ScenarioName != "" {
+			fmt.Printf("\n📋 Fetching details for scenario: %s\n", *response.ScenarioName)
+
+			scenarioDetail, err := scenarioProvider.GetScenarioDetail(*response.ScenarioName, nil)
+			if err != nil {
+				fmt.Printf("⚠️  Could not fetch scenario details: %v\n", err)
+			} else if scenarioDetail != nil {
+				fmt.Printf("\n📋 %s\n", scenarioDetail.Title)
+				fmt.Printf("   %s\n", scenarioDetail.Description)
+			}
+		}
+
 		fmt.Println()
 	}
 
