@@ -106,7 +106,8 @@ ARG CODE_VERSION=latest
 RUN echo "Building with code version: $CODE_VERSION"
 
 # Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
-RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
+RUN rm -rf /app/krkn-lightspeed && \
+    git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
     cd /app/krkn-lightspeed && \
     git checkout krknctl_lightspeed && \
     echo "Repository cloned and checked out successfully at version: $CODE_VERSION"
