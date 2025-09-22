@@ -21,24 +21,26 @@ WORKDIR /app
 RUN python3 -m venv --system-site-packages /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# Install only core requirements (exclude heavy dependencies for now)
+# Install build dependencies first
+RUN /app/venv/bin/pip install --no-cache-dir setuptools wheel scikit-build-core
+
+# Install core packages with essential dependencies
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
     git checkout krknctl_lightspeed && \
-    /app/venv/bin/pip install --no-cache-dir --no-deps fastapi uvicorn && \
-    /app/venv/bin/pip install --no-cache-dir --no-deps requests pydantic chromadb && \
+    /app/venv/bin/pip install --no-cache-dir fastapi uvicorn requests && \
+    /app/venv/bin/pip install --no-cache-dir pydantic chromadb && \
     rm -rf /tmp/krkn-lightspeed
 
-# Install lightweight PyTorch CUDA (runtime only, no dev tools)
-RUN /app/venv/bin/pip install --no-cache-dir --force-reinstall --no-deps \
-    torch --extra-index-url https://download.pytorch.org/whl/cu118
+# Install PyTorch with CUDA support (minimal installation)
+RUN /app/venv/bin/pip install --no-cache-dir torch --extra-index-url https://download.pytorch.org/whl/cu118
 
-# Install minimal llama-cpp-python with CUDA support (compile from source for smaller size)
-RUN CMAKE_ARGS="-DGGML_CUDA=on -DCUDA_PATH=/usr/local/cuda" \
-    /app/venv/bin/pip install --no-cache-dir --no-build-isolation llama-cpp-python
+# Install llama-cpp-python with CUDA support
+RUN CMAKE_ARGS="-DGGML_CUDA=on" \
+    /app/venv/bin/pip install --no-cache-dir llama-cpp-python
 
-# Install only essential sentence-transformers components
-RUN /app/venv/bin/pip install --no-cache-dir --no-deps sentence-transformers transformers tokenizers safetensors
+# Install sentence-transformers and model download dependencies
+RUN /app/venv/bin/pip install --no-cache-dir sentence-transformers huggingface-hub
 
 # Download LLM model (3B for better performance)
 RUN mkdir -p /app/models && \
