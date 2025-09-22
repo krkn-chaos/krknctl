@@ -17,7 +17,7 @@ fi
 
 # Verify the model is available (should be pre-downloaded)
 echo "Verifying Llama 3.2:1B model..."
-MODEL_PATH="/app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+MODEL_PATH="/app/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 if [ ! -f "$MODEL_PATH" ]; then
     echo "WARNING: Model not found at $MODEL_PATH"
     echo "Service will attempt to download it on first use"
