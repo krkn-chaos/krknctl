@@ -54,11 +54,11 @@ RUN find /app/venv -name "*.pyc" -delete && \
 RUN /app/venv/bin/python -c "import numpy; print(f'numpy version: {numpy.__version__}')" && \
     /app/venv/bin/python -c "import sentence_transformers; print(f'sentence-transformers version: {sentence_transformers.__version__}')"
 
-# Download LLM and embedding models in builder stage
+# Download LLM and embedding models in builder stage (3B model for better performance)
 RUN mkdir -p /app/models && \
-    /app/venv/bin/python -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-1B-Instruct-GGUF', filename='Llama-3.2-1B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
+    /app/venv/bin/python -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-3B-Instruct-GGUF', filename='Llama-3.2-3B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
     ls -la /app/models/ && \
-    [ $(stat -c%s /app/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf) -gt 500000000 ] || (echo "Model download failed - file too small" && exit 1)
+    [ $(stat -c%s /app/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf) -gt 1500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
 # Pre-download embedding models to avoid runtime downloads
 RUN mkdir -p /root/.cache/huggingface/transformers && \
