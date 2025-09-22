@@ -47,8 +47,8 @@ RUN /app/venv/bin/pip install --no-cache-dir llama-cpp-python[server] || \
 # Install sentence-transformers and model download dependencies
 RUN /app/venv/bin/pip install --no-cache-dir sentence-transformers huggingface-hub
 
-# Install langchain dependencies for document processing
-RUN /app/venv/bin/pip install --no-cache-dir langchain-community langchain-core langchain-text-splitters
+# Install langchain dependencies and opentelemetry for document processing
+RUN /app/venv/bin/pip install --no-cache-dir langchain-community langchain-core langchain-text-splitters opentelemetry-api opentelemetry-sdk
 
 # Download LLM model (3B for better performance)
 RUN mkdir -p /app/models && \
