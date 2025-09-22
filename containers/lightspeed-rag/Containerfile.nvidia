@@ -47,6 +47,9 @@ RUN /app/venv/bin/pip install --no-cache-dir llama-cpp-python[server] || \
 # Install sentence-transformers and model download dependencies
 RUN /app/venv/bin/pip install --no-cache-dir sentence-transformers huggingface-hub
 
+# Install langchain dependencies for document processing
+RUN /app/venv/bin/pip install --no-cache-dir langchain-community langchain-core langchain-text-splitters
+
 # Download LLM model (3B for better performance)
 RUN mkdir -p /app/models && \
     /app/venv/bin/python -c "import huggingface_hub; huggingface_hub.hf_hub_download(repo_id='bartowski/Llama-3.2-3B-Instruct-GGUF', filename='Llama-3.2-3B-Instruct-Q4_K_M.gguf', local_dir='/app/models', local_dir_use_symlinks=False)" && \
