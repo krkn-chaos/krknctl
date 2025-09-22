@@ -22,7 +22,7 @@ RUN python3 -m venv --system-site-packages /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
 # Install only core requirements (exclude heavy dependencies for now)
-RUN git clone --depth=1 https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
+RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
     git checkout krknctl_lightspeed && \
     /app/venv/bin/pip install --no-cache-dir --no-deps fastapi uvicorn && \
@@ -70,7 +70,7 @@ COPY krknctl_help.txt .
 COPY prebuild_chromadb.py .
 
 # Pre-build ChromaDB with minimal documentation
-RUN git clone --depth=1 https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed-build && \
+RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed-build && \
     cd /tmp/krkn-lightspeed-build && \
     git checkout krknctl_lightspeed && \
     cp -r /tmp/krkn-lightspeed-build /app/krkn-lightspeed && \
@@ -124,7 +124,7 @@ ARG CODE_VERSION=latest
 RUN echo "Building with code version: $CODE_VERSION"
 
 # Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
-RUN git clone --depth=1 https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
+RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
     cd /app/krkn-lightspeed && \
     git checkout krknctl_lightspeed && \
     echo "Repository cloned and checked out successfully at version: $CODE_VERSION"
