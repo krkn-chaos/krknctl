@@ -33,7 +33,11 @@ RUN /app/venv/bin/pip install --no-cache-dir setuptools wheel scikit-build-core
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
     git checkout krknctl_lightspeed_light && \
-    echo "Repository cloned successfully"
+    echo "krkn-lightspeed repository cloned successfully"
+
+# Clone krkn-hub repository to get scenario definitions
+RUN git clone https://github.com/krkn-chaos/krkn-hub.git /tmp/krkn-hub && \
+    echo "krkn-hub repository cloned successfully"
 
 # Install dependencies from requirements_krknctl.txt
 RUN /app/venv/bin/pip install --no-cache-dir -r /tmp/krkn-lightspeed/requirements_krknctl.txt
@@ -56,7 +60,7 @@ RUN mkdir -p /root/.cache/huggingface/transformers && \
 RUN cp /tmp/krkn-lightspeed/rag_pipelines/llama31_krknctl_rag_pipeline.py /app/ && \
     cp /tmp/krkn-lightspeed/fastapi_app.py /app/ && \
     cp -r /tmp/krkn-lightspeed/utils /app/ && \
-    rm -rf /tmp/krkn-lightspeed
+    rm -rf /tmp/krkn-lightspeed /tmp/krkn-hub
 
 # Copy krknctl help
 COPY krknctl_help.txt .
@@ -131,7 +135,12 @@ RUN rm -rf /app/rag_pipelines /app/fastapi_app.py /app/utils && \
     cp /tmp/krkn-lightspeed-fresh/fastapi_app.py /app/ && \
     cp -r /tmp/krkn-lightspeed-fresh/utils /app/ && \
     rm -rf /tmp/krkn-lightspeed-fresh && \
-    echo "Fresh code updated successfully at version: $CODE_VERSION"
+    echo "Fresh krkn-lightspeed code updated successfully at version: $CODE_VERSION"
+
+# Fresh clone of krkn-hub repository for scenario definitions
+RUN git clone https://github.com/krkn-chaos/krkn-hub.git /tmp/krkn-hub-fresh && \
+    echo "Fresh krkn-hub scenarios available for indexing at version: $CODE_VERSION" && \
+    rm -rf /tmp/krkn-hub-fresh
 
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
