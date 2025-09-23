@@ -224,7 +224,7 @@ Examples:
 
 			// Create spinners for the operations
 			pullSpinner := NewSpinnerWithSuffix(" pulling RAG model image...")
-			thinkingSpinner := NewSpinnerWithSuffix(" thinking...", 35)
+			thinkingSpinner := NewSpinnerWithSuffix(" thinking...", 37)
 
 			ragResult, err := lightspeed.DeployLightspeedModelWithGPUType(ctx, gpuType, *scenarioOrchestrator, config, registry, detector, pullSpinner)
 			if err != nil {
@@ -248,7 +248,7 @@ Examples:
 			fmt.Println("✅ Lightspeed service is ready!")
 
 			// Step 4: Start interactive prompt
-			fmt.Printf("\n🤖 Starting interactive Lightspeed service on port %s...\n", ragResult.HostPort)
+			fmt.Printf("\n🚂 Starting interactive Lightspeed service on port %s...\n", ragResult.HostPort)
 			fmt.Println("Type your chaos engineering questions and get intelligent krknctl command suggestions!")
 			fmt.Println("Type 'exit' or 'quit' to stop.")
 

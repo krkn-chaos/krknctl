@@ -186,7 +186,7 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 		os.Exit(0)
 	}()
 
-	fmt.Printf("🤖 AI Assistant ready! Ask me about krknctl commands or chaos engineering:\n")
+	fmt.Printf("⚡ Lightspeed AI Assistant ready! Ask me about krknctl commands or chaos engineering:\n")
 	fmt.Printf("📍 Service available at: http://%s:%s\n", config.RAGHost, hostPort)
 	fmt.Printf("💡 Try asking: 'How do I run a pod deletion scenario?'\n")
 	fmt.Printf("🚪 Type 'exit', 'quit', or press Ctrl+C to stop.\n\n")
@@ -230,11 +230,11 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			continue
 		}
 
-		// Display response
+		// Display response with beautiful formatting
 		if len(response.Choices) > 0 {
-			fmt.Printf("\n🤖 %s\n", response.Choices[0].Message.Content)
+			PrintLightspeedAnswer(response.Choices[0].Message.Content)
 		} else {
-			fmt.Printf("\n🤖 No response received\n")
+			fmt.Printf("\n🚫 No response received\n")
 		}
 
 		// If a scenario was detected, show scenario details
@@ -339,4 +339,22 @@ func newArgumentTable(inputFields []typing.InputField) table.Table {
 		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, defaultValue)
 	}
 	return tbl
+}
+
+// PrintLightspeedAnswer prints Lightspeed AI response with beautiful formatting
+func PrintLightspeedAnswer(content string) {
+	fmt.Print("\n")
+	// Use cyan color with underline for Lightspeed title (different from green scenario titles)
+	_, _ = color.New(color.FgCyan, color.Underline, color.Bold).Println("⚡ AI Lightspeed Response")
+	fmt.Print("\n")
+
+	// Justify the text content similar to scenario descriptions
+	justifiedText := text.Justify(content, 75) // Slightly wider than scenario descriptions (65)
+
+	// Use bright white color for the content for better readability
+	contentColor := color.New(color.FgHiWhite)
+	for _, line := range justifiedText {
+		contentColor.Println(line)
+	}
+	fmt.Print("\n")
 }
