@@ -25,12 +25,18 @@ WORKDIR /app
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
-# Install krkn-lightspeed requirements (except llama-cpp-python which we build separately)
+# Clone krkn-lightspeed repository to get requirements_krknctl.txt
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
-    git checkout krknctl_lightspeed && \
-    /app/venv/bin/pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/krkn-lightspeed
+    git checkout krknctl_lightspeed_light && \
+    echo "krkn-lightspeed repository cloned successfully"
+
+# Clone krkn-hub repository to get scenario definitions
+RUN git clone https://github.com/krkn-chaos/krkn-hub.git /tmp/krkn-hub && \
+    echo "krkn-hub repository cloned successfully"
+
+# Install dependencies from requirements_krknctl.txt
+RUN /app/venv/bin/pip install --no-cache-dir -r /tmp/krkn-lightspeed/requirements_krknctl.txt
 
 # Install llama-cpp-python (standard CPU-only version from PyPI)
 RUN /app/venv/bin/pip install --no-cache-dir llama-cpp-python
@@ -75,7 +81,7 @@ RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lights
     git checkout krknctl_lightspeed && \
     cp -r /tmp/krkn-lightspeed-build /app/krkn-lightspeed && \
     /app/venv/bin/python /app/prebuild_chromadb.py && \
-    rm -rf /tmp/krkn-lightspeed-build && \
+    rm -rf /tmp/krkn-lightspeed-build /tmp/krkn-hub && \
     echo "ChromaDB pre-build completed successfully"
 
 #############################################
@@ -135,8 +141,13 @@ RUN echo "Building with code version: $CODE_VERSION"
 # Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
     cd /app/krkn-lightspeed && \
-    git checkout krknctl_lightspeed && \
-    echo "Repository cloned and checked out successfully at version: $CODE_VERSION"
+    git checkout krknctl_lightspeed_light && \
+    echo "Fresh krkn-lightspeed code updated successfully at version: $CODE_VERSION"
+
+# Fresh clone of krkn-hub repository for scenario definitions
+RUN git clone https://github.com/krkn-chaos/krkn-hub.git /tmp/krkn-hub-fresh && \
+    echo "Fresh krkn-hub scenarios available for indexing at version: $CODE_VERSION" && \
+    rm -rf /tmp/krkn-hub-fresh
 
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
