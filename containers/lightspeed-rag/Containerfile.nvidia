@@ -32,7 +32,7 @@ RUN /app/venv/bin/pip install --no-cache-dir setuptools wheel scikit-build-core
 # Clone krkn-lightspeed repository to get requirements_krknctl.txt
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
-    git checkout main && \
+    git checkout krknctl_lightspeed_light && \
     echo "Repository cloned successfully"
 
 # Install dependencies from requirements_krknctl.txt
