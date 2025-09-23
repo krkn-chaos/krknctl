@@ -40,20 +40,22 @@ RUN which glslc && glslc --version && \
 # Set working directory
 WORKDIR /app
 
-# Install krkn-lightspeed requirements (except llama-cpp-python which we build separately)
+# Clone krkn-lightspeed repository to get requirements_krknctl.txt and new implementation
 RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed && \
     cd /tmp/krkn-lightspeed && \
-    git checkout krknctl_lightspeed && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/krkn-lightspeed
+    git checkout krknctl_lightspeed_light && \
+    echo "Repository cloned successfully"
 
-# Install PyTorch with Metal Performance Shaders (MPS) support for Apple Silicon
+# Install minimal dependencies from requirements_krknctl.txt (preserving GPU setup)
+RUN pip3 install --no-cache-dir -r /tmp/krkn-lightspeed/requirements_krknctl.txt
+
+# Install PyTorch with Metal Performance Shaders (MPS) support for Apple Silicon (PRESERVED)
 RUN pip3 install --no-cache-dir torch torchvision torchaudio
 
-# Compile and install llama-cpp-python with Vulkan support (Apple Silicon optimized)
+# Compile and install llama-cpp-python with Vulkan support (Apple Silicon optimized) - PRESERVED
 RUN CMAKE_ARGS="-DGGML_VULKAN=on" pip3 install --no-cache-dir --verbose llama-cpp-python
 
-# Install huggingface-hub for reliable model downloads
+# Install huggingface-hub for reliable model downloads (PRESERVED)
 RUN pip3 install --no-cache-dir huggingface-hub
 
 # Download LLM and embedding models (3B model for better performance)
@@ -62,30 +64,32 @@ RUN mkdir -p /app/models && \
     ls -la /app/models/ && \
     [ $(stat -c%s /app/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf) -gt 1500000000 ] || (echo "Model download failed - file too small" && exit 1)
 
-# Pre-download embedding models to avoid runtime downloads
+# Pre-download embedding models (UPDATED to use all-MiniLM-L6-v2 primarily)
 RUN mkdir -p /root/.cache/huggingface/transformers && \
-    python3 -c "from sentence_transformers import SentenceTransformer; print('Downloading Qwen embedding model...'); model = SentenceTransformer('Qwen/Qwen3-Embedding-0.6B'); print('Qwen model cached successfully'); print('Downloading fallback embedding model...'); fallback = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Fallback model cached successfully')" && \
-    echo "Embedding models pre-downloaded successfully"
+    python3 -c "from sentence_transformers import SentenceTransformer; print('Downloading all-MiniLM-L6-v2 embedding model...'); model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); print('Embedding model cached successfully')" && \
+    echo "Embedding model pre-downloaded successfully"
 
-# Copy krknctl help for documentation indexing, prebuild script, and entrypoint
+# Copy application files from repository (NEW IMPLEMENTATION)
+RUN cp /tmp/krkn-lightspeed/rag_pipelines/llama31_krknctl_rag_pipeline.py /app/ && \
+    cp /tmp/krkn-lightspeed/fastapi_app.py /app/ && \
+    cp -r /tmp/krkn-lightspeed/utils /app/ && \
+    echo "New FAISS implementation files copied successfully"
+
+# Copy krknctl help and entrypoint
 COPY krknctl_help.txt .
-COPY prebuild_chromadb.py .
+COPY rag_service.py .
+COPY index_docs.py .
 COPY entrypoint.sh .
 
 # Make scripts executable
 RUN chmod +x entrypoint.sh
 
-# Create directories
-RUN mkdir -p /app/cached_docs
+# Create directories for new implementation
+RUN mkdir -p /app/cached_docs /app/docs_index /app/faiss_index /app/rag_pipelines
 
-# Pre-build ChromaDB collection with document embeddings during build time
-RUN git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed-build && \
-    cd /tmp/krkn-lightspeed-build && \
-    git checkout krknctl_lightspeed && \
-    cp -r /tmp/krkn-lightspeed-build /app/krkn-lightspeed && \
-    python3 /app/prebuild_chromadb.py && \
-    rm -rf /tmp/krkn-lightspeed-build && \
-    echo "ChromaDB pre-build completed successfully"
+# Copy pipeline file to correct location
+RUN cp /app/llama31_krknctl_rag_pipeline.py /app/rag_pipelines/ && \
+    rm -rf /tmp/krkn-lightspeed
 
 # Expose port for FastAPI service
 EXPOSE 8080
@@ -105,12 +109,7 @@ RUN (dnf -y install akmod-nvidia xorg-x11-drv-nvidia-cuda || echo "NVIDIA driver
 ARG CODE_VERSION=latest
 RUN echo "Building with code version: $CODE_VERSION"
 
-# Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
-RUN rm -rf /app/krkn-lightspeed && \
-    git clone https://github.com/krkn-chaos/krkn-lightspeed.git /app/krkn-lightspeed && \
-    cd /app/krkn-lightspeed && \
-    git checkout krknctl_lightspeed && \
-    echo "Repository cloned and checked out successfully at version: $CODE_VERSION"
+# No need for additional repository clone - files already copied during build
 
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
