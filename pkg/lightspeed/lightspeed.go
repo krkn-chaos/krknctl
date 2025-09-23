@@ -207,15 +207,22 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 			break
 		}
 
-		// Send query to Lightspeed service with spinner
+		// Send query to Lightspeed service with spinner and timing
 		if thinkingSpinner != nil {
 			thinkingSpinner.Suffix = " thinking..."
 			thinkingSpinner.Start()
 		}
+
+		startTime := time.Now()
 		response, err := queryLightspeedService(hostPort, query, config)
+		elapsed := time.Since(startTime)
+
 		if thinkingSpinner != nil {
 			thinkingSpinner.Stop()
 		}
+
+		// Display response time
+		fmt.Printf("⏱️  Response time: %.2fs\n", elapsed.Seconds())
 
 		if err != nil {
 			fmt.Printf("❌ Error: %v\n", err)
