@@ -114,5 +114,24 @@ RUN chmod +x entrypoint.sh
 # Expose port for FastAPI service
 EXPOSE 8080
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+
+# CACHE INVALIDATION POINT: Change this ARG to force fresh code checkout
+ARG CODE_VERSION=latest
+RUN echo "Building with code version: $CODE_VERSION"
+
+# Fresh clone of krkn-lightspeed repository (this layer will be invalidated when CODE_VERSION changes)
+RUN rm -rf /app/rag_pipelines /app/fastapi_app.py /app/utils && \
+    mkdir -p /app/rag_pipelines && \
+    git clone https://github.com/krkn-chaos/krkn-lightspeed.git /tmp/krkn-lightspeed-fresh && \
+    cd /tmp/krkn-lightspeed-fresh && \
+    git checkout krknctl_lightspeed_light && \
+    cp /tmp/krkn-lightspeed-fresh/rag_pipelines/llama31_krknctl_rag_pipeline.py /app/rag_pipelines/ && \
+    cp /tmp/krkn-lightspeed-fresh/fastapi_app.py /app/ && \
+    cp -r /tmp/krkn-lightspeed-fresh/utils /app/ && \
+    rm -rf /tmp/krkn-lightspeed-fresh && \
+    echo "Fresh code updated successfully at version: $CODE_VERSION"
+
 # Run the entrypoint script
 ENTRYPOINT ["./entrypoint.sh"]
