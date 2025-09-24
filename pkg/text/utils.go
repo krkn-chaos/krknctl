@@ -8,12 +8,24 @@ import (
 
 func justifyLine(words []string, width int) string {
 	if len(words) == 1 {
-		return words[0] + strings.Repeat(" ", width-len(words[0]))
+		// Protect against negative repeat count
+		spacesToAdd := width - len(words[0])
+		if spacesToAdd < 0 {
+			spacesToAdd = 0
+		}
+		return words[0] + strings.Repeat(" ", spacesToAdd)
 	}
 	totalSpaces := width
 	for _, word := range words {
 		totalSpaces -= len(word)
 	}
+
+	// Protect against negative total spaces
+	if totalSpaces < 0 {
+		// If words are too long, just join with single spaces
+		return strings.Join(words, " ")
+	}
+
 	spacesBetweenWords := totalSpaces / (len(words) - 1)
 	extraSpaces := totalSpaces % (len(words) - 1)
 
