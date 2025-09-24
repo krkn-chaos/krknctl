@@ -41,27 +41,24 @@ if [ -f "/app/fastapi_app.py" ]; then
     if [ ! -d "/app/faiss_index" ] && [ ! -d "/app/docs_index" ]; then
         echo "Building documentation index..."
         python3 -c "
-from rag_pipelines.llama31_krknctl_rag_pipeline import DocumentationIndexer
-indexer = DocumentationIndexer('/app')
+from utils.faiss_document_indexer import FaissDocumentIndexer
+indexer = FaissDocumentIndexer('/app')
 indexer.build_and_save_index(
     'https://github.com/krkn-chaos/website',
     'content/en/docs',
-    '/app/faiss_index'
+    '/app/faiss_index',
+    'https://github.com/krkn-chaos/krkn-hub'
 )
 print('Index built successfully')
 " || echo "Index building failed, will build on first request"
     fi
 
-    # Start the new FastAPI server
-    echo "Starting new FAISS + llama.cpp FastAPI service on port 8080..."
+    # Start the FastAPI server
+    echo "Starting FAISS + llama.cpp FastAPI service on port 8080..."
     exec python3 fastapi_app.py
 
-elif [ -f "/app/rag_service.py" ]; then
-    echo "Using existing RAG service implementation"
-    exec python3 rag_service.py
-
 else
-    echo "ERROR: No FastAPI application found!"
+    echo "ERROR: FastAPI application not found!"
     echo "Available files in /app:"
     ls -la /app/
     exit 1
