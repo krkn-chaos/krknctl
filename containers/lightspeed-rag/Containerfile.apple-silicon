@@ -81,8 +81,6 @@ RUN cp /tmp/krkn-lightspeed/rag_pipelines/llama31_krknctl_rag_pipeline.py /app/ 
 
 # Copy krknctl help and entrypoint
 COPY krknctl_help.txt .
-COPY rag_service.py .
-COPY index_docs.py .
 COPY entrypoint.sh .
 
 # Make scripts executable

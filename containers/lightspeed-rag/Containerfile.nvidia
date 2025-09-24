@@ -107,9 +107,7 @@ ENV PATH="/app/venv/bin:$PATH" \
     TORCH_USE_CUDA_DSA=1 \
     PYTHONUNBUFFERED=1
 
-# Copy our implementation files
-COPY rag_service.py .
-COPY index_docs.py .
+# Copy entrypoint script
 
 # Create directories for indices
 RUN mkdir -p /app/docs_index /app/cached_docs /app/rag_pipelines
