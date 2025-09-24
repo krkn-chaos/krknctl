@@ -232,7 +232,10 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 
 		// Display response with beautiful formatting
 		if len(response.Choices) > 0 {
-			PrintLightspeedAnswer(response.Choices[0].Message.Content)
+			err := PrintLightspeedAnswer(response.Choices[0].Message.Content)
+			if err != nil {
+				return err
+			}
 		} else {
 			fmt.Printf("\n🚫 No response received\n")
 		}
@@ -342,7 +345,7 @@ func newArgumentTable(inputFields []typing.InputField) table.Table {
 }
 
 // PrintLightspeedAnswer prints Lightspeed AI response with beautiful formatting
-func PrintLightspeedAnswer(content string) {
+func PrintLightspeedAnswer(content string) error {
 	fmt.Print("\n")
 	// Use cyan color with underline for Lightspeed title (different from green scenario titles)
 	_, _ = color.New(color.FgCyan, color.Underline, color.Bold).Println("⚡ AI Lightspeed Response")
@@ -354,7 +357,11 @@ func PrintLightspeedAnswer(content string) {
 	// Use bright white color for the content for better readability
 	contentColor := color.New(color.FgHiWhite)
 	for _, line := range justifiedText {
-		contentColor.Println(line)
+		_, err := contentColor.Println(line)
+		if err != nil {
+			return err
+		}
 	}
 	fmt.Print("\n")
+	return nil
 }
