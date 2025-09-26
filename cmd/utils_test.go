@@ -16,6 +16,9 @@ import (
 	"time"
 )
 
+// 🤖 Assisted with Claude Code (claude.ai/code)
+// Added comprehensive tests for ParseArgValue function to test both --flag=value and --flag value formats
+
 func getConfig(t *testing.T) krknctlconfig.Config {
 	conf, err := krknctlconfig.LoadConfig()
 	assert.Nil(t, err)
@@ -256,6 +259,26 @@ func TestParsePrivateFlags(t *testing.T) {
 	assert.True(t, registry.Insecure)
 	assert.True(t, registry.SkipTLS)
 	assert.Equal(t, *registry.Token, token)
+
+	// Test --flag=value format for private registry args
+	args = []string{
+		"--private-registry-username=" + username,
+		"--private-registry-password=" + password,
+		"--private-registry-skip-tls",
+		"--private-registry-insecure",
+		"--private-registry-token=" + token,
+		"--private-registry=" + registryHost,
+		"--private-registry-scenarios=" + registryScenarios,
+	}
+
+	registry, err = parsePrivateRepoArgs(cmd, &args)
+	assert.Nil(t, err)
+	assert.NotNil(t, registry)
+	assert.Equal(t, *registry.Username, username)
+	assert.Equal(t, *registry.Password, password)
+	assert.True(t, registry.Insecure)
+	assert.True(t, registry.SkipTLS)
+	assert.Equal(t, *registry.Token, token)
 }
 
 func TestDumpRandomGraph(t *testing.T) {
@@ -348,4 +371,102 @@ func TestIsDeprecated(t *testing.T) {
 	deprecated, err = IsDeprecated(config)
 	assert.Nil(t, err)
 	assert.True(t, *deprecated)
+}
+
+func TestParseArgValue(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		flagName    string
+		expected    string
+		shouldFind  bool
+		shouldError bool
+	}{
+		{
+			name:        "flag=value format",
+			args:        []string{"scenario", "--test-flag=hello"},
+			flagName:    "--test-flag",
+			expected:    "hello",
+			shouldFind:  true,
+			shouldError: false,
+		},
+		{
+			name:        "flag value format",
+			args:        []string{"scenario", "--test-flag", "world"},
+			flagName:    "--test-flag",
+			expected:    "world",
+			shouldFind:  true,
+			shouldError: false,
+		},
+		{
+			name:        "flag=value with equals in value",
+			args:        []string{"scenario", "--test-flag=key=value"},
+			flagName:    "--test-flag",
+			expected:    "key=value",
+			shouldFind:  true,
+			shouldError: false,
+		},
+		{
+			name:        "flag not found",
+			args:        []string{"scenario", "--other-flag", "value"},
+			flagName:    "--test-flag",
+			expected:    "",
+			shouldFind:  false,
+			shouldError: false,
+		},
+		{
+			name:        "flag without value",
+			args:        []string{"scenario", "--test-flag"},
+			flagName:    "--test-flag",
+			expected:    "",
+			shouldFind:  false,
+			shouldError: true,
+		},
+		{
+			name:        "flag followed by another flag",
+			args:        []string{"scenario", "--test-flag", "--other"},
+			flagName:    "--test-flag",
+			expected:    "",
+			shouldFind:  false,
+			shouldError: true,
+		},
+		{
+			name:        "flag=empty value",
+			args:        []string{"scenario", "--test-flag="},
+			flagName:    "--test-flag",
+			expected:    "",
+			shouldFind:  false,
+			shouldError: true,
+		},
+		{
+			name:        "multiple flags with target flag=value",
+			args:        []string{"scenario", "--other-flag", "value1", "--test-flag=target", "--third-flag", "value3"},
+			flagName:    "--test-flag",
+			expected:    "target",
+			shouldFind:  true,
+			shouldError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value, found, err := ParseArgValue(tt.args, tt.flagName)
+
+			if tt.shouldError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.shouldError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if tt.shouldFind && !found {
+				t.Errorf("Expected to find flag but didn't")
+			}
+			if !tt.shouldFind && found {
+				t.Errorf("Expected not to find flag but found: %s", value)
+			}
+			if found && value != tt.expected {
+				t.Errorf("Expected value '%s', got '%s'", tt.expected, value)
+			}
+		})
+	}
 }
