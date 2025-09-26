@@ -16,20 +16,21 @@ import (
 const MaxFileSize int64 = 10_485_760
 
 type InputField struct {
-	Name             *string `json:"name"`
-	ShortDescription *string `json:"short_description,omitempty"`
-	Description      *string `json:"description,omitempty"`
-	Variable         *string `json:"variable"`
-	Type             Type    `json:"type"`
-	Default          *string `json:"default,omitempty"`
-	Validator        *string `json:"validator,omitempty"`
-	Separator        *string `json:"separator,omitempty"`
-	AllowedValues    *string `json:"allowed_values,omitempty"`
-	Required         bool    `json:"required,omitempty"`
-	MountPath        *string `json:"mount_path,omitempty"`
-	Requires         *string `json:"requires,omitempty"`
-	MutuallyExcludes *string `json:"mutually_excludes,omitempty"`
-	Secret           bool    `json:"secret,omitempty"`
+	Name              *string `json:"name"`
+	ShortDescription  *string `json:"short_description,omitempty"`
+	Description       *string `json:"description,omitempty"`
+	Variable          *string `json:"variable"`
+	Type              Type    `json:"type"`
+	Default           *string `json:"default,omitempty"`
+	Validator         *string `json:"validator,omitempty"`
+	ValidationMessage *string `json:"validation_message,omitempty"`
+	Separator         *string `json:"separator,omitempty"`
+	AllowedValues     *string `json:"allowed_values,omitempty"`
+	Required          bool    `json:"required,omitempty"`
+	MountPath         *string `json:"mount_path,omitempty"`
+	Requires          *string `json:"requires,omitempty"`
+	MutuallyExcludes  *string `json:"mutually_excludes,omitempty"`
+	Secret            bool    `json:"secret,omitempty"`
 }
 
 type alias InputField
@@ -141,7 +142,12 @@ func (f *InputField) Validate(value *string) (*string, error) {
 					return nil, err
 				}
 				if !match {
-					return nil, errors.New("`value`: '" + *selectedValue + "' does not match `validator`: '" + *f.Validator + "'")
+					if f.ValidationMessage != nil {
+						return nil, errors.New(*f.ValidationMessage)
+					} else {
+						return nil, errors.New("`value`: '" + *selectedValue + "' does not match `validator`: '" + *f.Validator + "'")
+					}
+
 				}
 			}
 		case Number:
