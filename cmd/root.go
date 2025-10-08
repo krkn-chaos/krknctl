@@ -63,7 +63,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
-
+	runCmd.LocalFlags().Bool("form", false, "Use interactive form to collect scenario parameters instead of CLI flags")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 

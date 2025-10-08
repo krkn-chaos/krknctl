@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/forms"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -25,6 +26,7 @@ import (
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	scenarioCollectedFlags := make(map[string]*string)
 	globalCollectedFlags := make(map[string]*string)
+	var useForm = false
 	var command = &cobra.Command{
 		Use:                "run",
 		Short:              "runs a scenario",
@@ -226,7 +228,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					if err := cmd.Help(); err != nil {
 						return err
 					}
-					return nil
+					if a == "--form" {
+						useForm = true
+					}
+
+					if a == "--help" {
+						spinner.Stop()
+						if err := cmd.Help(); err != nil {
+							return err
+						}
+						return nil
+					}
 				}
 			}
 
@@ -249,16 +261,92 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				volumes[*foundAlertsProfile] = config.AlertsProfilePath
 			}
 			spinner.Suffix = "validating input ..."
-			//dynamic flags parsing
-			scenarioEnv, scenarioVol, err := ParseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
-			if err != nil {
+
+			var scenarioEnv *map[string]ParsedField
+			var scenarioVol *map[string]string
+			var globalEnv *map[string]ParsedField
+			var globalVol *map[string]string
+
+			if useForm {
+				// Use interactive forms instead of CLI flags
 				spinner.Stop()
-				return err
-			}
-			globalEnv, globalVol, err := ParseFlags(globalDetail, args, globalCollectedFlags, true)
-			if err != nil {
-				spinner.Stop()
-				return err
+
+				// Create form with separate global and scenario fields
+				form := forms.NewForm(scenarioDetail.Fields, nil)
+
+				// Add global fields to GlobalItems array
+				for _, field := range globalDetail.Fields {
+					var predefinedValue *string
+					item := forms.FormPromptItem{
+						Field:           &field,
+						PredefinedValue: predefinedValue,
+					}
+					form.GlobalItems = append(form.GlobalItems, item)
+				}
+
+				allFields := append(globalDetail.Fields, scenarioDetail.Fields...)
+
+				// Run the form to collect input
+				formResult, err := form.Run()
+				if err != nil {
+					return fmt.Errorf("form collection failed: %w", err)
+				}
+
+				// Show form summary
+				formResult.PrintSummary(allFields)
+
+				// Convert form results to environment variables
+				formEnv := formResult.GetEnvironmentVariables()
+
+				// Convert to the format expected by the rest of the code
+				scenarioEnvMap := make(map[string]ParsedField)
+				globalEnvMap := make(map[string]ParsedField)
+				scenarioVolMap := make(map[string]string)
+				globalVolMap := make(map[string]string)
+
+				// Process scenario fields
+				for _, field := range scenarioDetail.Fields {
+					if field.Variable != nil {
+						if value, exists := formEnv[*field.Variable]; exists {
+							scenarioEnvMap[*field.Variable] = ParsedField{
+								value:  value,
+								secret: field.Secret,
+							}
+						}
+					}
+				}
+
+				// Process global fields
+				for _, field := range globalDetail.Fields {
+					if field.Variable != nil {
+						if value, exists := formEnv[*field.Variable]; exists {
+							globalEnvMap[*field.Variable] = ParsedField{
+								value:  value,
+								secret: field.Secret,
+							}
+						}
+					}
+				}
+
+				scenarioEnv = &scenarioEnvMap
+				scenarioVol = &scenarioVolMap
+				globalEnv = &globalEnvMap
+				globalVol = &globalVolMap
+
+				// Restart spinner for container operations
+				spinner.Start()
+			} else {
+				// Traditional dynamic flags parsing
+				scenarioEnv, scenarioVol, err = ParseFlags(scenarioDetail, args, scenarioCollectedFlags, false)
+				if err != nil {
+					spinner.Stop()
+					return err
+				}
+				globalEnv, globalVol, err = ParseFlags(globalDetail, args, globalCollectedFlags, true)
+				if err != nil {
+					spinner.Stop()
+					return err
+				}
 			}
 
 			for k, v := range *scenarioVol {
