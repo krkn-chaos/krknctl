@@ -151,7 +151,8 @@ func TestStringField(t *testing.T) {
 	"variable":"NODE_CPU_CORE",
 	"type":"string",
 	"default":"default",
-	"validator":"^\".*\"@\"[0-9]+\""
+	"validator":"^\".*\"@\"[0-9]+\"",
+    "validation_message":"string must be in the format test@1234"
 }
 `
 	err = json.Unmarshal([]byte(stringFieldValidator), &field)
@@ -162,14 +163,38 @@ func TestStringField(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "\"krkn\"@\"1234\"", *value)
 
-	// not validated
+	// not validated + test validation message
 	param = "\"krkn\"@\"notvalid\""
 	_, err = field.Validate(&param)
 	assert.NotNil(t, err)
+	assert.Equal(t, "string must be in the format test@1234", err.Error())
 
 	//wrong default
 	_, err = field.Validate(nil)
 	assert.NotNil(t, err)
+
+	// test validation message without explicit message definition
+	stringFieldValidatorNomessage := `
+{
+	"name":"cores",
+	"short_description":"Number of cores",
+	"description":"Number of cores (workers) of node CPU to be consumed",
+	"variable":"NODE_CPU_CORE",
+	"type":"string",
+	"default":"default",
+	"validator":"^\".*\"@\"[0-9]+\""
+}
+`
+	// not validated
+	field = InputField{}
+	err = json.Unmarshal([]byte(stringFieldValidatorNomessage), &field)
+	assert.Nil(t, err)
+	param = "\"krkn\"@\"notvalid\""
+	_, err = field.Validate(&param)
+	assert.NotNil(t, err)
+	assert.Equal(t, "`value`: '\"krkn\"@\"notvalid\"' does not match `validator`: '^\"."+
+		"*\"@\"[0-9]+\"'",
+		err.Error())
 
 	field = InputField{}
 
