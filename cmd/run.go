@@ -223,22 +223,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				if a == "--detached" {
 					runDetached = true
 				}
+
+				if a == "--form" {
+					useForm = true
+				}
+
 				if a == "--help" {
 					spinner.Stop()
 					if err := cmd.Help(); err != nil {
 						return err
 					}
-					if a == "--form" {
-						useForm = true
-					}
-
-					if a == "--help" {
-						spinner.Stop()
-						if err := cmd.Help(); err != nil {
-							return err
-						}
-						return nil
-					}
+					return nil
 				}
 			}
 
@@ -431,7 +426,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
 	for _, f := range scenario.Fields {
-		
+
 		enum := ""
 		if f.Type == typing.Enum {
 			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
