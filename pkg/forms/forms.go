@@ -15,7 +15,7 @@ import (
 
 // FormPromptItem represents a single form input item with optional predefined value
 type FormPromptItem struct {
-	Field          *typing.InputField
+	Field           *typing.InputField
 	PredefinedValue *string
 }
 
@@ -30,7 +30,7 @@ type FormResult struct {
 type Form struct {
 	RequiredItems []FormPromptItem
 	OptionalItems []FormPromptItem
-	GlobalItems   []FormPromptItem  // Global values array
+	GlobalItems   []FormPromptItem // Global values array
 }
 
 // NewForm creates a new form from a slice of InputFields and optional predefined values
@@ -48,9 +48,9 @@ func NewForm(fields []typing.InputField, predefinedValues map[string]*string) *F
 				predefinedValue = val
 			}
 		}
-
+		fieldCopy := field
 		item := FormPromptItem{
-			Field:           &field,
+			Field:           &fieldCopy,
 			PredefinedValue: predefinedValue,
 		}
 
