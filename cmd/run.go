@@ -340,17 +340,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 	return command
 }
 
-func checkStringArgValue(args []string, index int) error {
-	if len(args) < index+2 || strings.HasPrefix(args[index+1], "--") {
-		return fmt.Errorf("%s has no value", args[index])
-	}
-	return nil
-}
-
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
 	for _, f := range scenario.Fields {
-
+		
 		enum := ""
 		if f.Type == typing.Enum {
 			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
