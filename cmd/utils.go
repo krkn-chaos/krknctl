@@ -21,6 +21,9 @@ import (
 	"time"
 )
 
+// 🤖 Assisted with Claude Code (claude.ai/code)
+// Added ParseArgValue function to support both --flag=value and --flag value formats
+
 type ParsedField struct {
 	value  string
 	secret bool
@@ -91,13 +94,11 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 			return nil, nil, fmt.Errorf("field %s not found", k)
 		}
 		var foundArg *string = nil
-		for i, a := range args {
-			if a == fmt.Sprintf("--%s", k) {
-				if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
-					return nil, nil, fmt.Errorf("%s has no value", args[i])
-				}
-				foundArg = &args[i+1]
-			}
+		flagName := fmt.Sprintf("--%s", k)
+		if value, found, err := ParseArgValue(args, flagName); err != nil {
+			return nil, nil, err
+		} else if found {
+			foundArg = &value
 		}
 
 		var value *string = nil
@@ -184,58 +185,47 @@ func parsePrivateRepoArgs(cmd *cobra.Command, args *[]string) (*models.RegistryV
 			return nil, errors.New("args cannot be nil")
 		}
 
-		for i, a := range *args {
-			if strings.HasPrefix(a, "--") {
-				if a == "--private-registry" {
-					registrySettings = &models.RegistryV2{}
-					registrySettings.SkipTLS = false
-					if err := checkStringArgValue(*args, i); err != nil {
-						return nil, err
-					}
-					registrySettings.RegistryURL = (*args)[i+1]
-				}
-			}
+		if value, found, err := ParseArgValue(*args, "--private-registry"); err != nil {
+			return nil, err
+		} else if found {
+			registrySettings = &models.RegistryV2{}
+			registrySettings.SkipTLS = false
+			registrySettings.RegistryURL = value
 		}
 
-		for i, a := range *args {
-			if strings.HasPrefix(a, "--") {
-				if registrySettings != nil && a == "--private-registry-username" {
-					if err := checkStringArgValue(*args, i); err != nil {
-						return nil, err
-					}
-					v := (*args)[i+1]
-					registrySettings.Username = &v
-				}
-				if registrySettings != nil && a == "--private-registry-password" {
-					if err := checkStringArgValue(*args, i); err != nil {
-						return nil, err
-					}
-					v := (*args)[i+1]
-					registrySettings.Password = &v
-				}
-				if registrySettings != nil && a == "--private-registry-skip-tls" {
+		if registrySettings != nil {
+			if value, found, err := ParseArgValue(*args, "--private-registry-username"); err != nil {
+				return nil, err
+			} else if found {
+				registrySettings.Username = &value
+			}
+
+			if value, found, err := ParseArgValue(*args, "--private-registry-password"); err != nil {
+				return nil, err
+			} else if found {
+				registrySettings.Password = &value
+			}
+
+			if value, found, err := ParseArgValue(*args, "--private-registry-token"); err != nil {
+				return nil, err
+			} else if found {
+				registrySettings.Token = &value
+			}
+
+			if value, found, err := ParseArgValue(*args, "--private-registry-scenarios"); err != nil {
+				return nil, err
+			} else if found {
+				registrySettings.ScenarioRepository = value
+			}
+
+			// Handle boolean flags (these don't need values)
+			for _, a := range *args {
+				if a == "--private-registry-skip-tls" {
 					registrySettings.SkipTLS = true
 				}
-
-				if registrySettings != nil && a == "--private-registry-insecure" {
+				if a == "--private-registry-insecure" {
 					registrySettings.Insecure = true
 				}
-
-				if registrySettings != nil && a == "--private-registry-token" {
-					if err := checkStringArgValue(*args, i); err != nil {
-						return nil, err
-					}
-					v := (*args)[i+1]
-					registrySettings.Token = &v
-				}
-
-				if registrySettings != nil && a == "--private-registry-scenarios" {
-					if err := checkStringArgValue(*args, i); err != nil {
-						return nil, err
-					}
-					registrySettings.ScenarioRepository = (*args)[i+1]
-				}
-
 			}
 		}
 		if registrySettings != nil && registrySettings.ScenarioRepository == "" {
@@ -449,4 +439,26 @@ func IsDeprecated(config config.Config) (*bool, error) {
 	}
 	deprecated := strings.Contains(releaseObject.Body, config.GithubReleaseAPIDeprecated)
 	return &deprecated, nil
+}
+
+// ParseArgValue parses both --flag=value and --flag value formats
+// Returns the value and whether it was found
+func ParseArgValue(args []string, flagName string) (string, bool, error) {
+	for i, a := range args {
+		if a == flagName {
+			// Format: --flag value
+			if len(args) < i+2 || strings.HasPrefix(args[i+1], "--") {
+				return "", false, fmt.Errorf("%s has no value", flagName)
+			}
+			return args[i+1], true, nil
+		} else if strings.HasPrefix(a, flagName+"=") {
+			// Format: --flag=value
+			value := strings.TrimPrefix(a, flagName+"=")
+			if value == "" {
+				return "", false, fmt.Errorf("%s has no value", flagName)
+			}
+			return value, true, nil
+		}
+	}
+	return "", false, nil
 }

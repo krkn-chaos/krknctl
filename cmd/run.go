@@ -19,6 +19,9 @@ import (
 	"time"
 )
 
+// 🤖 Assisted with Claude Code (claude.ai/code)
+// Fixed flag parsing to support both --flag=value and --flag value formats
+
 func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	scenarioCollectedFlags := make(map[string]*string)
 	globalCollectedFlags := make(map[string]*string)
@@ -166,69 +169,64 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			var foundKubeconfig *string = nil
 			var foundAlertsProfile *string = nil
 			var foundMetricsProfile *string = nil
-			for i, a := range args {
-				if strings.HasPrefix(a, "--") {
+			// since automatic flag parsing is disabled to allow dynamic flags
+			// flags need to be parsed manually here e.g. kubeconfig
+			if value, found, err := ParseArgValue(args, "--kubeconfig"); err != nil {
+				return err
+			} else if found {
+				expandedConfig, err := commonutils.ExpandFolder(value, nil)
+				if err != nil {
+					spinner.Stop()
+					return err
+				}
+				if !CheckFileExists(*expandedConfig) {
+					return fmt.Errorf("file %s does not exist", value)
+				}
+				foundKubeconfig = expandedConfig
+			}
 
-					// since automatic flag parsing is disabled to allow dynamic flags
-					// flags need to be parsed manually here e.g. kubeconfig
-					if a == "--kubeconfig" {
-						if err := checkStringArgValue(args, i); err != nil {
-							return err
-						}
-						expandedConfig, err := commonutils.ExpandFolder(args[i+1], nil)
-						if err != nil {
+			if value, found, err := ParseArgValue(args, "--alerts-profile"); err != nil {
+				spinner.Stop()
+				return err
+			} else if found {
+				expandedProfile, err := commonutils.ExpandFolder(value, nil)
+				if err != nil {
+					spinner.Stop()
+					return err
+				}
+				if !CheckFileExists(*expandedProfile) {
+					return fmt.Errorf("file %s does not exist", *expandedProfile)
+				}
+				foundAlertsProfile = expandedProfile
+			}
 
-							spinner.Stop()
-							return err
-						}
-						if !CheckFileExists(*expandedConfig) {
-							return fmt.Errorf("file %s does not exist", args[i+1])
-						}
-						foundKubeconfig = expandedConfig
-					}
-					if a == "--alerts-profile" {
-						if err := checkStringArgValue(args, i); err != nil {
-							spinner.Stop()
-							return err
-						}
-						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
-						if err != nil {
-							spinner.Stop()
-							return err
-						}
-						if !CheckFileExists(*expandedProfile) {
-							return fmt.Errorf("file %s does not exist", *expandedProfile)
-						}
-						foundAlertsProfile = expandedProfile
-					}
-					if a == "--metrics-profile" {
-						if err := checkStringArgValue(args, i); err != nil {
-							spinner.Stop()
-							return err
-						}
-						expandedProfile, err := commonutils.ExpandFolder(args[i+1], nil)
-						if err != nil {
-							spinner.Stop()
-							return err
-						}
-						if !CheckFileExists(*expandedProfile) {
-							spinner.Stop()
-							return fmt.Errorf("file %s does not exist", *expandedProfile)
-						}
-						foundMetricsProfile = expandedProfile
-					}
+			if value, found, err := ParseArgValue(args, "--metrics-profile"); err != nil {
+				spinner.Stop()
+				return err
+			} else if found {
+				expandedProfile, err := commonutils.ExpandFolder(value, nil)
+				if err != nil {
+					spinner.Stop()
+					return err
+				}
+				if !CheckFileExists(*expandedProfile) {
+					spinner.Stop()
+					return fmt.Errorf("file %s does not exist", *expandedProfile)
+				}
+				foundMetricsProfile = expandedProfile
+			}
 
-					if a == "--detached" {
-						runDetached = true
+			// Handle boolean flags
+			for _, a := range args {
+				if a == "--detached" {
+					runDetached = true
+				}
+				if a == "--help" {
+					spinner.Stop()
+					if err := cmd.Help(); err != nil {
+						return err
 					}
-
-					if a == "--help" {
-						spinner.Stop()
-						if err := cmd.Help(); err != nil {
-							return err
-						}
-						return nil
-					}
+					return nil
 				}
 			}
 
@@ -342,17 +340,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 	return command
 }
 
-func checkStringArgValue(args []string, index int) error {
-	if len(args) < index+2 || strings.HasPrefix(args[index+1], "--") {
-		return fmt.Errorf("%s has no value", args[index])
-	}
-	return nil
-}
-
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
 	for _, f := range scenario.Fields {
-
+		
 		enum := ""
 		if f.Type == typing.Enum {
 			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
