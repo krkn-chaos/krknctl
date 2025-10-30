@@ -6,7 +6,7 @@ This guide explains how to test and debug the RAG (Retrieval-Augmented Generatio
 
 1. **Python Virtual Environment**: Activate the existing venv with all dependencies:
    ```bash
-   cd containers/lightspeed-rag
+   cd containers/assist-rag
    source venv/bin/activate
    ```
 
@@ -97,7 +97,7 @@ local_rag/
 
 ```bash
 # 1. Set up environment
-cd containers/lightspeed-rag
+cd containers/assist-rag
 source venv/bin/activate
 mkdir -p local_test && cd local_test
 

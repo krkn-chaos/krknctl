@@ -49,7 +49,7 @@
   "github_release_api_deprecated": "[DEPRECATED]",
   "table_field_max_length": 20,
   "table_max_step_scenario_length": 7,
-  "lightspeed_registry": "krknctl-lightspeed",
+  "assist_registry": "krknctl-lightspeed",
   "gpu_check_base_tag": "gpu-check",
   "rag_model_tag": "rag-model",
   "rag_container_prefix": "krknctl-lightspeed-rag",

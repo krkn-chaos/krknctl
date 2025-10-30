@@ -3,7 +3,7 @@ package cmd
 
 import (
 	"context"
-	"github.com/krkn-chaos/krknctl/pkg/lightspeed"
+	"github.com/krkn-chaos/krknctl/pkg/assist"
 	"io"
 	"os"
 	"testing"
@@ -97,11 +97,11 @@ func (m *MockScenarioOrchestrator) ResolveContainerName(containerName string, ct
 	return nil, nil
 }
 
-func TestNewLightspeedCommand(t *testing.T) {
-	cmd := NewLightspeedCommand()
+func TestNewAssistCommand(t *testing.T) {
+	cmd := NewAssistCommand()
 
 	assert.NotNil(t, cmd)
-	assert.Equal(t, "lightspeed", cmd.Use)
+	assert.Equal(t, "assist", cmd.Use)
 	assert.Contains(t, cmd.Short, "GPU and acceleration")
 	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
 
@@ -114,12 +114,12 @@ func TestNewLightspeedCommand(t *testing.T) {
 	assert.Nil(t, cmd.PersistentFlags().Lookup("intel"))
 }
 
-func TestNewLightspeedCheckCommand(t *testing.T) {
+func TestNewAssistCheckCommand(t *testing.T) {
 	config := getTestConfig(t)
 	providerFactory := getTestProviderFactory(t)
 	orchestrator := getTestOrchestrator(t)
 
-	cmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
+	cmd := NewAssistCheckCommand(providerFactory, &orchestrator, config)
 
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "check", cmd.Use)
@@ -129,20 +129,20 @@ func TestNewLightspeedCheckCommand(t *testing.T) {
 	assert.NotNil(t, cmd.RunE)
 }
 
-func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
+func TestBuildAssistRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	cmd := &cobra.Command{}
 	config := getTestConfig(t)
 
 	// Add all the required flags but don't set private-registry
 	cmd.Flags().String("private-registry", "", "")
-	cmd.Flags().String("private-registry-lightspeed", "", "")
+	cmd.Flags().String("private-registry-assist", "", "")
 	cmd.Flags().String("private-registry-username", "", "")
 	cmd.Flags().String("private-registry-password", "", "")
 	cmd.Flags().String("private-registry-token", "", "")
 	cmd.Flags().Bool("private-registry-insecure", false, "")
 	cmd.Flags().Bool("private-registry-skip-tls", false, "")
 
-	registry, err := buildLightspeedRegistryFromFlags(cmd, config)
+	registry, err := buildAssistRegistryFromFlags(cmd, config)
 
 	assert.NoError(t, err)
 	assert.Nil(t, registry)
@@ -150,44 +150,44 @@ func TestBuildLightspeedRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 
 func TestGPUAutoDetection(t *testing.T) {
 	config := getTestConfig(t)
-	detector := lightspeed.NewPlatformGPUDetector(config)
+	detector := assist.NewPlatformGPUDetector(config)
 
 	// Test GPU detection types
 	ctx := context.Background()
 
 	// Test with --no-gpu flag
 	gpuType := detector.DetectGPUAcceleration(ctx, true)
-	assert.Equal(t, lightspeed.GPUAccelerationGeneric, gpuType)
+	assert.Equal(t, assist.GPUAccelerationGeneric, gpuType)
 
 	// Test description generation
-	description := detector.GetGPUDescription(lightspeed.GPUAccelerationAppleSilicon)
+	description := detector.GetGPUDescription(assist.GPUAccelerationAppleSilicon)
 	assert.Contains(t, description, "Apple Silicon")
 
-	description = detector.GetGPUDescription(lightspeed.GPUAccelerationNVIDIA)
+	description = detector.GetGPUDescription(assist.GPUAccelerationNVIDIA)
 	assert.Contains(t, description, "NVIDIA")
 
-	description = detector.GetGPUDescription(lightspeed.GPUAccelerationGeneric)
+	description = detector.GetGPUDescription(assist.GPUAccelerationGeneric)
 	assert.Contains(t, description, "CPU-only")
 }
 
 // Test command creation and basic structure
-func TestLightspeedCommands_Structure(t *testing.T) {
+func TestAssistCommands_Structure(t *testing.T) {
 	config := getTestConfig(t)
 	providerFactory := getTestProviderFactory(t)
 	orchestrator := getTestOrchestrator(t)
 
-	// Test lightspeed command creation
-	lightspeedCmd := NewLightspeedCommand()
-	assert.NotNil(t, lightspeedCmd)
-	assert.Equal(t, "lightspeed", lightspeedCmd.Use)
+	// Test assist command creation
+	assistCmd := NewAssistCommand()
+	assert.NotNil(t, assistCmd)
+	assert.Equal(t, "assist", assistCmd.Use)
 
 	// Test check command creation
-	checkCmd := NewLightspeedCheckCommand(providerFactory, &orchestrator, config)
+	checkCmd := NewAssistCheckCommand(providerFactory, &orchestrator, config)
 	assert.NotNil(t, checkCmd)
 	assert.Equal(t, "check", checkCmd.Use)
 	assert.NotNil(t, checkCmd.RunE)
 
-	// Add check command to lightspeed
-	lightspeedCmd.AddCommand(checkCmd)
-	assert.Equal(t, 1, len(lightspeedCmd.Commands()))
+	// Add check command to assist
+	assistCmd.AddCommand(checkCmd)
+	assert.Equal(t, 1, len(assistCmd.Commands()))
 }

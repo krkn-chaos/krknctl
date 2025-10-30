@@ -1,4 +1,4 @@
-package lightspeed
+package assist
 
 import (
 	"context"
@@ -17,11 +17,11 @@ const (
 // GPUDetector interface for platform-based GPU detection
 type GPUDetector interface {
 	DetectGPUAcceleration(ctx context.Context, noGPU bool) GPUAcceleration
-	GetLightspeedImageURI(gpuType GPUAcceleration) (string, error)
+	GetAssistImageURI(gpuType GPUAcceleration) (string, error)
 	GetDeviceMounts(gpuType GPUAcceleration) map[string]string
 	GetGPUDescription(gpuType GPUAcceleration) string
 	HandleContainerError(err error, gpuType GPUAcceleration) error
-	AutoSelectLightspeedConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error)
+	AutoSelectAssistConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error)
 }
 
 // PlatformGPUDetector provides platform-based GPU detection
@@ -70,15 +70,15 @@ type QueryChoice struct {
 
 // QueryResponse represents an OpenAI-compatible response
 type QueryResponse struct {
-	ID           string        `json:"id"`
-	Object       string        `json:"object"`
-	Created      int64         `json:"created"`
-	Model        string        `json:"model"`
-	Choices      []QueryChoice `json:"choices"`
-	Usage        struct {
+	ID      string        `json:"id"`
+	Object  string        `json:"object"`
+	Created int64         `json:"created"`
+	Model   string        `json:"model"`
+	Choices []QueryChoice `json:"choices"`
+	Usage   struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
-	ScenarioName *string       `json:"scenario_name,omitempty"` // krknctl scenario name if detected
+	ScenarioName *string `json:"scenario_name,omitempty"` // krknctl scenario name if detected
 }
