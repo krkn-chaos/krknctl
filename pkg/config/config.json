@@ -57,10 +57,10 @@
   "dashboard_image_name": "krkn-dashboard",
   "dashboard_image_tag": "latest"
   "lightspeed_registry": "krknctl-lightspeed",
-  "assist_registry": "krknctl-lightspeed",
+  "assist_registry": "krknctl-assist",
   "gpu_check_base_tag": "gpu-check",
   "rag_model_tag": "rag-model",
-  "rag_container_prefix": "krknctl-lightspeed-rag",
+  "rag_container_prefix": "krknctl-assist-rag",
   "rag_service_port": "8080",
   "rag_health_endpoint": "/health",
   "rag_query_endpoint": "/v1/chat/completions",
