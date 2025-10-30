@@ -4,7 +4,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/lightspeed"
+	"github.com/krkn-chaos/krknctl/pkg/assist"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -15,9 +15,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewLightspeedCommand() *cobra.Command {
+func NewAssistCommand() *cobra.Command {
 	var command = &cobra.Command{
-		Use:   "lightspeed",
+		Use:   "assist",
 		Short: "GPU and acceleration related utilities",
 		Long: `GPU and acceleration related utilities for container runtime environments
 
@@ -37,9 +37,9 @@ GPU Auto-Detection:
   • Intel GPUs (Arc, Iris, UHD Graphics)
 
 Examples:
-  krknctl lightspeed check
-  krknctl lightspeed run
-  krknctl lightspeed run --no-gpu`,
+  krknctl assist check
+  krknctl assist run
+  krknctl assist run --no-gpu`,
 	}
 
 	// GPU auto-detection - no manual flags needed anymore!
@@ -52,7 +52,7 @@ Examples:
 
 // GPU auto-detection - no manual flag parsing needed anymore!
 
-func NewLightspeedCheckCommand(
+func NewAssistCheckCommand(
 	providerFactory *factory.ProviderFactory,
 	scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator,
 	config config.Config,
@@ -65,7 +65,7 @@ func NewLightspeedCheckCommand(
 Lightspeed automatically tests all supported GPU types to detect your hardware.
 
 Examples:
-  krknctl lightspeed check`,
+  krknctl assist check`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Print container runtime info
@@ -73,7 +73,8 @@ Examples:
 
 			// Check if Docker is being used - Lightspeed only supports Podman
 			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
-				return fmt.Errorf("❌ Lightspeed requires Podman container runtime. Docker is not supported for GPU acceleration")
+				return fmt.Errorf("❌ Assist requires Podman container runtime. " +
+					"Docker is not supported for GPU acceleration")
 			}
 
 			// Get container runtime socket
@@ -92,16 +93,16 @@ Examples:
 			noGPU, _ := cmd.Flags().GetBool("no-gpu")
 
 			// Create platform GPU detector
-			detector := lightspeed.NewPlatformGPUDetector(config)
+			detector := assist.NewPlatformGPUDetector(config)
 
 			// Auto-detect GPU acceleration
 			fmt.Println("\n🔍 Detecting GPU acceleration...")
 			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
 
 			// Get configuration
-			imageURI, _, deviceMounts, err := detector.AutoSelectLightspeedConfig(ctx, noGPU)
+			imageURI, _, deviceMounts, err := detector.AutoSelectAssistConfig(ctx, noGPU)
 			if err != nil {
-				return fmt.Errorf("failed to get lightspeed configuration: %w", err)
+				return fmt.Errorf("failed to get assist configuration: %w", err)
 			}
 
 			// Format and print result
@@ -120,11 +121,11 @@ Examples:
 	return command
 }
 
-// buildLightspeedRegistryFromFlags builds lightspeed registry configuration from command flags
-func buildLightspeedRegistryFromFlags(cmd *cobra.Command, config config.Config) (*models.RegistryV2, error) {
+// buildAssistRegistryFromFlags builds assist registry configuration from command flags
+func buildAssistRegistryFromFlags(cmd *cobra.Command, config config.Config) (*models.RegistryV2, error) {
 	// Get private registry flags from parent command
 	privateRegistry, _ := cmd.Flags().GetString("private-registry")
-	privateRegistryLightspeed, _ := cmd.Flags().GetString("private-registry-lightspeed")
+	privateRegistryAssist, _ := cmd.Flags().GetString("private-registry-assist")
 	privateRegistryUsername, _ := cmd.Flags().GetString("private-registry-username")
 	privateRegistryPassword, _ := cmd.Flags().GetString("private-registry-password")
 	privateRegistryToken, _ := cmd.Flags().GetString("private-registry-token")
@@ -136,10 +137,10 @@ func buildLightspeedRegistryFromFlags(cmd *cobra.Command, config config.Config) 
 		return nil, nil
 	}
 
-	// Use lightspeed repository override if provided, otherwise use config default
-	lightspeedRepo := privateRegistryLightspeed
-	if lightspeedRepo == "" {
-		lightspeedRepo = config.LightspeedRegistry
+	// Use assist repository override if provided, otherwise use config default
+	assistRepo := privateRegistryAssist
+	if assistRepo == "" {
+		assistRepo = config.AssistRegistry
 	}
 
 	// Build registry configuration
@@ -150,13 +151,13 @@ func buildLightspeedRegistryFromFlags(cmd *cobra.Command, config config.Config) 
 		Token:              &privateRegistryToken,
 		Insecure:           privateRegistryInsecure,
 		SkipTLS:            privateRegistrySkipTLS,
-		ScenarioRepository: lightspeedRepo,
+		ScenarioRepository: assistRepo,
 	}
 
 	return registry, nil
 }
 
-func NewLightspeedRunCommand(
+func NewAssistRunCommand(
 	providerFactory *factory.ProviderFactory,
 	scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator,
 	config config.Config,
@@ -177,8 +178,8 @@ The system uses:
 - Llama 3.2:1B model optimized for chaos engineering domain
 
 Examples:
-  krknctl lightspeed run          # Auto-detect GPU
-  krknctl lightspeed run --no-gpu # Force CPU-only mode`,
+  krknctl assist run          # Auto-detect GPU
+  krknctl assist run --no-gpu # Force CPU-only mode`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Get flags
@@ -189,7 +190,8 @@ Examples:
 
 			// Check if Docker is being used - Lightspeed only supports Podman
 			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
-				return fmt.Errorf("❌ Lightspeed requires Podman container runtime. Docker is not supported for GPU acceleration")
+				return fmt.Errorf("❌ assist requires Podman container runtime. " +
+					"Docker is not supported for GPU acceleration")
 			}
 
 			// Get container runtime socket
@@ -204,29 +206,29 @@ Examples:
 				return fmt.Errorf("failed to connect to container runtime: %w", err)
 			}
 
-			// Build lightspeed registry configuration from flags
-			registry, err := buildLightspeedRegistryFromFlags(cmd, config)
+			// Build assist registry configuration from flags
+			registry, err := buildAssistRegistryFromFlags(cmd, config)
 			if err != nil {
-				return fmt.Errorf("failed to build lightspeed registry configuration: %w", err)
+				return fmt.Errorf("failed to build assist registry configuration: %w", err)
 			}
 
 			// Step 1: Auto-detect GPU acceleration
-			fmt.Println("🔍 Detecting GPU acceleration...")
+			fmt.Println("🔍 detecting GPU acceleration...")
 
 			// Create platform GPU detector
-			detector := lightspeed.NewPlatformGPUDetector(config)
+			detector := assist.NewPlatformGPUDetector(config)
 			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
 
 			fmt.Printf("✅ GPU acceleration: %s\n", detector.GetGPUDescription(gpuType))
 
 			// Step 2: Deploy RAG model container
-			fmt.Println("\n🚀 Deploying lightspeed model...")
+			fmt.Println("\n🚀 deploying assist model...")
 
 			// Create spinners for the operations
 			pullSpinner := NewSpinnerWithSuffix(" pulling RAG model image...")
 			thinkingSpinner := NewSpinnerWithSuffix(" thinking...", 37)
 
-			ragResult, err := lightspeed.DeployLightspeedModelWithGPUType(ctx, gpuType, *scenarioOrchestrator, config, registry, detector, pullSpinner)
+			ragResult, err := assist.DeployAssistModelWithGPUType(ctx, gpuType, *scenarioOrchestrator, config, registry, detector, pullSpinner)
 			if err != nil {
 				// Handle GPU-related errors with helpful suggestions
 				enhancedErr := detector.HandleContainerError(err, gpuType)
@@ -234,28 +236,30 @@ Examples:
 			}
 
 			// Step 3: Health check
-			fmt.Println("\n🩺 Performing health check...")
+			fmt.Println("\n🩺 performing health check...")
 
-			healthOK, err := lightspeed.PerformLightspeedHealthCheck(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config)
+			healthOK, err := assist.PerformAssistHealthCheck(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config)
 			if err != nil {
 				return fmt.Errorf("health check failed: %w", err)
 			}
 
 			if !healthOK {
-				return fmt.Errorf("lightspeed service is not responding properly")
+				return fmt.Errorf("assist service is not responding properly")
 			}
 
-			fmt.Println("✅ Lightspeed service is ready!")
+			fmt.Println("✅ assist service is ready!")
 
 			// Step 4: Start interactive prompt
-			fmt.Printf("\n🚂 Starting interactive Lightspeed service on port %s...\n", ragResult.HostPort)
-			fmt.Println("Type your chaos engineering questions and get intelligent krknctl command suggestions!")
-			fmt.Println("Type 'exit' or 'quit' to stop.")
+			fmt.Printf("\n🚂 starting interactive assist service on port %s...\n",
+				ragResult.HostPort)
+			fmt.Println("type your chaos engineering questions and get intelligent krknctl" +
+				" command suggestions!")
+			fmt.Println("type 'exit' or 'quit' to stop.")
 
 			// Create scenario provider for describe functionality
 			scenarioProvider := providerFactory.NewInstance(provider.Quay)
 
-			return lightspeed.StartInteractivePrompt(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config, thinkingSpinner, scenarioProvider)
+			return assist.StartInteractivePrompt(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config, thinkingSpinner, scenarioProvider)
 		},
 	}
 

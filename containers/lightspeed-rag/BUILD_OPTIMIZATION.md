@@ -18,23 +18,23 @@ We've implemented a **cache invalidation strategy** using Docker ARG to control 
 
 #### Normal builds (uses cached code):
 ```bash
-podman build -f Containerfile.apple-silicon -t lightspeed:latest .
-podman build -f Containerfile.nvidia -t lightspeed:latest .
-podman build -f Containerfile.generic -t lightspeed:latest .
+podman build -f Containerfile.apple-silicon -t assist:latest .
+podman build -f Containerfile.nvidia -t assist:latest .
+podman build -f Containerfile.generic -t assist:latest .
 ```
 
 #### Force fresh code checkout:
 ```bash
 # Use current timestamp to force fresh checkout
 CODE_VERSION=$(date +%s)
-podman build --build-arg CODE_VERSION=$CODE_VERSION -f Containerfile.apple-silicon -t lightspeed:latest .
+podman build --build-arg CODE_VERSION=$CODE_VERSION -f Containerfile.apple-silicon -t assist:latest .
 
 # Or use a meaningful version identifier
-podman build --build-arg CODE_VERSION=v1.2.3 -f Containerfile.nvidia -t lightspeed:latest .
+podman build --build-arg CODE_VERSION=v1.2.3 -f Containerfile.nvidia -t assist:latest .
 
 # Or use git commit hash
 CODE_VERSION=$(git rev-parse HEAD)
-podman build --build-arg CODE_VERSION=$CODE_VERSION -f Containerfile.generic -t lightspeed:latest .
+podman build --build-arg CODE_VERSION=$CODE_VERSION -f Containerfile.generic -t assist:latest .
 ```
 
 ### Benefits

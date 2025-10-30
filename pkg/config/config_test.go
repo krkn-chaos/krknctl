@@ -10,10 +10,10 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	config, err := LoadConfig()
-	
+
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	
+
 	// Test that basic required fields are present
 	assert.NotEmpty(t, config.Version)
 	assert.NotEmpty(t, config.QuayHost)
@@ -21,27 +21,27 @@ func TestLoadConfig(t *testing.T) {
 	assert.NotEmpty(t, config.QuayScenarioRegistry)
 	assert.NotEmpty(t, config.QuayBaseImageRegistry)
 	assert.NotEmpty(t, config.QuayBaseImageTag)
-	
+
 	// Test GPU check specific fields that were added
-	assert.NotEmpty(t, config.LightspeedRegistry)
+	assert.NotEmpty(t, config.AssistRegistry)
 	assert.NotEmpty(t, config.GpuCheckBaseTag)
-	assert.Equal(t, "krknctl-lightspeed", config.LightspeedRegistry)
+	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
 	assert.Equal(t, "gpu-check", config.GpuCheckBaseTag)
 }
 
 func TestGetQuayImageURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetQuayImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	
+
 	// Should contain the host, org, and scenario registry
 	assert.Contains(t, uri, config.QuayHost)
 	assert.Contains(t, uri, config.QuayOrg)
 	assert.Contains(t, uri, config.QuayScenarioRegistry)
-	
+
 	// Should be in the format: host/org/registry
 	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.QuayScenarioRegistry
 	assert.Equal(t, expected, uri)
@@ -50,16 +50,16 @@ func TestGetQuayImageURI(t *testing.T) {
 func TestGetCustomDomainImageURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetCustomDomainImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	
+
 	// Should contain the custom domain host, org, and scenario registry
 	assert.Contains(t, uri, config.CustomDomainHost)
 	assert.Contains(t, uri, config.QuayOrg)
 	assert.Contains(t, uri, config.QuayScenarioRegistry)
-	
+
 	// Should be in the format: custom_host/org/registry
 	expected := config.CustomDomainHost + "/" + config.QuayOrg + "/" + config.QuayScenarioRegistry
 	assert.Equal(t, expected, uri)
@@ -68,11 +68,11 @@ func TestGetCustomDomainImageURI(t *testing.T) {
 func TestGetQuayScenarioRepositoryAPIURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetQuayScenarioRepositoryAPIURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	
+
 	// Should be a valid HTTPS URL
 	assert.Contains(t, uri, "https://")
 	assert.Contains(t, uri, config.QuayHost)
@@ -84,11 +84,11 @@ func TestGetQuayScenarioRepositoryAPIURI(t *testing.T) {
 func TestGetQuayBaseImageRepositoryAPIURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetQuayBaseImageRepositoryAPIURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	
+
 	// Should be a valid HTTPS URL
 	assert.Contains(t, uri, "https://")
 	assert.Contains(t, uri, config.QuayHost)
@@ -100,37 +100,37 @@ func TestGetQuayBaseImageRepositoryAPIURI(t *testing.T) {
 func TestGetGpuCheckImageURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetGpuCheckImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	
+
 	// Should contain the host, org, and GPU check registry
 	assert.Contains(t, uri, config.QuayHost)
 	assert.Contains(t, uri, config.QuayOrg)
-	assert.Contains(t, uri, config.LightspeedRegistry)
+	assert.Contains(t, uri, config.AssistRegistry)
 	assert.Contains(t, uri, config.GpuCheckBaseTag)
-	
+
 	// Should be in the format: host/org/registry:tag
-	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.LightspeedRegistry + ":" + config.GpuCheckBaseTag
+	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry + ":" + config.GpuCheckBaseTag
 	assert.Equal(t, expected, uri)
-	
+
 	// Verify it matches the expected default image
-	assert.Equal(t, "quay.io/krkn-chaos/krknctl-lightspeed:gpu-check", uri)
+	assert.Equal(t, "quay.io/krkn-chaos/krknctl-assist:gpu-check", uri)
 }
 
 func TestConfigStructFields(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test that all GPU check related fields are properly loaded
-	assert.IsType(t, "", config.LightspeedRegistry)
+	assert.IsType(t, "", config.AssistRegistry)
 	assert.IsType(t, "", config.GpuCheckBaseTag)
-	
+
 	// Test that the values are correct
-	assert.Equal(t, "krknctl-lightspeed", config.LightspeedRegistry)
+	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
 	assert.Equal(t, "gpu-check", config.GpuCheckBaseTag)
-	
+
 	// Test that other existing fields are still working
 	assert.Equal(t, "quay.io", config.QuayHost)
 	assert.Equal(t, "krkn-chaos", config.QuayOrg)
@@ -142,13 +142,13 @@ func TestConfigStructFields(t *testing.T) {
 func TestConfigJSONStructure(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test integer fields
 	assert.IsType(t, 0, config.TableFieldMaxLength)
 	assert.IsType(t, 0, config.TableMaxStepScenarioLength)
 	assert.Greater(t, config.TableFieldMaxLength, 0)
 	assert.Greater(t, config.TableMaxStepScenarioLength, 0)
-	
+
 	// Test string fields that should not be empty
 	requiredStringFields := []string{
 		config.Version,
@@ -169,10 +169,10 @@ func TestConfigJSONStructure(t *testing.T) {
 		config.DockerSocketRoot,
 		config.DockerRunningState,
 		config.DefaultContainerPlatform,
-		config.LightspeedRegistry,
+		config.AssistRegistry,
 		config.GpuCheckBaseTag,
 	}
-	
+
 	for _, field := range requiredStringFields {
 		assert.NotEmpty(t, field, "Required string field should not be empty")
 	}
@@ -181,7 +181,7 @@ func TestConfigJSONStructure(t *testing.T) {
 func TestConfigEnvironmentVariableFields(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test that environment variable field names are correct
 	envFields := map[string]string{
 		config.EnvPrivateRegistry:          "KRKNCTL_PRIVATE_REGISTRY",
@@ -192,7 +192,7 @@ func TestConfigEnvironmentVariableFields(t *testing.T) {
 		config.EnvPrivateRegistryScenarios: "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS",
 		config.EnvPrivateRegistryInsecure:  "KRKNCTL_PRIVATE_REGISTRY_INSECURE",
 	}
-	
+
 	for actual, expected := range envFields {
 		assert.Equal(t, expected, actual, "Environment variable name should match expected value")
 	}
@@ -201,13 +201,13 @@ func TestConfigEnvironmentVariableFields(t *testing.T) {
 func TestConfigGithubFields(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test GitHub related URLs
 	assert.Contains(t, config.GithubLatestRelease, "github.com")
 	assert.Contains(t, config.GithubLatestRelease, "releases/latest")
 	assert.Contains(t, config.GithubLatestReleaseAPI, "api.github.com")
 	assert.Contains(t, config.GithubReleaseAPI, "api.github.com")
-	
+
 	// Test that URLs are properly formatted
 	assert.True(t, strings.HasPrefix(config.GithubLatestRelease, "https://"))
 	assert.True(t, strings.HasPrefix(config.GithubLatestReleaseAPI, "https://"))
@@ -217,7 +217,7 @@ func TestConfigGithubFields(t *testing.T) {
 func TestConfigLabelFields(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test that label fields contain expected prefixes
 	labelFields := []string{
 		config.LabelTitle,
@@ -227,11 +227,11 @@ func TestConfigLabelFields(t *testing.T) {
 		config.LabelDescriptionGlobal,
 		config.LabelInputFieldsGlobal,
 	}
-	
+
 	for _, field := range labelFields {
 		assert.Contains(t, field, "krknctl", "Label field should contain krknctl prefix")
 	}
-	
+
 	// Test regex fields contain proper regex patterns
 	regexFields := []string{
 		config.LabelTitleRegex,
@@ -241,7 +241,7 @@ func TestConfigLabelFields(t *testing.T) {
 		config.LabelDescriptionRegexGlobal,
 		config.LabelInputFieldsRegexGlobal,
 	}
-	
+
 	for _, field := range regexFields {
 		assert.Contains(t, field, "LABEL", "Regex field should contain LABEL")
 		assert.Contains(t, field, "krknctl", "Regex field should contain krknctl")
@@ -252,9 +252,9 @@ func TestConfigLabelFields(t *testing.T) {
 func TestConfigTypes(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Verify field types are correct
-	assert.IsType(t, "", config.LightspeedRegistry)
+	assert.IsType(t, "", config.AssistRegistry)
 	assert.IsType(t, "", config.GpuCheckBaseTag)
 	assert.IsType(t, "", config.Version)
 	assert.IsType(t, "", config.QuayHost)
@@ -267,7 +267,7 @@ func TestConfigTypes(t *testing.T) {
 func TestGetGpuCheckImageURIByType(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	tests := []struct {
 		name        string
 		gpuType     string
@@ -284,7 +284,7 @@ func TestGetGpuCheckImageURIByType(t *testing.T) {
 			expectedTag: "gpu-check-amd",
 		},
 		{
-			name:        "Intel GPU image", 
+			name:        "Intel GPU image",
 			gpuType:     "intel",
 			expectedTag: "gpu-check-intel",
 		},
@@ -294,17 +294,17 @@ func TestGetGpuCheckImageURIByType(t *testing.T) {
 			expectedTag: "gpu-check-apple-silicon",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uri, err := config.GetGpuCheckImageURIByType(tt.gpuType)
-			
+
 			assert.NoError(t, err)
-			assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-lightspeed")
+			assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-assist")
 			assert.Contains(t, uri, tt.expectedTag)
-			
+
 			// Should be in the format: host/org/registry:tag
-			expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.LightspeedRegistry + ":" + tt.expectedTag
+			expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry + ":" + tt.expectedTag
 			assert.Equal(t, expected, uri)
 		})
 	}
@@ -314,13 +314,13 @@ func TestGetGpuCheckImageURIByType(t *testing.T) {
 func TestGetGpuCheckImageURIByType_Fallback(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	uri, err := config.GetGpuCheckImageURIByType("unknown-gpu-type")
-	
+
 	assert.NoError(t, err)
-	assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-lightspeed")
+	assert.Contains(t, uri, "quay.io/krkn-chaos/krknctl-assist")
 	assert.Contains(t, uri, "gpu-check") // Should fallback to base tag
-	
+
 	// Should match the base GPU check image URI
 	baseURI, baseErr := config.GetGpuCheckImageURI()
 	assert.NoError(t, baseErr)
@@ -331,44 +331,44 @@ func TestGetGpuCheckImageURIByType_Fallback(t *testing.T) {
 func TestGetGpuCheckImageURI_EdgeCases(t *testing.T) {
 	// Test with a config that has different values
 	testConfig := Config{
-		QuayHost:         "custom-registry.com",
-		QuayOrg:          "test-org",
-		LightspeedRegistry: "custom-lightspeed",
-		GpuCheckBaseTag:  "v1.0.0",
+		QuayHost:        "custom-registry.com",
+		QuayOrg:         "test-org",
+		AssistRegistry:  "custom-assist",
+		GpuCheckBaseTag: "v1.0.0",
 	}
-	
+
 	uri, err := testConfig.GetGpuCheckImageURI()
 	assert.NoError(t, err)
-	assert.Equal(t, "custom-registry.com/test-org/custom-lightspeed:v1.0.0", uri)
-	
+	assert.Equal(t, "custom-registry.com/test-org/custom-assist:v1.0.0", uri)
+
 	// Test the by-type method with custom config
 	uriByType, err := testConfig.GetGpuCheckImageURIByType("nvidia")
 	assert.NoError(t, err)
-	assert.Equal(t, "custom-registry.com/test-org/custom-lightspeed:v1.0.0-nvidia", uriByType)
+	assert.Equal(t, "custom-registry.com/test-org/custom-assist:v1.0.0-nvidia", uriByType)
 }
 
 // Test that the config loading preserves all existing functionality
 func TestConfigBackwardCompatibility(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
-	
+
 	// Test that all existing URI methods still work
 	quayURI, err := config.GetQuayImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, quayURI)
-	
+
 	customURI, err := config.GetCustomDomainImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, customURI)
-	
+
 	scenarioAPI, err := config.GetQuayScenarioRepositoryAPIURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, scenarioAPI)
-	
+
 	baseImageAPI, err := config.GetQuayBaseImageRepositoryAPIURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, baseImageAPI)
-	
+
 	// Test the new GPU check URI method
 	gpuURI, err := config.GetGpuCheckImageURI()
 	assert.NoError(t, err)
