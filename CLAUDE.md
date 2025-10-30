@@ -208,16 +208,16 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 
 ```bash
 # Automatic GPU detection and deployment
-krknctl lightspeed check
+krknctl assist check
 
 # AI-powered assistance with auto-detected GPU
-krknctl lightspeed run
+krknctl assist run
 
 # Force CPU-only mode (no GPU acceleration)
-krknctl lightspeed run --no-gpu
+krknctl assist run --no-gpu
 
 # Offline mode for airgapped environments  
-krknctl lightspeed run --offline
+krknctl assist run --offline
 ```
 
 ### Development Notes

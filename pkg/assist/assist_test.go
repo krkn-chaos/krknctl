@@ -1,4 +1,4 @@
-package lightspeed
+package assist
 
 import (
 	"context"
@@ -18,11 +18,11 @@ import (
 
 // MockScenarioOrchestrator implements the ScenarioOrchestrator interface for testing
 type MockScenarioOrchestrator struct {
-	containerID      string
-	shouldFailRun    bool
-	shouldFailKill   bool
-	containers       []orchestratormodels.Container
-	shouldFailList   bool
+	containerID    string
+	shouldFailRun  bool
+	shouldFailKill bool
+	containers     []orchestratormodels.Container
+	shouldFailList bool
 }
 
 func (m *MockScenarioOrchestrator) Run(imageURI string, containerName string, env map[string]string, waitForCompletion bool, volumes map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registrySettings *models.RegistryV2, portMappings *map[string]string) (*string, error) {
@@ -69,23 +69,43 @@ func (m *MockScenarioOrchestrator) ListRunningContainers(ctx context.Context) (*
 
 // Implement other required methods (empty implementations for test)
 func (m *MockScenarioOrchestrator) PrintContainerRuntime() {}
-func (m *MockScenarioOrchestrator) GetContainerRuntime() orchestratormodels.ContainerRuntime { return orchestratormodels.Podman }
-func (m *MockScenarioOrchestrator) GetContainerRuntimeSocket(*int) (*string, error) { socket := "unix://test.sock"; return &socket, nil }
-func (m *MockScenarioOrchestrator) Connect(string) (context.Context, error) { return context.Background(), nil }
-func (m *MockScenarioOrchestrator) RunAttached(string, string, map[string]string, bool, map[string]string, *map[string]string, io.Writer, io.Writer, *chan *string, context.Context, *models.RegistryV2) (*string, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) RunGraph(orchestratormodels.ScenarioSet, orchestratormodels.ResolvedGraph, map[string]string, map[string]string, bool, chan *orchestratormodels.GraphCommChannel, *models.RegistryV2, *int) {}
+func (m *MockScenarioOrchestrator) GetContainerRuntime() orchestratormodels.ContainerRuntime {
+	return orchestratormodels.Podman
+}
+func (m *MockScenarioOrchestrator) GetContainerRuntimeSocket(*int) (*string, error) {
+	socket := "unix://test.sock"
+	return &socket, nil
+}
+func (m *MockScenarioOrchestrator) Connect(string) (context.Context, error) {
+	return context.Background(), nil
+}
+func (m *MockScenarioOrchestrator) RunAttached(string, string, map[string]string, bool, map[string]string, *map[string]string, io.Writer, io.Writer, *chan *string, context.Context, *models.RegistryV2) (*string, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) RunGraph(orchestratormodels.ScenarioSet, orchestratormodels.ResolvedGraph, map[string]string, map[string]string, bool, chan *orchestratormodels.GraphCommChannel, *models.RegistryV2, *int) {
+}
 func (m *MockScenarioOrchestrator) CleanContainers(context.Context) (*int, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) AttachWait(*string, io.Writer, io.Writer, context.Context) (*bool, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) Attach(*string, chan os.Signal, io.Writer, io.Writer, context.Context) (bool, error) { return false, nil }
-func (m *MockScenarioOrchestrator) ListRunningScenarios(context.Context) (*[]orchestratormodels.ScenarioContainer, error) { return nil, nil }
-func (m *MockScenarioOrchestrator) InspectScenario(orchestratormodels.Container, context.Context) (*orchestratormodels.ScenarioContainer, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) AttachWait(*string, io.Writer, io.Writer, context.Context) (*bool, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) Attach(*string, chan os.Signal, io.Writer, io.Writer, context.Context) (bool, error) {
+	return false, nil
+}
+func (m *MockScenarioOrchestrator) ListRunningScenarios(context.Context) (*[]orchestratormodels.ScenarioContainer, error) {
+	return nil, nil
+}
+func (m *MockScenarioOrchestrator) InspectScenario(orchestratormodels.Container, context.Context) (*orchestratormodels.ScenarioContainer, error) {
+	return nil, nil
+}
 func (m *MockScenarioOrchestrator) GetConfig() config.Config { return config.Config{} }
-func (m *MockScenarioOrchestrator) ResolveContainerName(string, context.Context) (*string, error) { return nil, nil }
+func (m *MockScenarioOrchestrator) ResolveContainerName(string, context.Context) (*string, error) {
+	return nil, nil
+}
 
 // MockGPUDetector implements the GPUDetector interface for testing
 type MockGPUDetector struct {
-	gpuType     GPUAcceleration
-	imageURI    string
+	gpuType      GPUAcceleration
+	imageURI     string
 	deviceMounts map[string]string
 }
 
@@ -93,7 +113,7 @@ func (m *MockGPUDetector) DetectGPUAcceleration(ctx context.Context, noGPU bool)
 	return m.gpuType
 }
 
-func (m *MockGPUDetector) GetLightspeedImageURI(gpuType GPUAcceleration) (string, error) {
+func (m *MockGPUDetector) GetAssistImageURI(gpuType GPUAcceleration) (string, error) {
 	return m.imageURI, nil
 }
 
@@ -118,23 +138,23 @@ func (m *MockGPUDetector) HandleContainerError(err error, gpuType GPUAcceleratio
 	return err
 }
 
-func (m *MockGPUDetector) AutoSelectLightspeedConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error) {
+func (m *MockGPUDetector) AutoSelectAssistConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error) {
 	return m.imageURI, m.gpuType, m.deviceMounts, nil
 }
 
 func createTestConfig() config.Config {
 	return config.Config{
-		RAGContainerPrefix:            "test-lightspeed",
-		RAGServicePort:               "8080",
-		RAGHost:                      "127.0.0.1",
-		RAGHealthEndpoint:            "/health",
-		RAGQueryEndpoint:             "/v1/chat/completions",
-		RAGHealthMaxRetries:          3,
+		RAGContainerPrefix:            "test-assist",
+		RAGServicePort:                "8080",
+		RAGHost:                       "127.0.0.1",
+		RAGHealthEndpoint:             "/health",
+		RAGQueryEndpoint:              "/v1/chat/completions",
+		RAGHealthMaxRetries:           3,
 		RAGHealthRetryIntervalSeconds: 1,
 	}
 }
 
-func TestDeployLightspeedModelWithGPUType_Success(t *testing.T) {
+func TestDeployAssistModelWithGPUType_Success(t *testing.T) {
 	// Setup
 	ctx := context.Background()
 	config := createTestConfig()
@@ -145,14 +165,14 @@ func TestDeployLightspeedModelWithGPUType_Success(t *testing.T) {
 
 	mockDetector := &MockGPUDetector{
 		gpuType:      GPUAccelerationAppleSilicon,
-		imageURI:     "test-registry/lightspeed:latest",
+		imageURI:     "test-registry/assist:latest",
 		deviceMounts: map[string]string{"/dev/dri": "/dev/dri"},
 	}
 
 	mockSpinner := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 
 	// Execute
-	result, err := DeployLightspeedModelWithGPUType(ctx, GPUAccelerationAppleSilicon, mockOrchestrator, config, nil, mockDetector, mockSpinner)
+	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationAppleSilicon, mockOrchestrator, config, nil, mockDetector, mockSpinner)
 
 	// Assert
 	if err != nil {
@@ -172,7 +192,7 @@ func TestDeployLightspeedModelWithGPUType_Success(t *testing.T) {
 	}
 }
 
-func TestDeployLightspeedModelWithGPUType_RunFailure(t *testing.T) {
+func TestDeployAssistModelWithGPUType_RunFailure(t *testing.T) {
 	// Setup
 	ctx := context.Background()
 	config := createTestConfig()
@@ -183,11 +203,11 @@ func TestDeployLightspeedModelWithGPUType_RunFailure(t *testing.T) {
 
 	mockDetector := &MockGPUDetector{
 		gpuType:  GPUAccelerationNVIDIA,
-		imageURI: "test-registry/lightspeed-nvidia:latest",
+		imageURI: "test-registry/assist-nvidia:latest",
 	}
 
 	// Execute
-	result, err := DeployLightspeedModelWithGPUType(ctx, GPUAccelerationNVIDIA, mockOrchestrator, config, nil, mockDetector, nil)
+	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationNVIDIA, mockOrchestrator, config, nil, mockDetector, nil)
 
 	// Assert
 	if err == nil {
@@ -203,7 +223,7 @@ func TestDeployLightspeedModelWithGPUType_RunFailure(t *testing.T) {
 	}
 }
 
-func TestDeployLightspeedModelWithGPUType_WithSpinner(t *testing.T) {
+func TestDeployAssistModelWithGPUType_WithSpinner(t *testing.T) {
 	// Setup
 	ctx := context.Background()
 	config := createTestConfig()
@@ -214,13 +234,13 @@ func TestDeployLightspeedModelWithGPUType_WithSpinner(t *testing.T) {
 
 	mockDetector := &MockGPUDetector{
 		gpuType:  GPUAccelerationGeneric,
-		imageURI: "test-registry/lightspeed-generic:latest",
+		imageURI: "test-registry/assist-generic:latest",
 	}
 
 	mockSpinner := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 
 	// Execute
-	result, err := DeployLightspeedModelWithGPUType(ctx, GPUAccelerationGeneric, mockOrchestrator, config, nil, mockDetector, mockSpinner)
+	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationGeneric, mockOrchestrator, config, nil, mockDetector, mockSpinner)
 
 	// Assert
 	if err != nil {
@@ -232,7 +252,7 @@ func TestDeployLightspeedModelWithGPUType_WithSpinner(t *testing.T) {
 	}
 }
 
-func TestPerformLightspeedHealthCheck_Success(t *testing.T) {
+func TestPerformAssistHealthCheck_Success(t *testing.T) {
 	// Setup mock HTTP server that returns healthy status
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/health" {
@@ -240,7 +260,7 @@ func TestPerformLightspeedHealthCheck_Success(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			response := `{
 				"status": "healthy",
-				"service": "lightspeed-rag",
+				"service": "assist-rag",
 				"model": "llama-3.2-1b",
 				"documents_indexed": 150
 			}`
@@ -266,7 +286,7 @@ func TestPerformLightspeedHealthCheck_Success(t *testing.T) {
 	}
 
 	// Execute
-	healthy, err := PerformLightspeedHealthCheck(containerID, port, mockOrchestrator, ctx, config)
+	healthy, err := PerformAssistHealthCheck(containerID, port, mockOrchestrator, ctx, config)
 
 	// Assert
 	if err != nil {
@@ -278,7 +298,7 @@ func TestPerformLightspeedHealthCheck_Success(t *testing.T) {
 	}
 }
 
-func TestPerformLightspeedHealthCheck_Unhealthy(t *testing.T) {
+func TestPerformAssistHealthCheck_Unhealthy(t *testing.T) {
 	// Setup mock HTTP server that returns unhealthy status
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/health" {
@@ -286,7 +306,7 @@ func TestPerformLightspeedHealthCheck_Unhealthy(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			response := `{
 				"status": "unhealthy",
-				"service": "lightspeed-rag",
+				"service": "assist-rag",
 				"model": "llama-3.2-1b",
 				"documents_indexed": 0
 			}`
@@ -311,7 +331,7 @@ func TestPerformLightspeedHealthCheck_Unhealthy(t *testing.T) {
 	}
 
 	// Execute
-	healthy, err := PerformLightspeedHealthCheck(containerID, port, mockOrchestrator, ctx, config)
+	healthy, err := PerformAssistHealthCheck(containerID, port, mockOrchestrator, ctx, config)
 
 	// Assert
 	if err == nil {
@@ -323,7 +343,7 @@ func TestPerformLightspeedHealthCheck_Unhealthy(t *testing.T) {
 	}
 }
 
-func TestPerformLightspeedHealthCheck_ContainerNotRunning(t *testing.T) {
+func TestPerformAssistHealthCheck_ContainerNotRunning(t *testing.T) {
 	config := createTestConfig()
 	ctx := context.Background()
 	containerID := "missing-container"
@@ -336,7 +356,7 @@ func TestPerformLightspeedHealthCheck_ContainerNotRunning(t *testing.T) {
 	}
 
 	// Execute
-	healthy, err := PerformLightspeedHealthCheck(containerID, hostPort, mockOrchestrator, ctx, config)
+	healthy, err := PerformAssistHealthCheck(containerID, hostPort, mockOrchestrator, ctx, config)
 
 	// Assert
 	if err == nil {
@@ -353,7 +373,7 @@ func TestPerformLightspeedHealthCheck_ContainerNotRunning(t *testing.T) {
 	}
 }
 
-func TestQueryLightspeedService_Success(t *testing.T) {
+func TestQueryAssistService_Success(t *testing.T) {
 	// Setup mock HTTP server that returns a valid response
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/chat/completions" {
@@ -391,7 +411,7 @@ func TestQueryLightspeedService_Success(t *testing.T) {
 	port := serverURL[len("http://127.0.0.1:"):]
 
 	// Execute
-	response, err := queryLightspeedService(port, "How do I run a pod deletion scenario?", config)
+	response, err := queryAssistService(port, "How do I run a pod deletion scenario?", config)
 
 	// Assert
 	if err != nil {
@@ -412,7 +432,7 @@ func TestQueryLightspeedService_Success(t *testing.T) {
 	}
 }
 
-func TestQueryLightspeedService_ServerError(t *testing.T) {
+func TestQueryAssistService_ServerError(t *testing.T) {
 	// Setup mock HTTP server that returns an error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -426,7 +446,7 @@ func TestQueryLightspeedService_ServerError(t *testing.T) {
 	port := serverURL[len("http://127.0.0.1:"):]
 
 	// Execute
-	response, err := queryLightspeedService(port, "test query", config)
+	response, err := queryAssistService(port, "test query", config)
 
 	// Assert
 	if err == nil {
