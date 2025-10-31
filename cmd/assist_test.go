@@ -102,8 +102,8 @@ func TestNewAssistCommand(t *testing.T) {
 
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "assist", cmd.Use)
-	assert.Contains(t, cmd.Short, "GPU and acceleration")
-	assert.Contains(t, cmd.Long, "GPU and acceleration related utilities")
+	assert.Contains(t, cmd.Short, "Assist-AI related utilities")
+	assert.Contains(t, cmd.Long, "Assist-AI related utilities")
 
 	// Test that GPU auto-detection is enabled (no manual GPU flags needed)
 	assert.NotNil(t, cmd.PersistentFlags().Lookup("no-gpu"))
