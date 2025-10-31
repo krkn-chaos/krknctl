@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,13 +21,22 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/forms"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/text"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/manifoldco/promptui"
 	"github.com/rodaine/table"
 )
+
+// ParsedField represents a parsed field with its value and whether it's secret
+type ParsedField struct {
+	value  string
+	secret bool
+}
 
 // DeployAssistModelWithGPUType deploys the RAG model container using the new GPU detection system
 func DeployAssistModelWithGPUType(ctx context.Context, gpuType GPUAcceleration, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, detector GPUDetector, pullSpinner *spinner.Spinner) (*RAGDeploymentResult, error) {
@@ -253,6 +263,54 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 				fmt.Printf("⚠️  could not fetch scenario details: %v\n", err)
 			} else if scenarioDetail != nil {
 				printScenarioDetail(scenarioDetail)
+
+				// Ask if user wants to run the scenario
+				runPrompt := promptui.Prompt{
+					Label:     "Do you want to run the scenario?",
+					IsConfirm: true,
+					Default:   "n",
+				}
+
+				if _, err := runPrompt.Run(); err == nil {
+					// User confirmed, get global environment and show the form
+					fmt.Printf("\n🔧 configuring scenario parameters...\n")
+
+					globalDetail, err := scenarioProvider.GetGlobalEnvironment(nil, *response.ScenarioName)
+					if err != nil {
+						fmt.Printf("❌ error getting global environment: %v\n", err)
+						continue
+					}
+
+					form := forms.NewForm(scenarioDetail.Fields, nil)
+
+					// Add global fields to GlobalItems array
+					for _, field := range globalDetail.Fields {
+						var predefinedValue *string
+						item := forms.FormPromptItem{
+							Field:           &field,
+							PredefinedValue: predefinedValue,
+						}
+						form.GlobalItems = append(form.GlobalItems, item)
+					}
+
+					allFields := append(globalDetail.Fields, scenarioDetail.Fields...)
+
+					// Run the form to collect input
+					formResult, err := form.Run()
+					if err != nil {
+						fmt.Printf("❌ error collecting form data: %v\n", err)
+						continue
+					}
+
+					// Show form summary
+					formResult.PrintSummary(allFields)
+
+					// Execute the scenario with form data
+					err = executeScenario(*response.ScenarioName, scenarioDetail, formResult, orchestrator, ctx, config, scenarioProvider)
+					if err != nil {
+						fmt.Printf("❌ error executing scenario: %v\n", err)
+					}
+				}
 			}
 		}
 
@@ -367,5 +425,182 @@ func PrintAssistAnswer(content string) error {
 		}
 	}
 	fmt.Print("\n")
+	return nil
+}
+
+// NewEnvironmentTable creates a table to display environment variables
+func NewEnvironmentTable(env map[string]ParsedField, config config.Config) table.Table {
+	var headerFmt = color.New(color.FgGreen, color.Underline).SprintfFunc()
+	var columnFmt = color.New(color.FgYellow).SprintfFunc()
+
+	tbl := table.New("Environment Value", "Value")
+	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	for k, v := range env {
+		value := reduceString(v.value, config)
+		if v.secret {
+			tbl.AddRow(k, utils.MaskString(value))
+		} else {
+			tbl.AddRow(k, value)
+		}
+	}
+	return tbl
+}
+
+// reduceString truncates a string if it's longer than the configured maximum
+func reduceString(value string, config config.Config) string {
+	if len(value) > config.TableFieldMaxLength {
+		return fmt.Sprintf("%s...(%d bytes more)", value[0:config.TableFieldMaxLength], len(value)-config.TableFieldMaxLength)
+	}
+	return value
+}
+
+// executeScenario executes a chaos scenario with the provided form data using attached mode
+func executeScenario(scenarioName string, scenarioDetail *models.ScenarioDetail, formResult *forms.FormResult, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config, scenarioProvider provider.ScenarioDataProvider) error {
+	fmt.Printf("\n🚀 executing scenario: %s\n", scenarioName)
+
+	// Get global environment details
+	globalDetail, err := scenarioProvider.GetGlobalEnvironment(nil, scenarioName)
+	if err != nil {
+		return fmt.Errorf("failed to get global environment: %w", err)
+	}
+
+	// Convert form results to environment variables
+	formEnv := formResult.GetEnvironmentVariables()
+
+	// Convert to the format expected by the orchestrator
+	parsedFields := make(map[string]ParsedField)
+	environment := make(map[string]string)
+	volumes := make(map[string]string)
+
+	// Prepare kubeconfig automatically (like run.go does)
+	kubeconfigPath, err := utils.PrepareKubeconfig(nil, config)
+	if err != nil {
+		return fmt.Errorf("failed to prepare kubeconfig: %w", err)
+	}
+	if kubeconfigPath != nil {
+		volumes[*kubeconfigPath] = config.KubeconfigPath
+		fmt.Printf("🔧 auto-mounted kubeconfig: %s -> %s\n", *kubeconfigPath, config.KubeconfigPath)
+	}
+
+	// Process scenario fields
+	for _, field := range scenarioDetail.Fields {
+		if field.Variable != nil {
+			if value, exists := formEnv[*field.Variable]; exists {
+				if field.Type != typing.File {
+					// Regular environment variable
+					parsedFields[*field.Variable] = ParsedField{
+						value:  value,
+						secret: field.Secret,
+					}
+					environment[*field.Variable] = value
+				} else if field.Type == typing.File {
+					// File field - handle as volume mount
+					if field.MountPath != nil {
+						volumes[value] = *field.MountPath
+						parsedFields[*field.Variable] = ParsedField{
+							value:  *field.MountPath,
+							secret: field.Secret,
+						}
+						environment[*field.Variable] = *field.MountPath
+					}
+				}
+			}
+		}
+	}
+
+	// Process global fields
+	for _, field := range globalDetail.Fields {
+		if field.Variable != nil {
+			if value, exists := formEnv[*field.Variable]; exists {
+				if field.Type != typing.File {
+					// Regular environment variable
+					parsedFields[*field.Variable] = ParsedField{
+						value:  value,
+						secret: field.Secret,
+					}
+					environment[*field.Variable] = value
+				} else if field.Type == typing.File {
+					// File field - handle as volume mount
+					if field.MountPath != nil {
+						volumes[value] = *field.MountPath
+						parsedFields[*field.Variable] = ParsedField{
+							value:  *field.MountPath,
+							secret: field.Secret,
+						}
+						environment[*field.Variable] = *field.MountPath
+					}
+				}
+			}
+		}
+	}
+
+	// Display environment table
+	fmt.Printf("\n📋 scenario configuration:\n")
+	tbl := NewEnvironmentTable(parsedFields, config)
+	tbl.Print()
+
+	// Display volume mounts if any
+	if len(volumes) > 0 {
+		fmt.Printf("\n📂 volume mounts:\n")
+		for hostPath, containerPath := range volumes {
+			fmt.Printf("  %s -> %s\n",
+				color.New(color.FgYellow).Sprint(hostPath),
+				color.New(color.FgCyan).Sprint(containerPath))
+		}
+	}
+	fmt.Print("\n")
+
+	// Get socket connection
+	socket, err := orchestrator.GetContainerRuntimeSocket(nil)
+	if err != nil {
+		return fmt.Errorf("failed to get container runtime socket: %w", err)
+	}
+	conn, err := orchestrator.Connect(*socket)
+	if err != nil {
+		return fmt.Errorf("failed to connect to container runtime: %w", err)
+	}
+
+	// Get scenario image URI
+	quayImageURI, err := config.GetCustomDomainImageURI()
+	if err != nil {
+		return fmt.Errorf("failed to get image URI: %w", err)
+	}
+	scenarioImageURI := quayImageURI + ":" + scenarioName
+
+	// Generate container name
+	containerName := utils.GenerateContainerName(config, scenarioName, nil)
+
+	fmt.Printf("📦 container image: %s\n", scenarioImageURI)
+	fmt.Printf("🏷️  container name: %s\n", containerName)
+	fmt.Printf("🎯 running in attached mode...\n\n")
+
+	// Create spinner for image pull progress
+	spinner := spinner.New(spinner.CharSets[9], 100*time.Millisecond)
+	spinner.Suffix = " pulling scenario image..."
+	spinner.Start()
+
+	// Execute the scenario container in attached mode
+	commChan := make(chan *string)
+	go func() {
+		for msg := range commChan {
+			spinner.Suffix = *msg
+		}
+		spinner.Stop()
+	}()
+
+	startTime := time.Now()
+	_, err = orchestrator.RunAttached(scenarioImageURI, containerName, environment, false, volumes, nil, os.Stdout, os.Stderr, &commChan, conn, nil)
+	if err != nil {
+		var staterr *utils.ExitError
+		if errors.As(err, &staterr) {
+			fmt.Printf("\n❌ scenario exited with status: %d\n", staterr.ExitStatus)
+			return nil // Don't return error for non-zero exit status
+		}
+		return fmt.Errorf("failed to run scenario: %w", err)
+	}
+
+	scenarioDuration := time.Since(startTime)
+	fmt.Printf("\n✅ %s completed successfully in %s\n", scenarioName, scenarioDuration.String())
+
 	return nil
 }
