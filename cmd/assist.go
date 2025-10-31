@@ -18,8 +18,8 @@ import (
 func NewAssistCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "assist",
-		Short: "GPU and acceleration related utilities",
-		Long: `GPU and acceleration related utilities for container runtime environments
+		Short: "Assist-AI related utilities",
+		Long: `Assist-AI related utilities for container runtime environments
 
 Available Commands:
   check    Check GPU support in container runtime
