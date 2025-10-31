@@ -9,6 +9,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/kendru/darwin/go/depgraph v0.0.0-20230809052043-4d1c7e9d1767
 	github.com/letsencrypt/boulder v0.20251110.0
+	github.com/manifoldco/promptui v0.9.0
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/rodaine/table v1.3.0
 	github.com/spf13/cobra v1.10.2
