@@ -41,6 +41,8 @@ type Scenario struct {
 	Env                  map[string]string `json:"env,omitempty"`
 	Volumes              map[string]string `json:"volumes,omitempty"`
 	ResiliencyConfig     string            `json:"resiliencyConfig,omitempty"`
+	ResiliencyConfigPath string            `json:"resiliencyConfigPath,omitempty"`
+	ResiliencyWeight     float64           `json:"resiliencyWeight,omitempty"`
 }
 
 type ScenarioContainer struct {
