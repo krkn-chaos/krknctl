@@ -8,9 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -19,13 +17,10 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 )
 
-// ResiliencyReport represents resiliency report extracted from scenario logs
-type ResiliencyReport struct {
-	Score float64 `json:"score"`
-}
 
 func CommonRunGraph(
 	scenarios models.ScenarioSet,
@@ -40,12 +35,12 @@ func CommonRunGraph(
 	userID *int,
 ) {
 	// collectors initialization
-	var allResiliencyReports []ResiliencyReport
-	var resiliencyScores []float64
-	var resiliencyWeights []float64
+	var (
+        allReports []resiliency.DetailedScenarioReport
+        reportsMu  sync.Mutex
+    )
 	runStartTime := time.Now().UTC()
 
-	reportRegex := regexp.MustCompile(`^KRKN_RESILIENCY_REPORT_JSON:(.*)$`)
 
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
@@ -102,8 +97,23 @@ func CommonRunGraph(
 
 			go func() {
 				defer wg.Done()
-				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
-				if err != nil {
+				mw := io.MultiWriter(os.Stdout, file)
+                _, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry)
+                _ = file.Sync()
+                _ = file.Close()
+
+                if data, readErr := os.ReadFile(filename); readErr == nil {
+                    if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
+                        fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filename)
+                        reportsMu.Lock()
+                        allReports = append(allReports, *rep)
+                        reportsMu.Unlock()
+                    } else {
+                        fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filename, parseErr)
+                    }
+                }
+
+                if err != nil {
 					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
 					return
 				}
@@ -112,75 +122,63 @@ func CommonRunGraph(
 		}
 		wg.Wait()
 
-		// Parse resiliency reports 
-		for _, scIDIter := range s {
-			scenarioIter := scenarios[scIDIter]
-			containerNameIter := utils.GenerateContainerName(config, scenarioIter.Name, &scIDIter)
-			logFilePath := fmt.Sprintf("%s.log", containerNameIter)
-			if data, err := os.ReadFile(logFilePath); err == nil {
-				lines := strings.Split(string(data), "\n")
-				for _, line := range lines {
-					if matches := reportRegex.FindStringSubmatch(line); len(matches) > 1 {
-						var report ResiliencyReport
-						if err := json.Unmarshal([]byte(strings.TrimSpace(matches[1])), &report); err == nil {
-							allResiliencyReports = append(allResiliencyReports, report)
-							resiliencyScores = append(resiliencyScores, report.Score)
-							resiliencyWeights = append(resiliencyWeights, scenarioIter.ResiliencyWeight)
-						}
-						break
-					}
-				}
-			}
-		}
 	}
 	runEndTime := time.Now().UTC()
 	_ = runStartTime
 	_ = runEndTime
-	_ = allResiliencyReports
-	_ = resiliencyScores
-	_ = resiliencyWeights
+
+    finalReport := resiliency.AggregateReports(allReports)
+
+    type combined struct {
+        Summary  resiliency.FinalReport                      `json:"summary"`
+        Scenarios []resiliency.DetailedScenarioReport `json:"details"`
+    }
+    comb := combined{Summary: finalReport, Scenarios: allReports}
+    if data, _ := json.MarshalIndent(comb, "", "  "); data != nil {
+        _ = os.WriteFile("resiliency-report.json", data, 0o644)
+    }
+
+    if err := resiliency.WriteFinalReport(finalReport, "resiliency-report.json"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error writing resiliency-report.json: %v\n", err)
+	} else {
+        fmt.Println("Detailed resiliency report written to resiliency-report.json")
+    
+    resiliency.PrintHumanSummary(finalReport)
+    }
 
 	commChannel <- nil
 }
 
 func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+    
+    containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
+    if err != nil {
+        return nil,  err
+    }
+    signalChan := make(chan os.Signal, 1)
+    signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+    
+    kill, err := c.Attach(containerID, signalChan, stdout, stderr, ctx)
+    if err != nil {
+        return containerID, err
+    }
 
-	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
-	if err != nil {
-		return nil, err
-	}
+    if kill {
+        if err := c.Kill(containerID, ctx); err != nil {
+            return containerID, fmt.Errorf("failed to kill container: %w", err)
+        }
+    }
 
-	signalChan := make(chan os.Signal, 1)
+    containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
+    if err != nil {
+        return containerID, fmt.Errorf("failed to inspect container: %w", err)
+    }
 
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+    if containerStatus.Container.ExitStatus > 0 {
+        return containerID, &utils.ExitError{ExitStatus: int(containerStatus.Container.ExitStatus)}
+    }
 
-	kill, err := c.Attach(containerID, signalChan, stdout, stderr, ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if kill {
-		err = c.Kill(containerID, ctx)
-		if err != nil {
-			return nil, err
-		}
-		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerID))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
-	if err != nil {
-		return nil, err
-	}
-	// if there is an error exit status it is propagated via error to the cmd
-	if containerStatus.Container.ExitStatus > 0 {
-		return containerID, &utils.ExitError{ExitStatus: int(containerStatus.Container.ExitStatus)}
-	}
-
-	return containerID, nil
+    return containerID, nil
 }
 
 func CommonPrintRuntime(containerRuntime models.ContainerRuntime) {
