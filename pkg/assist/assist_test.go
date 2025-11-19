@@ -102,45 +102,6 @@ func (m *MockScenarioOrchestrator) ResolveContainerName(string, context.Context)
 	return nil, nil
 }
 
-// MockGPUDetector implements the GPUDetector interface for testing
-type MockGPUDetector struct {
-	gpuType      GPUAcceleration
-	imageURI     string
-	deviceMounts map[string]string
-}
-
-func (m *MockGPUDetector) DetectGPUAcceleration(ctx context.Context, noGPU bool) GPUAcceleration {
-	return m.gpuType
-}
-
-func (m *MockGPUDetector) GetAssistImageURI(gpuType GPUAcceleration) (string, error) {
-	return m.imageURI, nil
-}
-
-func (m *MockGPUDetector) GetDeviceMounts(gpuType GPUAcceleration) map[string]string {
-	return m.deviceMounts
-}
-
-func (m *MockGPUDetector) GetGPUDescription(gpuType GPUAcceleration) string {
-	switch gpuType {
-	case GPUAccelerationAppleSilicon:
-		return "Apple Silicon GPU (Metal)"
-	case GPUAccelerationNVIDIA:
-		return "NVIDIA GPU (CUDA)"
-	case GPUAccelerationGeneric:
-		return "CPU-only (no GPU acceleration)"
-	default:
-		return "Unknown GPU type"
-	}
-}
-
-func (m *MockGPUDetector) HandleContainerError(err error, gpuType GPUAcceleration) error {
-	return err
-}
-
-func (m *MockGPUDetector) AutoSelectAssistConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error) {
-	return m.imageURI, m.gpuType, m.deviceMounts, nil
-}
 
 func createTestConfig() config.Config {
 	return config.Config{
@@ -154,25 +115,23 @@ func createTestConfig() config.Config {
 	}
 }
 
-func TestDeployAssistModelWithGPUType_Success(t *testing.T) {
+func TestDeployAssistModel_Success(t *testing.T) {
 	// Setup
 	ctx := context.Background()
-	config := createTestConfig()
+	testConfig := createTestConfig()
+	testConfig.QuayHost = "quay.io"
+	testConfig.QuayOrg = "krkn-chaos"
+	testConfig.AssistRegistry = "krknctl-assist"
+	testConfig.RAGModelTag = "faiss-latest"
 
 	mockOrchestrator := &MockScenarioOrchestrator{
 		containerID: "test-container-123",
 	}
 
-	mockDetector := &MockGPUDetector{
-		gpuType:      GPUAccelerationAppleSilicon,
-		imageURI:     "test-registry/assist:latest",
-		deviceMounts: map[string]string{"/dev/dri": "/dev/dri"},
-	}
-
 	mockSpinner := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
 
 	// Execute
-	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationAppleSilicon, mockOrchestrator, config, nil, mockDetector, mockSpinner)
+	result, err := DeployAssistModel(ctx, mockOrchestrator, testConfig, nil, mockSpinner)
 
 	// Assert
 	if err != nil {
@@ -192,22 +151,21 @@ func TestDeployAssistModelWithGPUType_Success(t *testing.T) {
 	}
 }
 
-func TestDeployAssistModelWithGPUType_RunFailure(t *testing.T) {
+func TestDeployAssistModel_RunFailure(t *testing.T) {
 	// Setup
 	ctx := context.Background()
-	config := createTestConfig()
+	testConfig := createTestConfig()
+	testConfig.QuayHost = "quay.io"
+	testConfig.QuayOrg = "krkn-chaos"
+	testConfig.AssistRegistry = "krknctl-assist"
+	testConfig.RAGModelTag = "faiss-latest"
 
 	mockOrchestrator := &MockScenarioOrchestrator{
 		shouldFailRun: true,
 	}
 
-	mockDetector := &MockGPUDetector{
-		gpuType:  GPUAccelerationNVIDIA,
-		imageURI: "test-registry/assist-nvidia:latest",
-	}
-
 	// Execute
-	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationNVIDIA, mockOrchestrator, config, nil, mockDetector, nil)
+	result, err := DeployAssistModel(ctx, mockOrchestrator, testConfig, nil, nil)
 
 	// Assert
 	if err == nil {
@@ -220,35 +178,6 @@ func TestDeployAssistModelWithGPUType_RunFailure(t *testing.T) {
 
 	if err.Error() != "failed to run RAG container: mock run failure" {
 		t.Errorf("Unexpected error message: %v", err)
-	}
-}
-
-func TestDeployAssistModelWithGPUType_WithSpinner(t *testing.T) {
-	// Setup
-	ctx := context.Background()
-	config := createTestConfig()
-
-	mockOrchestrator := &MockScenarioOrchestrator{
-		containerID: "test-container-456",
-	}
-
-	mockDetector := &MockGPUDetector{
-		gpuType:  GPUAccelerationGeneric,
-		imageURI: "test-registry/assist-generic:latest",
-	}
-
-	mockSpinner := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
-
-	// Execute
-	result, err := DeployAssistModelWithGPUType(ctx, GPUAccelerationGeneric, mockOrchestrator, config, nil, mockDetector, mockSpinner)
-
-	// Assert
-	if err != nil {
-		t.Fatalf("Expected no error, got: %v", err)
-	}
-
-	if result.ContainerID != "test-container-456" {
-		t.Errorf("Expected ContainerID 'test-container-456', got '%s'", result.ContainerID)
 	}
 }
 

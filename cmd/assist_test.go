@@ -3,7 +3,6 @@ package cmd
 
 import (
 	"context"
-	"github.com/krkn-chaos/krknctl/pkg/assist"
 	"io"
 	"os"
 	"testing"
@@ -102,31 +101,8 @@ func TestNewAssistCommand(t *testing.T) {
 
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "assist", cmd.Use)
-	assert.Contains(t, cmd.Short, "Assist-AI related utilities")
-	assert.Contains(t, cmd.Long, "Assist-AI related utilities")
-
-	// Test that GPU auto-detection is enabled (no manual GPU flags needed)
-	assert.NotNil(t, cmd.PersistentFlags().Lookup("no-gpu"))
-	// Manual GPU flags should not exist (using auto-detection now)
-	assert.Nil(t, cmd.PersistentFlags().Lookup("nvidia"))
-	assert.Nil(t, cmd.PersistentFlags().Lookup("apple-silicon"))
-	assert.Nil(t, cmd.PersistentFlags().Lookup("amd"))
-	assert.Nil(t, cmd.PersistentFlags().Lookup("intel"))
-}
-
-func TestNewAssistCheckCommand(t *testing.T) {
-	config := getTestConfig(t)
-	providerFactory := getTestProviderFactory(t)
-	orchestrator := getTestOrchestrator(t)
-
-	cmd := NewAssistCheckCommand(providerFactory, &orchestrator, config)
-
-	assert.NotNil(t, cmd)
-	assert.Equal(t, "check", cmd.Use)
-	assert.Contains(t, cmd.Short, "Check GPU support")
-	assert.Contains(t, cmd.Long, "Check whether the container runtime")
-	assert.NotNil(t, cmd.Args)
-	assert.NotNil(t, cmd.RunE)
+	assert.Contains(t, cmd.Short, "AI-powered chaos engineering")
+	assert.Contains(t, cmd.Long, "AI-powered chaos engineering")
 }
 
 func TestBuildAssistRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
@@ -148,28 +124,6 @@ func TestBuildAssistRegistryFromFlags_NoPrivateRegistry(t *testing.T) {
 	assert.Nil(t, registry)
 }
 
-func TestGPUAutoDetection(t *testing.T) {
-	config := getTestConfig(t)
-	detector := assist.NewPlatformGPUDetector(config)
-
-	// Test GPU detection types
-	ctx := context.Background()
-
-	// Test with --no-gpu flag
-	gpuType := detector.DetectGPUAcceleration(ctx, true)
-	assert.Equal(t, assist.GPUAccelerationGeneric, gpuType)
-
-	// Test description generation
-	description := detector.GetGPUDescription(assist.GPUAccelerationAppleSilicon)
-	assert.Contains(t, description, "Apple Silicon")
-
-	description = detector.GetGPUDescription(assist.GPUAccelerationNVIDIA)
-	assert.Contains(t, description, "NVIDIA")
-
-	description = detector.GetGPUDescription(assist.GPUAccelerationGeneric)
-	assert.Contains(t, description, "CPU-only")
-}
-
 // Test command creation and basic structure
 func TestAssistCommands_Structure(t *testing.T) {
 	config := getTestConfig(t)
@@ -181,13 +135,13 @@ func TestAssistCommands_Structure(t *testing.T) {
 	assert.NotNil(t, assistCmd)
 	assert.Equal(t, "assist", assistCmd.Use)
 
-	// Test check command creation
-	checkCmd := NewAssistCheckCommand(providerFactory, &orchestrator, config)
-	assert.NotNil(t, checkCmd)
-	assert.Equal(t, "check", checkCmd.Use)
-	assert.NotNil(t, checkCmd.RunE)
+	// Test run command creation
+	runCmd := NewAssistRunCommand(providerFactory, &orchestrator, config)
+	assert.NotNil(t, runCmd)
+	assert.Equal(t, "run", runCmd.Use)
+	assert.NotNil(t, runCmd.RunE)
 
-	// Add check command to assist
-	assistCmd.AddCommand(checkCmd)
+	// Add run command to assist
+	assistCmd.AddCommand(runCmd)
 	assert.Equal(t, 1, len(assistCmd.Commands()))
 }

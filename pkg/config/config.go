@@ -139,70 +139,11 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 	return repositoryURI, nil
 }
 
-func (c *Config) GetGpuCheckImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
-	if err != nil {
-		return "", err
-	}
-	return imageURI + ":" + c.GpuCheckBaseTag, nil
-}
-
-// GetGpuCheckImageURIByType returns the GPU check image URI for a specific GPU type
-func (c *Config) GetGpuCheckImageURIByType(gpuType string) (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
-	if err != nil {
-		return "", err
-	}
-
-	// Check for known GPU types
-	knownGpuTypes := map[string]bool{
-		"nvidia":        true,
-		"amd":           true,
-		"intel":         true,
-		"apple-silicon": true,
-	}
-
-	var tag string
-	if knownGpuTypes[gpuType] {
-		// Construct tag by appending GPU type to base tag
-		tag = c.GpuCheckBaseTag + "-" + gpuType
-	} else {
-		// Fall back to base tag for unknown GPU types
-		tag = c.GpuCheckBaseTag
-	}
-
-	return imageURI + ":" + tag, nil
-}
-
-// GetRAGModelImageURI returns the RAG model image URI
-func (c *Config) GetRAGModelImageURI() (string, error) {
+// GetAssistImageURI returns the assist RAG image URI with faiss-latest tag
+func (c *Config) GetAssistImageURI() (string, error) {
 	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
 	if err != nil {
 		return "", err
 	}
 	return imageURI + ":" + c.RAGModelTag, nil
-}
-
-// GetAssistImageURI returns the assist RAG image URI for a specific GPU type
-func (c *Config) GetAssistImageURI(gpuType string) (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
-	if err != nil {
-		return "", err
-	}
-
-	// Construct tag using rag_model_tag from config + architecture suffix
-	var tag string
-	switch gpuType {
-	case "nvidia":
-		tag = c.RAGModelTag + "-nvidia"
-	case "apple-silicon":
-		tag = c.RAGModelTag + "-apple-silicon"
-	case "generic":
-		tag = c.RAGModelTag + "-generic"
-	default:
-		// Default to generic for unknown types
-		tag = c.RAGModelTag + "-generic"
-	}
-
-	return imageURI + ":" + tag, nil
 }
