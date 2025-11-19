@@ -3,20 +3,24 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"log"
-	"os"
-	"strings"
-	"time"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -303,6 +307,16 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			if !runDetached {
+				// capture stdout/stderr to both terminal and a log file for parsing
+				filename := fmt.Sprintf("%s.log", containerName)
+				file, cerr := os.Create(path.Clean(filename))
+				if cerr != nil {
+					spinner.Stop()
+					return cerr
+				}
+				defer file.Close()
+				mw := io.MultiWriter(os.Stdout, file)
+
 				commChan := make(chan *string)
 				go func() {
 					for msg := range commChan {
@@ -311,7 +325,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings)
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -319,6 +333,21 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 					return err
 				}
+
+				_ = file.Sync()
+
+				// Parse resiliency report from captured logs and generate report
+				if data, rerr := os.ReadFile(filename); rerr == nil {
+					if rep, perr := resiliency.ParseResiliencyReport(data); perr == nil {
+						if err := resiliency.GenerateAndWriteReport(
+							[]resiliency.DetailedScenarioReport{*rep},
+							"resiliency-report.json",
+						); err != nil {
+							log.Printf("Error generating resiliency report: %v", err)
+						}
+					}
+				}
+
 				scenarioDuration := time.Since(startTime)
 				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {
