@@ -2,7 +2,6 @@ package scenarioorchestrator
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"sort"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -39,8 +37,6 @@ func CommonRunGraph(
         allReports []resiliency.DetailedScenarioReport
         reportsMu  sync.Mutex
     )
-	runStartTime := time.Now().UTC()
-
 
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
@@ -123,27 +119,12 @@ func CommonRunGraph(
 		wg.Wait()
 
 	}
-	runEndTime := time.Now().UTC()
-	_ = runStartTime
-	_ = runEndTime
 
-    finalReport := resiliency.AggregateReports(allReports)
 
-    type combined struct {
-        Summary  resiliency.FinalReport                      `json:"summary"`
-        Scenarios []resiliency.DetailedScenarioReport `json:"details"`
-    }
-    comb := combined{Summary: finalReport, Scenarios: allReports}
-    if data, _ := json.MarshalIndent(comb, "", "  "); data != nil {
-        _ = os.WriteFile("resiliency-report.json", data, 0o644)
-    }
-
-    if err := resiliency.WriteFinalReport(finalReport, "resiliency-report.json"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing resiliency-report.json: %v\n", err)
-	} else {
+    if err := resiliency.GenerateAndWriteReport(allReports, "resiliency-report.json"); err != nil {
+        fmt.Fprintf(os.Stderr, "Error generating resiliency report: %v\n", err)
+    } else {
         fmt.Println("Detailed resiliency report written to resiliency-report.json")
-    
-    resiliency.PrintHumanSummary(finalReport)
     }
 
 	commChannel <- nil
