@@ -1,4 +1,5 @@
 {
+  "_comment": "Assisted by Claude Sonnet 4",
   "version": "v0.0.1-alpha",
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
@@ -47,5 +48,15 @@
   "github_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags",
   "github_release_api_deprecated": "[DEPRECATED]",
   "table_field_max_length": 20,
-  "table_max_step_scenario_length": 7
+  "table_max_step_scenario_length": 7,
+  "assist_registry": "krknctl-assist",
+  "rag_model_tag": "faiss-latest",
+  "rag_container_prefix": "krknctl-assist-rag",
+  "rag_service_port": "8080",
+  "rag_health_endpoint": "/health",
+  "rag_query_endpoint": "/v1/chat/completions",
+  "rag_host": "localhost",
+  "rag_health_max_retries": 60,
+  "rag_health_retry_interval_seconds": 10,
+  "rag_query_max_results": 5
 }

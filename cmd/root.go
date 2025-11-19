@@ -1,4 +1,5 @@
 // Package cmd contains the CLI options and commands to interact with krknctl
+// Assisted by Claude Sonnet 4
 package cmd
 
 import (
@@ -21,6 +22,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	rootCmd.PersistentFlags().Bool("private-registry-skip-tls", false, "skips tls verification on private registry")
 	rootCmd.PersistentFlags().String("private-registry-token", "", "private registry identity token for token based authentication")
 	rootCmd.PersistentFlags().String("private-registry-scenarios", "", "private registry krkn scenarios image repository")
+	rootCmd.PersistentFlags().String("private-registry-assist", "", "private registry assist image repository")
 	var completionCmd = &cobra.Command{
 		Use:       "completion [bash|zsh]",
 		Short:     "Genera script di completamento per bash o zsh",
@@ -62,7 +64,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
-
+	runCmd.LocalFlags().Bool("form", false, "Use interactive form to collect scenario parameters instead of CLI flags")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
@@ -112,6 +114,12 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
+
+	// assist subcommands
+	assistCmd := NewAssistCommand()
+	assistRunCmd := NewAssistRunCommand(providerFactory, scenarioOrchestrator, config)
+	assistCmd.AddCommand(assistRunCmd)
+	rootCmd.AddCommand(assistCmd)
 
 	// update and deprecation check
 	isDeprecated, err := IsDeprecated(config)
