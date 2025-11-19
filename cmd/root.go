@@ -117,9 +117,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	// assist subcommands
 	assistCmd := NewAssistCommand()
-	assistCheckCmd := NewAssistCheckCommand(providerFactory, scenarioOrchestrator, config)
 	assistRunCmd := NewAssistRunCommand(providerFactory, scenarioOrchestrator, config)
-	assistCmd.AddCommand(assistCheckCmd)
 	assistCmd.AddCommand(assistRunCmd)
 	rootCmd.AddCommand(assistCmd)
 

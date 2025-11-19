@@ -1,33 +1,6 @@
+// Package assist provides AI-powered chaos engineering assistance using RAG (Retrieval-Augmented Generation).
+// This file contains data structures for the assist service API and deployment.
 package assist
-
-import (
-	"context"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-)
-
-// GPUAcceleration represents the type of GPU acceleration available
-type GPUAcceleration string
-
-const (
-	GPUAccelerationAppleSilicon GPUAcceleration = "apple-silicon"
-	GPUAccelerationNVIDIA       GPUAcceleration = "nvidia"
-	GPUAccelerationGeneric      GPUAcceleration = "generic"
-)
-
-// GPUDetector interface for platform-based GPU detection
-type GPUDetector interface {
-	DetectGPUAcceleration(ctx context.Context, noGPU bool) GPUAcceleration
-	GetAssistImageURI(gpuType GPUAcceleration) (string, error)
-	GetDeviceMounts(gpuType GPUAcceleration) map[string]string
-	GetGPUDescription(gpuType GPUAcceleration) string
-	HandleContainerError(err error, gpuType GPUAcceleration) error
-	AutoSelectAssistConfig(ctx context.Context, noGPU bool) (string, GPUAcceleration, map[string]string, error)
-}
-
-// PlatformGPUDetector provides platform-based GPU detection
-type PlatformGPUDetector struct {
-	config config.Config
-}
 
 // RAGDeploymentResult holds information about the deployed RAG model
 type RAGDeploymentResult struct {

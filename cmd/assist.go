@@ -18,108 +18,22 @@ import (
 func NewAssistCommand() *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "assist",
-		Short: "Assist-AI related utilities",
-		Long: `Assist-AI related utilities for container runtime environments
+		Short: "AI-powered chaos engineering assistance",
+		Long: `AI-powered chaos engineering assistance for krknctl
 
 Available Commands:
-  check    Check GPU support in container runtime
   run      Run AI-powered chaos engineering assistance
 
-GPU Auto-Detection:
-  Lightspeed automatically detects your GPU type! No manual flags needed.
-  
-  Supported GPU Types:
-  • Apple Silicon (M1, M2, M3, M4 with Metal)
-  • NVIDIA GPUs (CUDA, GeForce, Quadro, Tesla)
-  
-  Future support planned:
-  • AMD GPUs (Radeon, FirePro, Instinct with ROCm)
-  • Intel GPUs (Arc, Iris, UHD Graphics)
+The assist service uses a lightweight AI model with FAISS vector search
+to provide intelligent command suggestions and documentation search.
 
 Examples:
-  krknctl assist check
-  krknctl assist run
-  krknctl assist run --no-gpu`,
-	}
-
-	// GPU auto-detection - no manual flags needed anymore!
-
-	// Add no-gpu flag for CPU-only mode
-	command.PersistentFlags().Bool("no-gpu", false, "Use CPU-only mode (no GPU acceleration)")
-
-	return command
-}
-
-// GPU auto-detection - no manual flag parsing needed anymore!
-
-func NewAssistCheckCommand(
-	providerFactory *factory.ProviderFactory,
-	scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator,
-	config config.Config,
-) *cobra.Command {
-	var command = &cobra.Command{
-		Use:   "check",
-		Short: "Check GPU support in container runtime",
-		Long: `Check whether the container runtime (Podman or Docker) has GPU support available
-
-Lightspeed automatically tests all supported GPU types to detect your hardware.
-
-Examples:
-  krknctl assist check`,
-		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			// Print container runtime info
-			(*scenarioOrchestrator).PrintContainerRuntime()
-
-			// Check if Docker is being used - Lightspeed only supports Podman
-			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
-				return fmt.Errorf("❌ Assist requires Podman container runtime. " +
-					"Docker is not supported for GPU acceleration")
-			}
-
-			// Get container runtime socket
-			socket, err := (*scenarioOrchestrator).GetContainerRuntimeSocket(nil)
-			if err != nil {
-				return fmt.Errorf("failed to get container runtime socket: %w", err)
-			}
-
-			// Connect to container runtime
-			ctx, err := (*scenarioOrchestrator).Connect(*socket)
-			if err != nil {
-				return fmt.Errorf("failed to connect to container runtime: %w", err)
-			}
-
-			// Get no-gpu flag
-			noGPU, _ := cmd.Flags().GetBool("no-gpu")
-
-			// Create platform GPU detector
-			detector := assist.NewPlatformGPUDetector(config)
-
-			// Auto-detect GPU acceleration
-			fmt.Println("\n🔍 Detecting GPU acceleration...")
-			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
-
-			// Get configuration
-			imageURI, _, deviceMounts, err := detector.AutoSelectAssistConfig(ctx, noGPU)
-			if err != nil {
-				return fmt.Errorf("failed to get assist configuration: %w", err)
-			}
-
-			// Format and print result
-			fmt.Printf("\n✅ GPU acceleration: %s\n", detector.GetGPUDescription(gpuType))
-			fmt.Printf("📦 Container image: %s\n", imageURI)
-			if len(deviceMounts) > 0 {
-				fmt.Printf("🔗 Device mounts: %v\n", deviceMounts)
-			} else {
-				fmt.Printf("🔗 Device mounts: none (CPU-only)\n")
-			}
-
-			return nil
-		},
+  krknctl assist run`,
 	}
 
 	return command
 }
+
 
 // buildAssistRegistryFromFlags builds assist registry configuration from command flags
 func buildAssistRegistryFromFlags(cmd *cobra.Command, config config.Config) (*models.RegistryV2, error) {
@@ -167,31 +81,24 @@ func NewAssistRunCommand(
 		Short: "Run AI-powered chaos engineering assistance",
 		Long: `Run AI-powered chaos engineering assistance with Retrieval-Augmented Generation (RAG)
 
-This command automatically detects your GPU and deploys a lightweight AI model that can answer 
-questions about krknctl usage, chaos engineering scenarios, and provide intelligent command 
-suggestions based on natural language.
+This command deploys a lightweight AI model that can answer questions about krknctl usage,
+chaos engineering scenarios, and provide intelligent command suggestions based on natural language.
 
 The system uses:
-- Automatic GPU detection (Apple Silicon, NVIDIA)
-- GPU-accelerated inference for fast responses
+- FAISS vector search for fast document retrieval
 - Live documentation indexing
-- Llama 3.2:1B model optimized for chaos engineering domain
+- Llama model optimized for chaos engineering domain
 
 Examples:
-  krknctl assist run          # Auto-detect GPU
-  krknctl assist run --no-gpu # Force CPU-only mode`,
+  krknctl assist run`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get flags
-			noGPU, _ := cmd.Flags().GetBool("no-gpu")
-
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
 
-			// Check if Docker is being used - Lightspeed only supports Podman
+			// Check if Docker is being used - assist requires Podman
 			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
-				return fmt.Errorf("❌ assist requires Podman container runtime. " +
-					"Docker is not supported for GPU acceleration")
+				return fmt.Errorf("❌ assist requires Podman container runtime")
 			}
 
 			// Get container runtime socket
@@ -212,30 +119,19 @@ Examples:
 				return fmt.Errorf("failed to build assist registry configuration: %w", err)
 			}
 
-			// Step 1: Auto-detect GPU acceleration
-			fmt.Println("🔍 detecting GPU acceleration...")
-
-			// Create platform GPU detector
-			detector := assist.NewPlatformGPUDetector(config)
-			gpuType := detector.DetectGPUAcceleration(ctx, noGPU)
-
-			fmt.Printf("✅ GPU acceleration: %s\n", detector.GetGPUDescription(gpuType))
-
-			// Step 2: Deploy RAG model container
-			fmt.Println("\n🚀 deploying assist model...")
+			// Deploy RAG model container
+			fmt.Println("🚀 deploying assist model...")
 
 			// Create spinners for the operations
 			pullSpinner := NewSpinnerWithSuffix(" pulling RAG model image...")
 			thinkingSpinner := NewSpinnerWithSuffix(" thinking...", 37)
 
-			ragResult, err := assist.DeployAssistModelWithGPUType(ctx, gpuType, *scenarioOrchestrator, config, registry, detector, pullSpinner)
+			ragResult, err := assist.DeployAssistModel(ctx, *scenarioOrchestrator, config, registry, pullSpinner)
 			if err != nil {
-				// Handle GPU-related errors with helpful suggestions
-				enhancedErr := detector.HandleContainerError(err, gpuType)
-				return fmt.Errorf("failed to deploy RAG model: %w", enhancedErr)
+				return fmt.Errorf("failed to deploy RAG model: %w", err)
 			}
 
-			// Step 3: Health check
+			// Health check
 			fmt.Println("\n🩺 performing health check...")
 
 			healthOK, err := assist.PerformAssistHealthCheck(ragResult.ContainerID, ragResult.HostPort, *scenarioOrchestrator, ctx, config)
@@ -249,7 +145,7 @@ Examples:
 
 			fmt.Println("✅ assist service is ready!")
 
-			// Step 4: Start interactive prompt
+			// Start interactive prompt
 			fmt.Printf("\n🚂 starting interactive assist service on port %s...\n",
 				ragResult.HostPort)
 			fmt.Println("type your chaos engineering questions and get intelligent krknctl" +
