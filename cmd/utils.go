@@ -129,6 +129,16 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		}
 
 	}
+
+	// Set RESILIENCY_ENABLED_MODE based on PROMETHEUS_URL
+	if cfg, err := config.LoadConfig(); err == nil {
+		mode := "disabled"
+		if prom, ok := environment["PROMETHEUS_URL"]; ok && prom.value != "" {
+			mode = cfg.ResiliencyEnabledMode
+		}
+		environment["RESILIENCY_ENABLED_MODE"] = ParsedField{value: mode, secret: false}
+	}
+
 	return &environment, &volumes, nil
 }
 

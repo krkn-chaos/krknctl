@@ -52,6 +52,8 @@
   "github_release_api_deprecated": "[DEPRECATED]",
   "table_field_max_length": 20,
   "table_max_step_scenario_length": 7,
+  "resiliency_enabled_mode": "controller",
+  "resiliency_report_regex": "KRKN_RESILIENCY_REPORT_JSON: (\\{.*)",
   "visualize_image_name": "krkn-visualize",
   "visualize_image_tag": "latest",
   "dashboard_image_name": "krkn-dashboard",
