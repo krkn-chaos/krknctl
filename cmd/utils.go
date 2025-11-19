@@ -4,6 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -13,12 +20,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-	"time"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -122,6 +123,16 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		}
 
 	}
+
+	// Set RESILIENCY_ENABLED_MODE based on PROMETHEUS_URL
+	if cfg, err := config.LoadConfig(); err == nil {
+		mode := "disabled"
+		if prom, ok := environment["PROMETHEUS_URL"]; ok && prom.value != "" {
+			mode = cfg.ResiliencyEnabledMode
+		}
+		environment["RESILIENCY_ENABLED_MODE"] = ParsedField{value: mode, secret: false}
+	}
+
 	return &environment, &volumes, nil
 }
 
