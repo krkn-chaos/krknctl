@@ -2,6 +2,7 @@ package scenarioorchestrator
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -73,10 +74,10 @@ func CommonRunGraph(
 				volumes[k] = v
 			}
 
-			// inject resiliency config as env variable if provided (Use Case: Resiliency Config is provided via env variable)
+			// inject resiliency config as base64 encoded env variable if provided (Use Case: To pass the custom resiliency config to the container)
 			if scenario.ResiliencyConfigPath != "" {
 				if content, err := os.ReadFile(scenario.ResiliencyConfigPath); err == nil {
-					env["RESILIENCY_CONFIG"] = string(content)
+					env["KRKN_ALERTS_YAML_CONTENT"] = base64.StdEncoding.EncodeToString(content)
 				}
 			}
 
