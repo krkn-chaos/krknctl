@@ -16,6 +16,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
 	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
@@ -124,12 +125,13 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 
 	}
 
-	// Set RESILIENCY_ENABLED_MODE based on PROMETHEUS_URL
+	// Set RESILIENCY_ENABLED_MODE based on PROMETHEUS_URL using resiliency helper
 	if cfg, err := config.LoadConfig(); err == nil {
-		mode := "disabled"
-		if prom, ok := environment["PROMETHEUS_URL"]; ok && prom.value != "" {
-			mode = cfg.ResiliencyEnabledMode
+		promURL := ""
+		if prom, ok := environment["PROMETHEUS_URL"]; ok {
+			promURL = prom.value
 		}
+		mode := resiliency.ComputeResiliencyMode(promURL, cfg)
 		environment["RESILIENCY_ENABLED_MODE"] = ParsedField{value: mode, secret: false}
 	}
 

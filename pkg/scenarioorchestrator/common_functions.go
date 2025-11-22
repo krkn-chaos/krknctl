@@ -74,6 +74,13 @@ func CommonRunGraph(
 				volumes[k] = v
 			}
 
+			// set RESILIENCY_ENABLED_MODE using shared utility
+			promURL := ""
+			if prom, ok := env["PROMETHEUS_URL"]; ok {
+				promURL = prom
+			}
+			env["RESILIENCY_ENABLED_MODE"] = resiliency.ComputeResiliencyMode(promURL, config)
+
 			// inject resiliency config as base64 encoded env variable if provided (Use Case: To pass the custom resiliency config to the container)
 			if scenario.ResiliencyConfigPath != "" {
 				if content, err := os.ReadFile(scenario.ResiliencyConfigPath); err == nil {
