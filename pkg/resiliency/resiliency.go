@@ -227,3 +227,11 @@ func PrintHumanSummary(report FinalReport) {
 		fmt.Printf("Overall Resiliency Report Summary:\n%s\n", string(data))
 	}
 }
+
+// ComputeResiliencyMode returns the value to set in RESILIENCY_ENABLED_MODE.
+func ComputeResiliencyMode(prometheusURL string, cfg config.Config) string {
+	if prometheusURL != "" {
+		return cfg.ResiliencyEnabledMode
+	}
+	return "disabled"
+}
