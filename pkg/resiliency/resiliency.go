@@ -40,6 +40,7 @@ type OverallResiliencyReport struct {
 
 type DetailedScenarioReport struct {
 	OverallReport OverallResiliencyReport
+	ScenarioWeights map[string]float64 `json:"scenario_weights,omitempty"`
 }
 
 // ----------------------------------------------------------------------------
@@ -166,23 +167,32 @@ func AggregateReports(reports []DetailedScenarioReport) FinalReport {
 		Scenarios: make(map[string]float64),
 	}
 
-	var scoreSum float64
-	var scoreCount int
+	var weightedSum float64
+	var totalWeight float64
 
 	for _, rep := range reports {
-		// Merge per-scenario scores.
 		for name, score := range rep.OverallReport.Scenarios {
 			final.Scenarios[name] = score
-			scoreSum += score
-			scoreCount++
+
+			// Resolve weight – defaults to 1 when absent/invalid.
+			weight := 1.0
+			if rep.ScenarioWeights != nil {
+				if w, ok := rep.ScenarioWeights[name]; ok && w > 0 {
+					weight = w
+				}
+			}
+
+			weightedSum += score * weight
+			totalWeight += weight
 		}
+
 		// Aggregate SLO counters.
 		final.PassedSlos += rep.OverallReport.PassedSlos
 		final.TotalSlos += rep.OverallReport.TotalSlos
 	}
 
-	if scoreCount > 0 {
-		final.ResiliencyScore = scoreSum / float64(scoreCount)
+	if totalWeight > 0 {
+		final.ResiliencyScore = weightedSum / totalWeight
 	} else {
 		final.ResiliencyScore = 100.0
 	}

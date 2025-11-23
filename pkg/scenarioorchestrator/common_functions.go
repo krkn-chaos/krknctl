@@ -15,11 +15,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/resiliency"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 )
-
 
 func CommonRunGraph(
 	scenarios models.ScenarioSet,
@@ -35,13 +34,14 @@ func CommonRunGraph(
 ) {
 	// collectors initialization
 	var (
-        allReports []resiliency.DetailedScenarioReport
-        reportsMu  sync.Mutex
-    )
+		allReports []resiliency.DetailedScenarioReport
+		reportsMu  sync.Mutex
+	)
 
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scID := range s {
+			scCopy := scenarios[scID] 
 
 			socket, err := orchestrator.GetContainerRuntimeSocket(userID)
 			if err != nil {
@@ -99,75 +99,84 @@ func CommonRunGraph(
 			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: nil}
 			wg.Add(1)
 
-			go func() {
+			go func(scenario models.Scenario) {
 				defer wg.Done()
 				mw := io.MultiWriter(os.Stdout, file)
-                _, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry)
-                _ = file.Sync()
-                _ = file.Close()
+				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry)
+				_ = file.Sync()
+				_ = file.Close()
 
-                if data, readErr := os.ReadFile(filename); readErr == nil {
-                    if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
-                        fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filename)
-                        reportsMu.Lock()
-                        allReports = append(allReports, *rep)
-                        reportsMu.Unlock()
-                    } else {
-                        fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filename, parseErr)
-                    }
-                }
+				if data, readErr := os.ReadFile(filename); readErr == nil {
+					if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
+						// Attach weight information for this scenario.
+						weight := scenario.ResiliencyWeight
+						if weight <= 0 {
+							weight = 1
+						}
+						if rep.ScenarioWeights == nil {
+							rep.ScenarioWeights = make(map[string]float64)
+						}
+						rep.ScenarioWeights[scenario.Name] = weight
 
-                if err != nil {
+						fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filename)
+						reportsMu.Lock()
+						allReports = append(allReports, *rep)
+						reportsMu.Unlock()
+					} else {
+						fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filename, parseErr)
+					}
+				}
+
+				if err != nil {
 					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
 					return
 				}
-			}()
+			}(scCopy.Scenario)
 
 		}
 		wg.Wait()
 
 	}
 
-
-    if err := resiliency.GenerateAndWriteReport(allReports, "resiliency-report.json"); err != nil {
-        fmt.Fprintf(os.Stderr, "Error generating resiliency report: %v\n", err)
-    } else {
-        fmt.Println("Detailed resiliency report written to resiliency-report.json")
-    }
+	if err := resiliency.GenerateAndWriteReport(allReports, "resiliency-report.json"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating resiliency report: %v\n", err)
+	} else {
+		fmt.Println("Detailed resiliency report written to resiliency-report.json")
+	}
 
 	commChannel <- nil
 }
 
 func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
-    
-    containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
-    if err != nil {
-        return nil,  err
-    }
-    signalChan := make(chan os.Signal, 1)
-    signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-    
-    kill, err := c.Attach(containerID, signalChan, stdout, stderr, ctx)
-    if err != nil {
-        return containerID, err
-    }
 
-    if kill {
-        if err := c.Kill(containerID, ctx); err != nil {
-            return containerID, fmt.Errorf("failed to kill container: %w", err)
-        }
-    }
+	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
+	if err != nil {
+		return nil, err
+	}
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-    containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
-    if err != nil {
-        return containerID, fmt.Errorf("failed to inspect container: %w", err)
-    }
+	kill, err := c.Attach(containerID, signalChan, stdout, stderr, ctx)
+	if err != nil {
+		return containerID, err
+	}
 
-    if containerStatus.Container.ExitStatus > 0 {
-        return containerID, &utils.ExitError{ExitStatus: int(containerStatus.Container.ExitStatus)}
-    }
+	if kill {
+		if err := c.Kill(containerID, ctx); err != nil {
+			return containerID, fmt.Errorf("failed to kill container: %w", err)
+		}
+	}
 
-    return containerID, nil
+	containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
+	if err != nil {
+		return containerID, fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	if containerStatus.Container.ExitStatus > 0 {
+		return containerID, &utils.ExitError{ExitStatus: int(containerStatus.Container.ExitStatus)}
+	}
+
+	return containerID, nil
 }
 
 func CommonPrintRuntime(containerRuntime models.ContainerRuntime) {
