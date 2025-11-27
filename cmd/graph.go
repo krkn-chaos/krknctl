@@ -103,8 +103,21 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 
+			outputDir, err := cmd.Flags().GetString("output")
 			if err != nil {
 				return err
+			}
+			var outputDirPath *string
+			if outputDir != "" {
+				expandedOutputDir, err := commonutils.ExpandFolder(outputDir, nil)
+				if err != nil {
+					return err
+				}
+				// Ensure output directory exists
+				if err = EnsureDirectory(*expandedOutputDir); err != nil {
+					return fmt.Errorf("failed to create output directory %s: %v", *expandedOutputDir, err)
+				}
+				outputDirPath = expandedOutputDir
 			}
 
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
@@ -114,6 +127,12 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if kubeconfigPath == nil {
 				return fmt.Errorf("kubeconfig not found: %s", kubeconfig)
 			}
+			// Clean up kubeconfig file on exit
+			defer func() {
+				if kubeconfigPath != nil {
+					_ = os.Remove(*kubeconfigPath)
+				}
+			}()
 			volumes[*kubeconfigPath] = config.KubeconfigPath
 
 			if metricsProfile != "" {
@@ -199,7 +218,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			commChannel := make(chan *models.GraphCommChannel)
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil, outputDirPath)
 			}()
 
 			for {
@@ -222,6 +241,10 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 								}
 							}
 							if exitOnerror {
+								// Clean up kubeconfig before exiting
+								if kubeconfigPath != nil {
+									_ = os.Remove(*kubeconfigPath)
+								}
 								_, err = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", staterr.ExitStatus))
 								if err != nil {
 									return err

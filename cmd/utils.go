@@ -83,6 +83,12 @@ func CheckFileExists(filePath string) bool {
 	return true
 }
 
+// EnsureDirectory creates a directory if it doesn't exist
+// Returns an error if the directory cannot be created
+func EnsureDirectory(dirPath string) error {
+	return os.MkdirAll(dirPath, 0755)
+}
+
 func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCollectedFlags map[string]*string, skipDefault bool) (env *map[string]ParsedField, vol *map[string]string, err error) {
 	environment := make(map[string]ParsedField)
 	volumes := make(map[string]string)

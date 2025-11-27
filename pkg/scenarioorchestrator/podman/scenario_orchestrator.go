@@ -373,9 +373,10 @@ func (c *ScenarioOrchestrator) RunGraph(
 	commChannel chan *orchestratormodels.GraphCommChannel,
 	registry *providermodels.RegistryV2,
 	userID *int,
+	outputDir *string,
 ) {
 	//TODO: add a getconfig method in scenarioOrchestrator
-	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID, outputDir)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
