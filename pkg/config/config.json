@@ -42,6 +42,8 @@
   "env_private_registry_token": "KRKNCTL_PRIVATE_REGISTRY_TOKEN",
   "env_private_registry_scenarios": "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS",
   "env_private_registry_insecure": "KRKNCTL_PRIVATE_REGISTRY_INSECURE",
+  "env_resiliency_enabled_mode": "RESILIENCY_ENABLED_MODE",
+  "env_krkn_alerts_yaml_content": "KRKN_ALERTS_YAML_CONTENT",
   "github_latest_release": "https://github.com/krkn-chaos/krknctl/releases/latest",
   "github_latest_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/latest",
   "github_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags",

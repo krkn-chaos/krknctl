@@ -58,6 +58,8 @@ type Config struct {
 	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
 	ResiliencyEnabledMode       string `json:"resiliency_enabled_mode"`
 	ResiliencyReportRegex       string `json:"resiliency_report_regex"`
+	EnvResiliencyEnabledMode    string `json:"env_resiliency_enabled_mode"`
+	EnvKrknAlertsYamlContent    string `json:"env_krkn_alerts_yaml_content"`
 }
 
 //go:embed config.json

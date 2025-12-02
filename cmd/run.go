@@ -307,7 +307,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			if !runDetached {
-				// capture stdout/stderr to both terminal and an in-memory buffer for parsing
+				
+				// Here we are using an io.MultiWriter to multiplex the container's stdout and stderr to both
+				// the terminal stdout and a bytes.Buffer. This allows us to capture the logs for parsing later.
+				// The container stdout and stderr will be written to both the terminal stdout and the bytes.Buffer.
 				var logBuf bytes.Buffer
 				mw := io.MultiWriter(os.Stdout, &logBuf)
 

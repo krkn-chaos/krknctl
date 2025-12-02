@@ -132,7 +132,7 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 			promURL = prom.value
 		}
 		mode := resiliency.ComputeResiliencyMode(promURL, cfg)
-		environment["RESILIENCY_ENABLED_MODE"] = ParsedField{value: mode, secret: false}
+		environment[cfg.EnvResiliencyEnabledMode] = ParsedField{value: mode, secret: false}
 	}
 
 	return &environment, &volumes, nil

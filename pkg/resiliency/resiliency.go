@@ -86,42 +86,37 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 	var rep DetailedScenarioReport
 
 	// 1. Direct overall_resiliency_report at root.
-	type root1 struct {
+	type directRoot struct {
 		Overall OverallResiliencyReport `json:"overall_resiliency_report"`
 	}
-	var r1 root1
-	if err := json.Unmarshal(raw, &r1); err == nil && r1.Overall.ResiliencyScore != 0 {
-		rep.OverallReport = r1.Overall
+	var direct directRoot
+	if err := json.Unmarshal(raw, &direct); err == nil && direct.Overall.ResiliencyScore != 0 {
+		rep.OverallReport = direct.Overall
 		return &rep, nil
 	}
 
 	// 2. Nested under telemetry.overall_resiliency_report.
-	type root2 struct {
+	type telemetryRoot struct {
 		Telemetry struct {
 			Overall OverallResiliencyReport `json:"overall_resiliency_report"`
 		} `json:"telemetry"`
 	}
-	var r2 root2
-	if err := json.Unmarshal(raw, &r2); err == nil && r2.Telemetry.Overall.ResiliencyScore != 0 {
-		rep.OverallReport = r2.Telemetry.Overall
+	var telemetry telemetryRoot
+	if err := json.Unmarshal(raw, &telemetry); err == nil && telemetry.Telemetry.Overall.ResiliencyScore != 0 {
+		rep.OverallReport = telemetry.Telemetry.Overall
 		return &rep, nil
 	}
 
 	// 3. As a map of scenario scores at root with optional aggregate values.
-	type root3 struct {
+	type mapRoot struct {
 		Scenarios       map[string]float64 `json:"scenarios"`
 		ResiliencyScore float64            `json:"resiliency_score"`
 		PassedSlos      int                `json:"passed_slos"`
 		TotalSlos       int                `json:"total_slos"`
 	}
-	var r3 root3
-	if err := json.Unmarshal(raw, &r3); err == nil && len(r3.Scenarios) > 0 {
-		rep.OverallReport = OverallResiliencyReport{
-			Scenarios:       r3.Scenarios,
-			ResiliencyScore: r3.ResiliencyScore,
-			PassedSlos:      r3.PassedSlos,
-			TotalSlos:       r3.TotalSlos,
-		}
+	var mRoot mapRoot
+	if err := json.Unmarshal(raw, &mRoot); err == nil && len(mRoot.Scenarios) > 0 {
+		rep.OverallReport = OverallResiliencyReport(mRoot)
 		return &rep, nil
 	}
 
@@ -134,21 +129,21 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 			Failed int `json:"failed"`
 		} `json:"breakdown"`
 	}
-	type root4 struct {
+	type arrayRoot struct {
 		Scenarios []scenarioItem `json:"scenarios"`
 	}
-	var r4 root4
-	if err := json.Unmarshal(raw, &r4); err == nil && len(r4.Scenarios) > 0 {
+	var aRoot arrayRoot
+	if err := json.Unmarshal(raw, &aRoot); err == nil && len(aRoot.Scenarios) > 0 {
 		m := make(map[string]float64)
 		var total float64
 		var passed, totalSLOs int
-		for _, it := range r4.Scenarios {
+		for _, it := range aRoot.Scenarios {
 			m[it.Name] = it.Score
 			total += it.Score
 			passed += it.Breakdown.Passed
 			totalSLOs += it.Breakdown.Passed + it.Breakdown.Failed
 		}
-		avg := total / float64(len(r4.Scenarios))
+		avg := total / float64(len(aRoot.Scenarios))
 		rep.OverallReport = OverallResiliencyReport{
 			Scenarios:       m,
 			ResiliencyScore: avg,
@@ -158,10 +153,9 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 		return &rep, nil
 	}
 
-	return nil, errors.New("unrecognised resiliency report JSON structure")
+	return nil, errors.New("unrecognised resiliency report json structure")
 }
 
-// / TODO: @abhinavs1920 (Implement weighted average of scores)
 func AggregateReports(reports []DetailedScenarioReport) FinalReport {
 	final := FinalReport{
 		Scenarios: make(map[string]float64),
@@ -234,7 +228,7 @@ func GenerateAndWriteReport(reports []DetailedScenarioReport, outputPath string)
 
 func PrintHumanSummary(report FinalReport) {
 	if data, err := json.MarshalIndent(report, "", "  "); err == nil {
-		fmt.Printf("Overall Resiliency Report Summary:\n%s\n", string(data))
+		fmt.Printf("overall resiliency report summary:\n%s\n", string(data))
 	}
 }
 

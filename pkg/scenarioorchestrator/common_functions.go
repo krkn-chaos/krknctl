@@ -41,7 +41,7 @@ func CommonRunGraph(
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scID := range s {
-			scCopy := scenarios[scID] 
+			scCopy := scenarios[scID]
 
 			socket, err := orchestrator.GetContainerRuntimeSocket(userID)
 			if err != nil {
@@ -79,12 +79,12 @@ func CommonRunGraph(
 			if prom, ok := env["PROMETHEUS_URL"]; ok {
 				promURL = prom
 			}
-			env["RESILIENCY_ENABLED_MODE"] = resiliency.ComputeResiliencyMode(promURL, config)
+			env[config.EnvResiliencyEnabledMode] = resiliency.ComputeResiliencyMode(promURL, config)
 
 			// inject resiliency config as base64 encoded env variable if provided (Use Case: To pass the custom resiliency config to the container)
 			if scenario.ResiliencyConfigPath != "" {
 				if content, err := os.ReadFile(scenario.ResiliencyConfigPath); err == nil {
-					env["KRKN_ALERTS_YAML_CONTENT"] = base64.StdEncoding.EncodeToString(content)
+					env[config.EnvKrknAlertsYamlContent] = base64.StdEncoding.EncodeToString(content)
 				}
 			}
 
