@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -307,15 +307,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			if !runDetached {
-				// capture stdout/stderr to both terminal and a log file for parsing
-				filename := fmt.Sprintf("%s.log", containerName)
-				file, cerr := os.Create(path.Clean(filename))
-				if cerr != nil {
-					spinner.Stop()
-					return cerr
-				}
-				defer file.Close()
-				mw := io.MultiWriter(os.Stdout, file)
+				// capture stdout/stderr to both terminal and an in-memory buffer for parsing
+				var logBuf bytes.Buffer
+				mw := io.MultiWriter(os.Stdout, &logBuf)
 
 				commChan := make(chan *string)
 				go func() {
@@ -334,17 +328,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					return err
 				}
 
-				_ = file.Sync()
-
 				// Parse resiliency report from captured logs and generate report
-				if data, rerr := os.ReadFile(filename); rerr == nil {
-					if rep, perr := resiliency.ParseResiliencyReport(data); perr == nil {
-						if err := resiliency.GenerateAndWriteReport(
-							[]resiliency.DetailedScenarioReport{*rep},
-							"resiliency-report.json",
-						); err != nil {
-							log.Printf("Error generating resiliency report: %v", err)
-						}
+				if rep, perr := resiliency.ParseResiliencyReport(logBuf.Bytes()); perr == nil {
+					if err := resiliency.GenerateAndWriteReport(
+						[]resiliency.DetailedScenarioReport{*rep},
+						"resiliency-report.json",
+					); err != nil {
+						log.Printf("Error generating resiliency report: %v", err)
 					}
 				}
 
@@ -372,7 +362,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
 	for _, f := range scenario.Fields {
-		
+
 		enum := ""
 		if f.Type == typing.Enum {
 			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
