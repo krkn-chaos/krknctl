@@ -4,21 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/briandowns/spinner"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
-	"github.com/krkn-chaos/krknctl/pkg/provider/models"
-	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/typing"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/briandowns/spinner"
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
+	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
+	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -122,6 +124,17 @@ func ParseFlags(scenarioDetail *models.ScenarioDetail, args []string, scenarioCo
 		}
 
 	}
+
+	// Set RESILIENCY_ENABLED_MODE based on PROMETHEUS_URL using resiliency helper
+	if cfg, err := config.LoadConfig(); err == nil {
+		promURL := ""
+		if prom, ok := environment["PROMETHEUS_URL"]; ok {
+			promURL = prom.value
+		}
+		mode := resiliency.ComputeResiliencyMode(promURL, cfg)
+		environment[cfg.EnvResiliencyEnabledMode] = ParsedField{value: mode, secret: false}
+	}
+
 	return &environment, &volumes, nil
 }
 

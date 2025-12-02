@@ -42,10 +42,14 @@
   "env_private_registry_token": "KRKNCTL_PRIVATE_REGISTRY_TOKEN",
   "env_private_registry_scenarios": "KRKNCTL_PRIVATE_REGISTRY_SCENARIOS",
   "env_private_registry_insecure": "KRKNCTL_PRIVATE_REGISTRY_INSECURE",
+  "env_resiliency_enabled_mode": "RESILIENCY_ENABLED_MODE",
+  "env_krkn_alerts_yaml_content": "KRKN_ALERTS_YAML_CONTENT",
   "github_latest_release": "https://github.com/krkn-chaos/krknctl/releases/latest",
   "github_latest_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/latest",
   "github_release_api": "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags",
   "github_release_api_deprecated": "[DEPRECATED]",
   "table_field_max_length": 20,
-  "table_max_step_scenario_length": 7
+  "table_max_step_scenario_length": 7,
+  "resiliency_enabled_mode": "controller",
+  "resiliency_report_regex": "KRKN_RESILIENCY_REPORT_JSON:\\s*(\\{.*)"
 }
