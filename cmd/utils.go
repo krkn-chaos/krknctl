@@ -4,6 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -13,12 +20,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"io"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-	"time"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -245,9 +246,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-		name *string
-		err  error
-	},
+	name *string
+	err  error
+},
 	registrySettings *models.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -387,7 +388,9 @@ func queryGithubRelease(url string) ([]byte, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request failed with status : %d", resp.StatusCode)
+		fmt.Printf("Error querying GitHub API, status code: %d\n", resp.StatusCode)
+		return nil, nil
+
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -429,7 +432,7 @@ func IsDeprecated(config config.Config) (*bool, error) {
 
 	// timeout condition
 	if body == nil {
-		return nil, nil
+		return nil, fmt.Errorf("no release found")
 	}
 
 	var releaseObject GitHubRelease
