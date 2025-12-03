@@ -44,3 +44,4 @@ The security team currently consists of the [Maintainers of Krkn](https://github
 ## Process and Supported Releases
 
 The Krkn security team will investigate and provide a fix in a timely mannner depending on the severity. The fix will be included in the new release of Krkn and details will be included in the release notes.
+
