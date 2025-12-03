@@ -50,26 +50,26 @@ func CleanPath(path string) string {
 
 	// Ensure that all paths are cleaned (especially problematic ones like
 	// "/../../../../../" which can cause lots of issues).
-	path = filepath.Clean(path)
+
+	if filepath.IsAbs(path) {
+		return filepath.Clean(path)
+	}
 
 	// If the path isn't absolute, we need to do more processing to fix paths
 	// such as "../../../../<etc>/some/path". We also shouldn't convert absolute
 	// paths to relative ones.
-	if !filepath.IsAbs(path) {
-		path = filepath.Clean(string(os.PathSeparator) + path)
-		// This can't fail, as (by definition) all paths are relative to root.
-		path, _ = filepath.Rel(string(os.PathSeparator), path)
-	}
+	path = filepath.Clean(string(os.PathSeparator) + path)
+	// This can't fail, as (by definition) all paths are relative to root.
+	path, _ = filepath.Rel(string(os.PathSeparator), path)
 
-	// Clean the path again for good measure.
-	return filepath.Clean(path)
+	return path
 }
 
-// StripRoot returns the passed path, stripping the root path if it was
+// stripRoot returns the passed path, stripping the root path if it was
 // (lexicially) inside it. Note that both passed paths will always be treated
 // as absolute, and the returned path will also always be absolute. In
 // addition, the paths are cleaned before stripping the root.
-func StripRoot(root, path string) string {
+func stripRoot(root, path string) string {
 	// Make the paths clean and absolute.
 	root, path = CleanPath("/"+root), CleanPath("/"+path)
 	switch {
@@ -77,7 +77,7 @@ func StripRoot(root, path string) string {
 		path = "/"
 	case root == "/":
 		// do nothing
-	case strings.HasPrefix(path, root+"/"):
+	default:
 		path = strings.TrimPrefix(path, root+"/")
 	}
 	return CleanPath("/" + path)
@@ -88,8 +88,8 @@ func StripRoot(root, path string) string {
 func SearchLabels(labels []string, key string) (string, bool) {
 	key += "="
 	for _, s := range labels {
-		if strings.HasPrefix(s, key) {
-			return s[len(key):], true
+		if val, ok := strings.CutPrefix(s, key); ok {
+			return val, true
 		}
 	}
 	return "", false
