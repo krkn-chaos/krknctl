@@ -28,10 +28,6 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 					return []string{}, cobra.ShellCompDirectiveError
 				}
 			}
-			if err != nil {
-				log.Fatalf("Error fetching scenarios: %v", err)
-				return []string{}, cobra.ShellCompDirectiveError
-			}
 			privateRegistry := false
 			if registrySettings != nil {
 				privateRegistry = true
@@ -64,10 +60,6 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			spinner := NewSpinnerWithSuffix("fetching scenario details...")
 			spinner.Start()
 
-			if err != nil {
-				spinner.Stop()
-				return err
-			}
 			provider := GetProvider(registrySettings != nil, factory)
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], registrySettings)
 			if err != nil {

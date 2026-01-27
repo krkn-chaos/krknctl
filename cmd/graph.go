@@ -103,10 +103,6 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 
-			if err != nil {
-				return err
-			}
-
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
 			if err != nil {
 				return err
