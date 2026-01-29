@@ -2,12 +2,14 @@ package registryv2
 
 import (
 	json_parser "encoding/json"
+	"os"
+	"testing"
+
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"testing"
 )
 
 func getConfig(t *testing.T) krknctlconfig.Config {
@@ -46,6 +48,7 @@ curl -X GET \
 */
 
 func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
+	utils.SkipTestIfForkPR(t)
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -141,6 +144,7 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 }
 
 func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
+	utils.SkipTestIfForkPR(t)
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -169,7 +173,7 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 }
 
 func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
-
+	utils.SkipTestIfForkPR(t)
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -203,6 +207,7 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 }
 
 func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
+	utils.SkipTestIfForkPR(t)
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{

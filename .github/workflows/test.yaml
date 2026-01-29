@@ -73,6 +73,8 @@ jobs:
           ./staticcheck/staticcheck -checks all ./...
           
       - name: run test suite
+        env:
+          CI_FORK_PR: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
         run: |
          export USERID=$(id -u)
          go test -tags containers_image_openpgp -race -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
