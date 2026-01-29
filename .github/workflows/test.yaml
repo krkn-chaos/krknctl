@@ -90,6 +90,7 @@ jobs:
           echo "TOTAL_COVERAGE=$COVERAGE" >> $GITHUB_ENV
 
       - name: check out doc repo
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         uses: actions/checkout@v4
         with:
           repository: krkn-chaos/krkn-lib-docs
@@ -97,6 +98,7 @@ jobs:
           ssh-key: ${{ secrets.KRKN_LIB_DOCS_PRIV_KEY }}
 
       - name: push updated coverage badge
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         env:
           COLOR: yellow
         run: |
