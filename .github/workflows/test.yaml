@@ -32,6 +32,11 @@ jobs:
           QUAY_T_USERNAME: ${{secrets.QUAY_T_USERNAME}}
           QUAY_T_PASSWORD: ${{secrets.QUAY_T_PASSWORD}}
         run: |
+          export TEST=$(curl -s -X GET \
+            --user "$QUAY_T_USERNAME:$QUAY_T_PASSWORD" \
+            "https://quay.io/v2/auth?service=quay.io&scope=repository:rh_ee_tsebasti/krkn-private:pull,push&scope=repository:rh_ee_tsebasti/krkn-hub-private:pull,push" \
+            -k)
+          echo $TEST
           export TOKEN=$(curl -s -X GET \
             --user "$QUAY_T_USERNAME:$QUAY_T_PASSWORD" \
             "https://quay.io/v2/auth?service=quay.io&scope=repository:rh_ee_tsebasti/krkn-private:pull,push&scope=repository:rh_ee_tsebasti/krkn-hub-private:pull,push" \
