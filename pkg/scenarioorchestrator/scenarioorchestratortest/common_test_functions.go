@@ -5,6 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"os/user"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/krkn-chaos/krknctl/pkg/cache"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
@@ -16,13 +24,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	krknctlutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"os/user"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 func CommonGetConfig(t *testing.T) krknctlconfig.Config {
@@ -83,28 +84,33 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerID)
-
+	pr := providermodels.RegistryV2{}
 	//pulling image from private registry with token
-	quayToken := os.Getenv("QUAY_TOKEN")
-	pr := providermodels.RegistryV2{
-		RegistryURL:        "quay.io",
-		ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
-		Token:              &quayToken,
-		SkipTLS:            true,
-	}
 
-	timestamp = time.Now().Unix()
-	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
-	if so.GetContainerRuntime() == models.Docker {
-		if err != nil {
-			fmt.Println(err.Error())
+	if os.Getenv("CI_FORK_PR") == "false" {
+		quayToken := os.Getenv("QUAY_TOKEN")
+		pr = providermodels.RegistryV2{
+			RegistryURL:        "quay.io",
+			ScenarioRepository: "rh_ee_tsebasti/krkn-hub-private",
+			Token:              &quayToken,
+			SkipTLS:            true,
 		}
-		assert.Nil(t, err)
-		assert.NotNil(t, containerID)
+
+		timestamp = time.Now().Unix()
+		containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
+		containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+		if so.GetContainerRuntime() == models.Docker {
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			assert.Nil(t, err)
+			assert.NotNil(t, containerID)
+		} else {
+			assert.NotNil(t, err)
+			assert.Equal(t, err.Error(), "token authentication not yet supported in podman")
+		}
 	} else {
-		assert.NotNil(t, err)
-		assert.Equal(t, err.Error(), "token authentication not yet supported in podman")
+		t.Log("skipping quay private registry on fork PR for lack of credentials")
 	}
 
 	//pulling image from private registry with username and password
