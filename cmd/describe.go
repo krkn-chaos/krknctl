@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
@@ -76,7 +78,16 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			}
 			spinner.Stop()
 			if scenarioDetail == nil {
-				return fmt.Errorf("could not find %s scenario", args[0])
+				// Fetch available scenarios to provide suggestions
+				scenarios, fetchErr := FetchScenarios(provider, registrySettings)
+				if fetchErr == nil && scenarios != nil {
+					suggestions := text.FindSimilarStrings(args[0], *scenarios, 3)
+					if len(suggestions) > 0 {
+						return fmt.Errorf("scenario '%s' not found. Did you mean: %s?",
+							args[0], strings.Join(suggestions, ", "))
+					}
+				}
+				return fmt.Errorf("scenario '%s' not found. Use 'krknctl list available' to see all scenarios", args[0])
 			}
 			PrintScenarioDetail(scenarioDetail)
 			return nil
