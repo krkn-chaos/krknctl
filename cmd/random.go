@@ -206,7 +206,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			commChannel := make(chan *models.GraphCommChannel)
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil, nil)
 			}()
 
 			for {

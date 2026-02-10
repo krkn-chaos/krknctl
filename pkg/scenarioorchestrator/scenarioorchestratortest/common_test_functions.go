@@ -336,7 +336,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid, nil)
 	}()
 
 	for {
@@ -412,7 +412,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 
 	commChannel = make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid, nil)
 	}()
 
 	for {

@@ -77,6 +77,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
 	graphRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
+	graphRunCmd.Flags().StringP("output", "o", "", "output directory for log files (default: current working directory)")
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
 	graphCmd.AddCommand(graphRunCmd)
