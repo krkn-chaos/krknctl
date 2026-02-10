@@ -294,9 +294,6 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 					return err
 				}
 			}
-			if err != nil {
-				return err
-			}
 			dataProvider := GetProvider(registrySettings != nil, factory)
 			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
 			if err != nil {
@@ -327,10 +324,6 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 				if len(args) == 0 {
 					return fmt.Errorf("please provide at least one scenario")
 				}
-			}
-
-			if err != nil {
-				return err
 			}
 
 			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, seed)
