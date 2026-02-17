@@ -173,7 +173,7 @@ tar -xzf "$TMP/$TARBALL" -C "$TMP" \
   || err "Failed to extract archive."
 
 [ -f "$TMP/$BIN" ] || err "Binary not found in archive."
-[ -x "$TMP/$BIN" ] || err "Binary in archive is not executable (corrupt or invalid archive)."
+[ -x "$TMP/$BIN" ] || err "Extracted file is not executable."
 
 mkdir -p "$BINDIR"
 
