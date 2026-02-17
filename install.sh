@@ -130,11 +130,11 @@ fi
 TARBALL="${BIN}-${VERSION}-${SUFFIX}.tar.gz"
 URL="${BASE_URL}/${TARBALL}"
 
-echo
-echo -e "${BOLD}Version:${RESET}   $VERSION"
-echo -e "${BOLD}Platform:${RESET}  $SUFFIX"
-echo -e "${BOLD}Install to:${RESET} $BINDIR"
-echo
+printf '\n'
+printf '%b\n' "${BOLD}Version:${RESET}   $VERSION"
+printf '%b\n' "${BOLD}Platform:${RESET}  $SUFFIX"
+printf '%b\n' "${BOLD}Install to:${RESET} $BINDIR"
+printf '\n'
 
 # ---------- Expected checksum (from GitHub release metadata) ----------
 log "Fetching release checksum..."
@@ -153,8 +153,8 @@ fi
 [ "${#EXPECTED_SHA}" -eq 64 ] || err "No checksum for $TARBALL in release $VERSION. Supply-chain verification unavailable."
 
 # ---------- Download ----------
-TMP="$(mktemp -d 2>/dev/null)" || true
-[ -d "$TMP" ] && [ -n "$TMP" ] || err "Failed to create temporary directory (mktemp -d failed)."
+TMP="$(mktemp -d 2>/dev/null)" || TMP="$(mktemp -d -t krknctl 2>/dev/null)" || true
+[ -n "${TMP:-}" ] && [ -d "$TMP" ] || err "Failed to create temporary directory (mktemp failed)."
 trap 'rm -rf "$TMP"' EXIT
 
 log "Downloading..."
