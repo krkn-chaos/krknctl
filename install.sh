@@ -46,6 +46,13 @@ EOF
 require curl
 require tar
 require install
+if command -v sha256sum >/dev/null 2>&1; then
+  SHA256SUM="sha256sum"
+elif command -v shasum >/dev/null 2>&1; then
+  SHA256SUM="shasum -a 256"
+else
+  err "sha256sum or shasum is required for integrity verification."
+fi
 
 # ---------- Defaults ----------
 REQUESTED_VERSION=""
@@ -123,6 +130,17 @@ echo "${BOLD}Platform:${RESET}  $SUFFIX"
 echo "${BOLD}Install to:${RESET} $BINDIR"
 echo
 
+# ---------- Expected checksum (from GitHub release metadata) ----------
+log "Fetching release checksum..."
+RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" \
+  || err "Failed to fetch release metadata from GitHub.")"
+# Parse asset digest from release JSON (digest is the one following our asset name)
+RELEASE_LINE="$(echo "$RELEASE_JSON" | tr -d '\n')"
+REST_AFTER_NAME="$(echo "$RELEASE_LINE" | sed "s/.*\"name\": *\"${TARBALL}\"/ /")"
+# Extract first 64-char hex (SHA256) from this asset block — the digest value
+EXPECTED_SHA="$(echo "$REST_AFTER_NAME" | grep -oE '[0-9a-f]{64}' | head -1)"
+[ "${#EXPECTED_SHA}" -eq 64 ] || err "No checksum for $TARBALL in release $VERSION. Supply-chain verification unavailable."
+
 # ---------- Download ----------
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -130,6 +148,12 @@ trap 'rm -rf "$TMP"' EXIT
 log "Downloading..."
 curl -fL --progress-bar "$URL" -o "$TMP/$TARBALL" \
   || err "Download failed. Check version or network."
+
+# ---------- Verify integrity ----------
+log "Verifying checksum..."
+ACTUAL_SHA="$($SHA256SUM "$TMP/$TARBALL" | awk '{print $1}')"
+[ "$ACTUAL_SHA" = "$EXPECTED_SHA" ] || err "Checksum verification failed (expected $EXPECTED_SHA, got $ACTUAL_SHA). The download may have been tampered with."
+ok "Checksum verified"
 
 # ---------- Extract ----------
 log "Extracting..."
