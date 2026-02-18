@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -52,6 +53,14 @@ func (s *ScenarioProvider) getRegistryImages(registry *models.RegistryV2) (*[]mo
 }
 
 func (s *ScenarioProvider) queryRegistry(uri string, username *string, password *string, token *string, method string, skipTLS bool) (*[]byte, error) {
+	parsedURL, err := url.Parse(uri)
+	if err != nil {
+		return nil, fmt.Errorf("invalid registry URL %q: %w", uri, err)
+	}
+	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported URL scheme %q in %q", parsedURL.Scheme, uri)
+	}
+
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: skipTLS,
@@ -60,7 +69,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 
 	client := &http.Client{}
 	client.Transport = tr
-	req, err := http.NewRequest(method, uri, nil)
+	req, err := http.NewRequest(method, parsedURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
