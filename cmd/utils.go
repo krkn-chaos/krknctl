@@ -384,7 +384,7 @@ func queryGithubRelease(rawURL string) ([]byte, error) {
 		Timeout: 2 * time.Second,
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is validated via url.Parse and scheme-restricted to https; destination is always the GitHub API, constructed from trusted config
 	// if any http error is happening the checks are skipped
 	// to avoid errors in disconnected environments
 	if err != nil {

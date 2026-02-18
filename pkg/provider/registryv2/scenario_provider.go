@@ -85,7 +85,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 		req.SetBasicAuth(*username, registryPassword)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is validated via url.Parse and scheme-allowlisted to http/https; source is user-supplied registry config in a CLI context, not external input
 	if err != nil {
 		return nil, err
 	}
