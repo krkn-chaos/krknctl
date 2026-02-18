@@ -73,7 +73,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 	if err != nil {
 		return nil, err
 	}
-	//req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	if token != nil {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *token))
 	}
@@ -96,11 +96,12 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 	}()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("image not found %s not found", uri)
+		return nil, fmt.Errorf("image not found: %s", uri)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("URI %s response: %d", uri, resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("URI %s returned %d: %s", uri, resp.StatusCode, string(bodyBytes))
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
