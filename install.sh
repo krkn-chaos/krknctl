@@ -138,8 +138,8 @@ printf '\n'
 
 # ---------- Expected checksum (from GitHub release metadata) ----------
 log "Fetching release checksum..."
-RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" \
-  || err "Failed to fetch release metadata from GitHub.")"
+RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" 2>&1)" || \
+  err "Failed to fetch release metadata from GitHub. curl output: $RELEASE_JSON"
 EXPECTED_SHA=""
 if command -v jq >/dev/null 2>&1; then
   EXPECTED_SHA="$(echo "$RELEASE_JSON" | jq -r --arg name "$TARBALL" '.assets[] | select(.name == $name) | .digest | sub("sha256:"; "")')"
