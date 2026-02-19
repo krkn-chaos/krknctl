@@ -42,7 +42,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		Type     *string `json:"type"`
 		Variable *string `json:"variable"`
 		Required *string `json:"required"`
-		Secret   *string `json:"secret"`
+		Secret   *string `json:"secret"` // #nosec G117 -- metadata flag, not a hardcoded secret
 	}{alias: (*alias)(f)}
 
 	if err := json.Unmarshal(data, &aux); err != nil {

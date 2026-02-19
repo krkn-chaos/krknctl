@@ -365,9 +365,16 @@ func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][
 	return nil
 }
 
-func queryGithubRelease(url string) ([]byte, error) {
+func queryGithubRelease(rawURL string) ([]byte, error) {
 	var deferErr error
-	req, err := http.NewRequest("GET", url, nil)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid GitHub release URL %q: %w", rawURL, err)
+	}
+	if parsedURL.Scheme != "https" {
+		return nil, fmt.Errorf("unsupported URL scheme %q in %q", parsedURL.Scheme, rawURL)
+	}
+	req, err := http.NewRequest("GET", parsedURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +384,7 @@ func queryGithubRelease(url string) ([]byte, error) {
 		Timeout: 2 * time.Second,
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is validated via url.Parse and scheme-restricted to https; destination is always the GitHub API, constructed from trusted config
 	// if any http error is happening the checks are skipped
 	// to avoid errors in disconnected environments
 	if err != nil {
