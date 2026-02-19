@@ -117,7 +117,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	// update and deprecation check
 	isDeprecated, err := IsDeprecated(config)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("failed to fetch krknctl version: %v", err))
+		fmt.Fprintf(os.Stderr, "failed to fetch krknctl version: %v", err)
 		fmt.Println(err)
 
 	}
@@ -131,7 +131,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 
 	latestVersion, err := GetLatest(config)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, fmt.Sprintf("failed to fetch krknctl version: %v", err))
+		fmt.Fprintf(os.Stderr, "failed to fetch krknctl version: %v", err)
 	}
 
 	if latestVersion != nil && *latestVersion != config.Version {

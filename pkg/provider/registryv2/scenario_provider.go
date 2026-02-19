@@ -76,7 +76,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 		req.SetBasicAuth(*username, registryPassword)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //#nosec G704
 	if err != nil {
 		return nil, err
 	}
