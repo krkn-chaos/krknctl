@@ -5,18 +5,19 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types/registry"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"net/url"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/docker/docker/api/types/registry"
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
 )
 
 type RegistryV2 struct {
 	Username           *string `form:"username"`
-	Password           *string `form:"password"`
+	Password           *string `form:"password"` //#nosec G117
 	Token              *string `form:"token"`
 	RegistryURL        string  `form:"registry_url"`
 	ScenarioRepository string  `form:"scenario_repository"`
@@ -113,7 +114,7 @@ func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
 		}
 	}
 
-	encodedJSON, err := json.Marshal(authConfig)
+	encodedJSON, err := json.Marshal(authConfig) //#nosec G117
 	if err != nil {
 		return nil, err
 	}

@@ -5,15 +5,17 @@ jobs:
   test:
     name: krknctl test
     runs-on: ubuntu-24.04
+    env:
+      GOTOOLCHAIN: auto
     steps:
       - name: create multi-node kind cluster
         uses: redhat-chaos/actions/kind@main
       - name: code checkout
         uses: actions/checkout@v4
       - name: set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v6
         with:
-          go-version: '1.23.1'
+          go-version-file: ./go.mod
       - name: install podman
         run: |
           sudo apt-get update && sudo apt-get install podman libbtrfs-dev nodejs wamerican libgpgme-dev
@@ -63,6 +65,8 @@ jobs:
           docker push -q localhost:5001/krkn-chaos/krkn:latest
       - name: run gosec security scanner
         uses: securego/gosec@master
+        env:
+          GOTOOLCHAIN: auto
         with:
           args: --exclude G402 ./...
 

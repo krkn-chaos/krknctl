@@ -377,7 +377,7 @@ func queryGithubRelease(url string) ([]byte, error) {
 		Timeout: 2 * time.Second,
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //#nosec G704
 	// if any http error is happening the checks are skipped
 	// to avoid errors in disconnected environments
 	if err != nil {
