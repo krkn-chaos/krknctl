@@ -6,13 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/krkn-chaos/krknctl/pkg/provider"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 )
 
 type ScenarioProvider struct {
@@ -73,7 +74,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	// req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
 	if token != nil {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *token))
 	}
