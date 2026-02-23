@@ -246,9 +246,9 @@ func logPrivateRegistry(registry string) {
 func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 	nodes map[string]orchestratorModels.ScenarioNode,
 	scenarioNameChannel chan *struct {
-	name *string
-	err  error
-},
+		name *string
+		err  error
+	},
 	registrySettings *models.RegistryV2) {
 	for _, n := range nodes {
 		// skip _comment
@@ -370,9 +370,6 @@ func queryGithubRelease(rawURL string) ([]byte, error) {
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid GitHub release URL %q: %w", rawURL, err)
-	}
-	if parsedURL.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URL scheme %q in %q", parsedURL.Scheme, rawURL)
 	}
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
 	if err != nil {
