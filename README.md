@@ -1,4 +1,4 @@
-![build](https://github.com/krkn-chaos/krknctl/actions/workflows/build.yaml/badge.svg)
+ ![build](https://github.com/krkn-chaos/krknctl/actions/workflows/build.yaml/badge.svg)
 ![test](https://github.com/krkn-chaos/krknctl/actions/workflows/test.yaml/badge.svg)
 ![coverage](https://krkn-chaos.github.io/krkn-lib-docs/coverage_badge_krknctl.svg)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10651/badge)](https://www.bestpractices.dev/projects/10651)
