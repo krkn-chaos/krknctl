@@ -16,7 +16,7 @@ import (
 
 type RegistryV2 struct {
 	Username           *string `form:"username"`
-	Password           *string `form:"password"`
+	Password           *string `form:"password"` // #nosec G117 -- not a hardcoded credential, holds runtime user input
 	Token              *string `form:"token"`
 	RegistryURL        string  `form:"registry_url"`
 	ScenarioRepository string  `form:"scenario_repository"`
