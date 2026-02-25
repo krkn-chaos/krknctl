@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"io"
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 )
 
 const MaxFileSize int64 = 10_485_760
@@ -40,7 +41,7 @@ func (f *InputField) MarshalJSON() ([]byte, error) {
 		*alias
 		Type     string `json:"type"`
 		Required string `json:"required,omitempty"`
-		Secret   string `json:"secret,omitempty"`
+		Secret   string `json:"secret,omitempty"` // #nosec G117 -- metadata flag, not a hardcoded secret
 	}{
 		alias:    (*alias)(f),
 		Type:     f.Type.String(),
