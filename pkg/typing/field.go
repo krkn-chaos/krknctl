@@ -118,6 +118,10 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 }
 
 func (f *InputField) Validate(value *string) (*string, error) {
+	return f.validate(value, true)
+}
+
+func (f *InputField) validate(value *string, validateDefault bool) (*string, error) {
 	var deferErr error
 	// if string value is nil, the default value is nil and the field is required the field is not valid
 	if value == nil && f.Default == nil && f.Required && f.Type == String {
@@ -139,9 +143,11 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		// recursive call to validate default value
 		// to avoid schema development errors
 
-		// the default value is validated recursively
-		if _, err := f.Validate(selectedValue); err != nil {
-			return nil, errors.New("schema validation error on default value: " + err.Error())
+		// the default value is validated recursively (only once to prevent stack overflow)
+		if validateDefault {
+			if _, err := f.validate(selectedValue, false); err != nil {
+				return nil, errors.New("schema validation error on default value: " + err.Error())
+			}
 		}
 	} else {
 		selectedValue = value
