@@ -105,7 +105,7 @@ func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
 	if r.Token != nil {
 		authConfig.RegistryToken = *r.Token
 	} else {
-		if r.Username != nil {
+		if r.Username != nil && r.Password != nil {
 			authConfig.Username = *r.Username
 			authConfig.Password = *r.Password
 		} else {
