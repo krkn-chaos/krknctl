@@ -113,7 +113,7 @@ func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
 		}
 	}
 
-	encodedJSON, err := json.Marshal(authConfig)
+	encodedJSON, err := json.Marshal(authConfig) // #nosec G117 -- intentionally marshaling auth config to build Docker registry auth string
 	if err != nil {
 		return nil, err
 	}
