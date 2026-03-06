@@ -56,6 +56,8 @@ type Config struct {
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
 	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
+	VisualizeImageName          string `json:"visualize_image_name"`
+	VisualizeImageTag           string `json:"visualize_image_tag"`
 }
 
 //go:embed config.json
@@ -93,6 +95,14 @@ func (c *Config) GetQuayScenarioRepositoryAPIURI() (string, error) {
 		return "", err
 	}
 	return repositoryURI, nil
+}
+
+func (c *Config) GetVisualizeImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.VisualizeImageName)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.VisualizeImageTag, nil
 }
 
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
