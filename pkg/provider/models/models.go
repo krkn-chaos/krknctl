@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types/registry"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"net/url"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/docker/docker/api/types/registry"
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/typing"
 )
 
 type RegistryV2 struct {
@@ -113,7 +114,7 @@ func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
 		}
 	}
 
-	encodedJSON, err := json.Marshal(authConfig)
+	encodedJSON, err := json.Marshal(authConfig) // #nosec G117 -- not a hardcoded credential, holds runtime user input
 	if err != nil {
 		return nil, err
 	}
