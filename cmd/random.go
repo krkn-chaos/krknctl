@@ -121,7 +121,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return err
 			}
 
-			if randomGraphFile != "" {
+			if randomGraphFile == "" {
 				randomGraphFile = fmt.Sprintf(config.RandomGraphPath, time.Now().Unix())
 			}
 
