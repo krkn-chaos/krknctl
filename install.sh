@@ -139,12 +139,10 @@ CHECKSUMS="$(curl -fsSL "$CHECKSUMS_URL" 2>/dev/null)" && \
   EXPECTED_SHA="$(printf '%s\n' "$CHECKSUMS" | awk -v f="$TARBALL" '$2==f {print $1; exit}')"
 
 if [ -z "$EXPECTED_SHA" ] || [ "${#EXPECTED_SHA}" -ne 64 ]; then
-  # Fallback for older releases without checksums.txt: GitHub API (rate-limited; GITHUB_TOKEN increases limit)
-  AUTH_HEADER=""
-  [ -n "${GITHUB_TOKEN:-}" ] && AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
-  RELEASE_JSON="$(curl -fsSL ${AUTH_HEADER:+-H "$AUTH_HEADER"} \
+  # Fallback for older releases without checksums.txt: GitHub API (unauthenticated, subject to rate limits)
+  RELEASE_JSON="$(curl -fsSL \
     "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" 2>&1)" || \
-    err "Failed to fetch release metadata. If checksums.txt is missing for this release, set GITHUB_TOKEN to avoid rate limits."
+    err "Failed to fetch release metadata."
   if command -v jq >/dev/null 2>&1; then
     EXPECTED_SHA="$(echo "$RELEASE_JSON" | jq -r --arg name "$TARBALL" '.assets[] | select(.name == $name) | .digest | sub("sha256:"; "")')"
   fi
