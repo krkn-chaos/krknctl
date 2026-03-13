@@ -38,7 +38,7 @@ jobs:
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
         go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        gh release upload ${{github.event.release.tag_name}} $FILENAME --clobber
 
     - name: build linux arm64
       env:
@@ -51,7 +51,7 @@ jobs:
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
         go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        gh release upload ${{github.event.release.tag_name}} $FILENAME --clobber
 
     - name: build darwin arm64
       env:
@@ -64,7 +64,7 @@ jobs:
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
         go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        gh release upload ${{github.event.release.tag_name}} $FILENAME --clobber
 
     - name: build darwin amd64
       env:
@@ -77,12 +77,12 @@ jobs:
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
         go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        gh release upload ${{github.event.release.tag_name}} $FILENAME --clobber
 
     - name: generate and upload checksums
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         sha256sum krknctl-${{github.event.release.tag_name}}-*.tar.gz > checksums.txt
-        gh release upload ${{github.event.release.tag_name}} checksums.txt
+        gh release upload ${{github.event.release.tag_name}} checksums.txt --clobber
 
