@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -406,21 +407,44 @@ func queryGithubRelease(rawURL string) ([]byte, error) {
 }
 
 func GetLatest(config config.Config) (*string, error) {
-	body, err := queryGithubRelease(config.GithubLatestReleaseAPI)
+	parsedURL, err := url.Parse(config.GithubLatestRelease)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid GitHub latest release URL %q: %w", config.GithubLatestRelease, err)
 	}
-	// timeout condition
-	if body == nil {
+
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(parsedURL.String())
+	if err != nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusMovedPermanently {
 		return nil, nil
 	}
 
-	var releaseObject GitHubRelease
-	err = json.Unmarshal(body, &releaseObject)
-	if err != nil {
-		return nil, err
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, nil
 	}
-	release := releaseObject.TagName
+
+	locURL, err := url.Parse(location)
+	if err != nil {
+		return nil, nil
+	}
+	if !locURL.IsAbs() {
+		locURL = resp.Request.URL.ResolveReference(locURL)
+	}
+	release := path.Base(locURL.Path)
+	if release == "" || release == "." {
+		return nil, nil
+	}
 	return &release, nil
 }
 
