@@ -79,4 +79,10 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
+    - name: generate and upload checksums
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        sha256sum krknctl-${{github.event.release.tag_name}}-*.tar.gz > checksums.txt
+        gh release upload ${{github.event.release.tag_name}} checksums.txt
 
