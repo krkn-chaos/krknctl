@@ -136,7 +136,7 @@ log "Fetching release checksum..."
 CHECKSUMS_URL="https://github.com/krkn-chaos/krknctl/releases/download/${VERSION}/checksums.txt"
 EXPECTED_SHA=""
 CHECKSUMS="$(curl -fsSL "$CHECKSUMS_URL" 2>/dev/null)" && \
-  EXPECTED_SHA="$(echo "$CHECKSUMS" | grep "$TARBALL" | awk '{print $1}')"
+  EXPECTED_SHA="$(printf '%s\n' "$CHECKSUMS" | awk -v f="$TARBALL" '$2==f {print $1; exit}')"
 
 if [ -z "$EXPECTED_SHA" ] || [ "${#EXPECTED_SHA}" -ne 64 ]; then
   # Fallback for older releases without checksums.txt: GitHub API (rate-limited; GITHUB_TOKEN increases limit)
