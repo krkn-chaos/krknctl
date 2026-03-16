@@ -6,7 +6,6 @@ set -euo pipefail
 # --------------------------------------------------
 
 BIN="krknctl"
-LATEST_API="https://api.github.com/repos/krkn-chaos/krknctl/releases/latest"
 BASE_URL="https://krkn-chaos.gateway.scarf.sh"
 
 # ---------- Colors (auto disable if not TTY) ----------
@@ -116,15 +115,11 @@ if [ -n "$REQUESTED_VERSION" ]; then
   log "Using specified version: $VERSION"
 else
   log "Fetching latest release..."
-  API_RESPONSE="$(curl -fsSL "$LATEST_API" 2>/dev/null)" || true
-  [ -z "$API_RESPONSE" ] && err "Failed to fetch latest version (API rate limit or network issue)."
-  if command -v jq >/dev/null 2>&1; then
-    VERSION="$(echo "$API_RESPONSE" | jq -r '.tag_name // empty')"
-  fi
-  if [ -z "$VERSION" ]; then
-    VERSION="$(echo "$API_RESPONSE" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-  fi
-  [ -z "$VERSION" ] && err "Failed to parse latest version from API response."
+  REDIRECT_URL="$(curl -fsSo /dev/null -w '%{redirect_url}' \
+    https://github.com/krkn-chaos/krknctl/releases/latest 2>/dev/null)" \
+    || err "Failed to fetch latest version (network issue)."
+  VERSION="${REDIRECT_URL##*/}"
+  [ -z "$VERSION" ] && err "Failed to determine latest version from GitHub redirect."
 fi
 
 TARBALL="${BIN}-${VERSION}-${SUFFIX}.tar.gz"
@@ -136,19 +131,26 @@ printf '%b\n' "${BOLD}Platform:${RESET}  $SUFFIX"
 printf '%b\n' "${BOLD}Install to:${RESET} $BINDIR"
 printf '\n'
 
-# ---------- Expected checksum (from GitHub release metadata) ----------
+# ---------- Expected checksum (from release checksums file, fallback to API) ----------
 log "Fetching release checksum..."
-RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" 2>&1)" || \
-  err "Failed to fetch release metadata from GitHub. curl output: $RELEASE_JSON"
+CHECKSUMS_URL="https://github.com/krkn-chaos/krknctl/releases/download/${VERSION}/checksums.txt"
 EXPECTED_SHA=""
-if command -v jq >/dev/null 2>&1; then
-  EXPECTED_SHA="$(echo "$RELEASE_JSON" | jq -r --arg name "$TARBALL" '.assets[] | select(.name == $name) | .digest | sub("sha256:"; "")')"
-fi
+CHECKSUMS="$(curl -fsSL "$CHECKSUMS_URL" 2>/dev/null)" && \
+  EXPECTED_SHA="$(printf '%s\n' "$CHECKSUMS" | awk -v f="$TARBALL" '$2==f {print $1; exit}')"
+
 if [ -z "$EXPECTED_SHA" ] || [ "${#EXPECTED_SHA}" -ne 64 ]; then
-  # Fallback: parse asset digest without jq (fragile if API format changes)
-  RELEASE_LINE="$(echo "$RELEASE_JSON" | tr -d '\n')"
-  REST_AFTER_NAME="$(echo "$RELEASE_LINE" | sed "s/.*\"name\": *\"${TARBALL}\"/ /")"
-  EXPECTED_SHA="$(echo "$REST_AFTER_NAME" | grep -oE '[0-9a-f]{64}' | head -1)"
+  # Fallback for older releases without checksums.txt: GitHub API (unauthenticated, subject to rate limits)
+  RELEASE_JSON="$(curl -fsSL \
+    "https://api.github.com/repos/krkn-chaos/krknctl/releases/tags/${VERSION}" 2>&1)" || \
+    err "Failed to fetch release metadata."
+  if command -v jq >/dev/null 2>&1; then
+    EXPECTED_SHA="$(echo "$RELEASE_JSON" | jq -r --arg name "$TARBALL" '.assets[] | select(.name == $name) | .digest | sub("sha256:"; "")')"
+  fi
+  if [ -z "$EXPECTED_SHA" ] || [ "${#EXPECTED_SHA}" -ne 64 ]; then
+    RELEASE_LINE="$(echo "$RELEASE_JSON" | tr -d '\n')"
+    REST_AFTER_NAME="$(echo "$RELEASE_LINE" | sed "s/.*\"name\": *\"${TARBALL}\"/ /")"
+    EXPECTED_SHA="$(echo "$REST_AFTER_NAME" | grep -oE '[0-9a-f]{64}' | head -1)"
+  fi
 fi
 [ "${#EXPECTED_SHA}" -eq 64 ] || err "No checksum for $TARBALL in release $VERSION. Supply-chain verification unavailable."
 
