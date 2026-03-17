@@ -76,6 +76,7 @@ func CommonRunGraph(
 			wg.Add(1)
 
 			go func() {
+				defer file.Close()
 				defer wg.Done()
 				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
 				if err != nil {
