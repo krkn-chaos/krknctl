@@ -93,11 +93,18 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
 	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
 	randomRunCmd.Flags().String("graph-dump", "", "specifies the name of the file where the randomly generated dependency graph will be persisted")
+	randomRunCmd.Flags().BoolP("detach", "d", false, "run in background and return immediately; default is foreground (attached)")
+	randomRunCmd.Flags().String("log-dir", "", "directory to store scenario log files (created if it does not exist)")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
 		os.Exit(1)
 	}
+
+	randomStatusCmd := NewRandomStatusCommand()
+	randomAbortCmd := NewRandomAbortCommand()
+	randomCmd.AddCommand(randomStatusCmd)
+	randomCmd.AddCommand(randomAbortCmd)
 
 	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
 	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
