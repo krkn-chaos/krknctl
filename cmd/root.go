@@ -63,6 +63,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
+	runCmd.LocalFlags().String("dry-run", "", "validate scenario locally without cluster calls; only accepted value: client (e.g. --dry-run=client)")
 
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)

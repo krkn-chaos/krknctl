@@ -48,6 +48,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// dry-run=client skips all registry/cluster calls
+			if _, isDryRun, err := parseDryRunFlag(args); err != nil {
+				return err
+			} else if isDryRun {
+				return nil
+			}
+
 			registrySettings, err := models.NewRegistryV2FromEnv(config)
 			if err != nil {
 				return err
@@ -122,6 +129,45 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// ── dry-run=client: local validation only, no cluster/runtime calls ──
+			if _, isDryRun, err := parseDryRunFlag(args); err != nil {
+				return err
+			} else if isDryRun {
+				scenarioName, err := parseScenarioName(args)
+				if err != nil {
+					return err
+				}
+
+				// Resolve registry settings from env or args (no cluster calls).
+				registrySettings, _ := models.NewRegistryV2FromEnv(config)
+				if registrySettings == nil {
+					registrySettings, _ = parsePrivateRepoArgs(cmd, &args)
+				}
+
+				// Fetch scenario metadata from the image registry.
+				// This is the only network call in dry-run mode and it targets
+				// the image registry (Quay / private), NOT the Kubernetes cluster.
+				// kubeconfig is never loaded and no cluster API is contacted.
+				provider := GetProvider(registrySettings != nil, factory)
+				scenarioDetail, fetchErr := provider.GetScenarioDetail(scenarioName, registrySettings)
+				if fetchErr != nil {
+					// Registry unreachable — report clearly and exit non-zero.
+					return fmt.Errorf("dry-run: could not fetch scenario metadata for %q: %w", scenarioName, fetchErr)
+				}
+
+				var globalDetail *models.ScenarioDetail
+				if scenarioDetail != nil {
+					globalDetail, _ = provider.GetGlobalEnvironment(registrySettings, scenarioName)
+				}
+
+				result := validateScenarioLocally(scenarioDetail, globalDetail, args)
+				result.Print()
+				if !result.Valid {
+					return fmt.Errorf("dry-run validation failed")
+				}
+				return nil
+			}
+
 			registrySettings, err := models.NewRegistryV2FromEnv(config)
 			if err != nil {
 				return err

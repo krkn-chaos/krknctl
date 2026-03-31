@@ -7,7 +7,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/fatih/color"
@@ -24,22 +26,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewRandomCommand is the parent group command; it takes no positional args.
 func NewRandomCommand() *cobra.Command {
-	var command = &cobra.Command{
+	return &cobra.Command{
 		Use:   "random",
 		Short: "runs or scaffolds a random chaos run based on a json test plan",
 		Long:  `runs or scaffolds a random chaos run based on a json test plan`,
-		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
 	}
-	return command
 }
 
-// runRandomPlan contains the core execution logic shared by both attach and
-// detach modes. It is called either directly (attach) or from a re-spawned
-// child process (detach).
+// runRandomPlan is the shared execution core for both foreground and background
+// modes. Called directly when attached, or from the re-spawned child when detached.
 func runRandomPlan(
 	cmd *cobra.Command,
 	args []string,
@@ -165,20 +165,20 @@ func runRandomPlan(
 	}
 
 	// ── load plan ────────────────────────────────────────────────────────────
-	file, err := os.ReadFile(args[0])
+	planFile := args[0]
+	fileData, err := os.ReadFile(planFile)
 	if err != nil {
-		return fmt.Errorf("failed to open scenario file: %s", args[0])
+		return fmt.Errorf("failed to open scenario file: %s", planFile)
 	}
 	nodes := make(map[string]models.ScenarioNode)
-	if err = json.Unmarshal(file, &nodes); err != nil {
+	if err = json.Unmarshal(fileData, &nodes); err != nil {
 		return err
 	}
 
-	privateRegistry := registrySettings != nil
-	dataProvider := GetProvider(privateRegistry, factory)
+	dataProvider := GetProvider(registrySettings != nil, factory)
 
 	// ── validate ─────────────────────────────────────────────────────────────
-	spinner := NewSpinnerWithSuffix("running randomly generated chaos plan...")
+	spinner := NewSpinnerWithSuffix(" validating chaos plan...")
 	nameChannel := make(chan *struct {
 		name *string
 		err  error
@@ -188,16 +188,16 @@ func runRandomPlan(
 		validateGraphScenarioInput(dataProvider, nodes, nameChannel, registrySettings)
 	}()
 	for {
-		validateResult := <-nameChannel
-		if validateResult == nil {
+		result := <-nameChannel
+		if result == nil {
 			break
 		}
-		if validateResult.err != nil {
+		if result.err != nil {
 			spinner.Stop()
-			return fmt.Errorf("failed to validate scenario: %s, error: %s", *validateResult.name, validateResult.err)
+			return fmt.Errorf("failed to validate scenario %s: %w", *result.name, result.err)
 		}
-		if validateResult.name != nil {
-			spinner.Suffix = fmt.Sprintf("validating input for scenario: %s", *validateResult.name)
+		if result.name != nil {
+			spinner.Suffix = fmt.Sprintf(" validating scenario: %s", *result.name)
 		}
 	}
 	spinner.Stop()
@@ -208,8 +208,8 @@ func runRandomPlan(
 		return err
 	}
 	if len(executionPlan) == 0 {
-		_, err = color.New(color.FgYellow).Println("No scenario to execute; the random graph file appears to be empty (single-node graphs are not supported).")
-		return err
+		_, _ = color.New(color.FgYellow).Println("no scenario to execute; the random graph file appears to be empty (single-node graphs are not supported)")
+		return nil
 	}
 
 	table, err := NewGraphTable(executionPlan, cfg)
@@ -220,11 +220,10 @@ func runRandomPlan(
 	fmt.Print("\n\n")
 
 	// ── persist state ────────────────────────────────────────────────────────
-	planName := args[0]
 	state := &randomstate.State{
 		PID:          os.Getpid(),
-		ScenarioName: planName,
-		PlanFile:     planName,
+		ScenarioName: filepath.Base(planFile), // display name, not the full path
+		PlanFile:     planFile,
 		StartTime:    time.Now(),
 		LogDir:       logDir,
 	}
@@ -234,12 +233,13 @@ func runRandomPlan(
 	defer func() { _ = randomstate.ClearState() }()
 
 	// ── run ──────────────────────────────────────────────────────────────────
-	spinner.Suffix = "starting chaos scenarios..."
+	spinner.Suffix = " starting chaos scenarios..."
 	spinner.Start()
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
+		// logDir is forwarded so CommonRunGraph writes log files to the right place
+		(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil, logDir)
 	}()
 
 	for {
@@ -249,26 +249,25 @@ func runRandomPlan(
 		}
 		if c.Err != nil {
 			spinner.Stop()
-			var statErr *utils.ExitError
-			if errors.As(c.Err, &statErr) {
+			var exitErr *utils.ExitError
+			if errors.As(c.Err, &exitErr) {
 				if c.ScenarioID != nil && c.ScenarioLogFile != nil {
-					logFile := *c.ScenarioLogFile
-					if logDir != "" {
-						logFile = fmt.Sprintf("%s/%s", logDir, *c.ScenarioLogFile)
-					}
 					_, _ = color.New(color.FgHiRed).Println(fmt.Sprintf(
-						"scenario %s at step %d with exit status %d, check log file %s aborting chaos run.",
-						*c.ScenarioID, *c.Layer, statErr.ExitStatus, logFile))
+						"scenario %s at step %d exited with status %d, log: %s",
+						*c.ScenarioID, *c.Layer, exitErr.ExitStatus, *c.ScenarioLogFile))
 				}
 				if exitOnError {
-					_, _ = color.New(color.FgHiRed).Println(fmt.Sprintf("aborting chaos run with exit status %d", statErr.ExitStatus))
-					os.Exit(statErr.ExitStatus)
+					_, _ = color.New(color.FgHiRed).Printf("aborting chaos run with exit status %d\n", exitErr.ExitStatus)
+					os.Exit(exitErr.ExitStatus)
 				}
 				spinner.Start()
+			} else {
+				// non-exit error (runtime / orchestration failure) — surface immediately
+				return c.Err
 			}
 		}
 		if c != nil && c.Layer != nil {
-			spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
+			spinner.Suffix = fmt.Sprintf(" running step %d: %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
 		}
 	}
 	spinner.Stop()
@@ -276,7 +275,7 @@ func runRandomPlan(
 }
 
 func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, cfg config.Config) *cobra.Command {
-	var command = &cobra.Command{
+	return &cobra.Command{
 		Use:   "run",
 		Short: "runs a random chaos run",
 		Long:  `runs a random run based on a json test plan`,
@@ -286,49 +285,43 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			if err != nil {
 				return err
 			}
-
 			if detach {
-				return runDetached(args)
+				return runDetached()
 			}
 			return runRandomPlan(cmd, args, factory, scenarioOrchestrator, cfg)
 		},
 	}
-	return command
 }
 
-// runDetached re-executes the current binary with --attach so the child runs
-// the actual plan while the parent returns immediately.
-func runDetached(args []string) error {
+// runDetached re-executes the current binary without --detach/-d so the child
+// runs the actual plan in the foreground while the parent returns immediately.
+// No args parameter needed — everything is already in os.Args.
+func runDetached() error {
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("resolving executable path: %w", err)
 	}
 
-	// Rebuild the child argv: replace --detach with --attach
-	childArgs := []string{"random", "run", "--attach"}
+	// Forward all original args, stripping --detach / -d in every token form.
+	var childArgs []string
 	for _, a := range os.Args[1:] {
-		if a == "--detach" || a == "-d" {
+		if a == "--detach" || a == "-d" ||
+			strings.HasPrefix(a, "--detach=") || strings.HasPrefix(a, "-d=") {
 			continue
 		}
 		childArgs = append(childArgs, a)
 	}
-	// Ensure the plan file is present
-	if len(args) > 0 {
-		// args[0] is already in os.Args, so it will be carried over above.
-		// Nothing extra needed.
-		_ = args
-	}
 
-	cmd := exec.Command(exe, childArgs...) // #nosec G204 -- exe is resolved from os.Executable(), not user input
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	cmd.Stdin = nil
+	child := exec.Command(exe, childArgs...) // #nosec G204 -- exe comes from os.Executable(), not user input
+	child.Stdout = nil
+	child.Stderr = nil
+	child.Stdin = nil
 
-	if err = cmd.Start(); err != nil {
+	if err = child.Start(); err != nil {
 		return fmt.Errorf("starting background process: %w", err)
 	}
 
-	_, _ = color.New(color.FgGreen).Printf("🚀 chaos plan started in background (PID %d)\n", cmd.Process.Pid)
+	_, _ = color.New(color.FgGreen).Printf("🚀 chaos plan started in background (PID %d)\n", child.Process.Pid)
 	return nil
 }
 
@@ -349,15 +342,7 @@ func NewRandomStatusCommand() *cobra.Command {
 				return nil
 			}
 
-			// Verify the process is still alive
-			process, err := os.FindProcess(state.PID)
-			running := false
-			if err == nil {
-				// On Unix, FindProcess always succeeds; send signal 0 to check
-				if sigErr := process.Signal(os.Signal(nil)); sigErr == nil {
-					running = true
-				}
-			}
+			running := isProcessAlive(state.PID)
 
 			green := color.New(color.FgGreen).SprintFunc()
 			red := color.New(color.FgRed).SprintFunc()
@@ -370,6 +355,7 @@ func NewRandomStatusCommand() *cobra.Command {
 
 			fmt.Printf("%s %s\n", bold("running:"), runningStr)
 			fmt.Printf("%s %s\n", bold("scenario:"), state.ScenarioName)
+			fmt.Printf("%s %s\n", bold("plan-file:"), state.PlanFile)
 			fmt.Printf("%s %d\n", bold("pid:"), state.PID)
 			fmt.Printf("%s %s\n", bold("started:"), state.StartTime.Format(time.RFC3339))
 			if state.LogDir != "" {
@@ -424,8 +410,19 @@ func NewRandomAbortCommand() *cobra.Command {
 	}
 }
 
+// isProcessAlive probes whether a process is still running using signal 0.
+// syscall.Signal(0) checks existence without delivering an actual signal.
+// os.Signal(nil) must NOT be used — it is a nil interface, not signal 0.
+func isProcessAlive(pid int) bool {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false
+	}
+	return process.Signal(syscall.Signal(0)) == nil
+}
+
 func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, cfg config.Config) *cobra.Command {
-	var command = &cobra.Command{
+	return &cobra.Command{
 		Use:   "scaffold",
 		Short: "scaffolds a random chaos run",
 		Long:  `scaffolds a random run based on a json test plan`,
@@ -440,10 +437,6 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, cfg conf
 				if err != nil {
 					return nil, cobra.ShellCompDirectiveError
 				}
-			}
-			if err != nil {
-				log.Fatalf("Error fetching scenarios: %v", err)
-				return nil, cobra.ShellCompDirectiveError
 			}
 			dataProvider := GetProvider(registrySettings != nil, factory)
 			scenarios, err := FetchScenarios(dataProvider, registrySettings)
@@ -490,10 +483,8 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, cfg conf
 					NumberOfScenarios: numberOfScenarios,
 					Path:              *seedFilePath,
 				}
-			} else {
-				if len(args) == 0 {
-					return fmt.Errorf("please provide at least one scenario")
-				}
+			} else if len(args) == 0 {
+				return fmt.Errorf("please provide at least one scenario")
 			}
 			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, seed)
 			if err != nil {
@@ -503,5 +494,4 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, cfg conf
 			return nil
 		},
 	}
-	return command
 }
