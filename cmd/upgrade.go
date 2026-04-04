@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -76,6 +78,19 @@ func runUpgrade(cfg config.Config) error {
 	binaryData, err := downloadBinary(downloadURL)
 	if err != nil {
 		return fmt.Errorf("failed to download binary: %w", err)
+	}
+
+	// Find and verify checksum
+	checksumAssetName := assetName + ".sha256"
+	checksumURL, err := findChecksumAsset(assets, checksumAssetName)
+	if err == nil {
+		fmt.Println(color.CyanString("🔐 Verifying checksum..."))
+		if err := verifyChecksum(binaryData, checksumURL); err != nil {
+			return fmt.Errorf("checksum verification failed: %w", err)
+		}
+		fmt.Println(color.GreenString("✅ Checksum verified"))
+	} else {
+		fmt.Println(color.YellowString("⚠️  No checksum found, skipping verification"))
 	}
 
 	fmt.Println(color.CyanString("🔄 Installing update..."))
@@ -180,6 +195,40 @@ func findBinaryAsset(assets []GitHubReleaseAsset, osName, arch string) (string, 
 	return "", "", fmt.Errorf("no matching binary found for %s/%s", osName, arch)
 }
 
+// findChecksumAsset locates the checksum file for the binary
+func findChecksumAsset(assets []GitHubReleaseAsset, checksumName string) (string, error) {
+	for _, asset := range assets {
+		if strings.EqualFold(asset.Name, checksumName) {
+			return asset.BrowserDownloadURL, nil
+		}
+	}
+	return "", fmt.Errorf("checksum file not found: %s", checksumName)
+}
+
+// verifyChecksum downloads and verifies the SHA256 checksum of the binary
+func verifyChecksum(binaryData []byte, checksumURL string) error {
+	// Download checksum file
+	checksumData, err := downloadBinary(checksumURL)
+	if err != nil {
+		return fmt.Errorf("failed to download checksum: %w", err)
+	}
+
+	// Parse checksum (format: "hash  filename" or just "hash")
+	checksumStr := strings.TrimSpace(string(checksumData))
+	expectedHash := strings.Fields(checksumStr)[0]
+
+	// Compute actual hash
+	hash := sha256.Sum256(binaryData)
+	actualHash := hex.EncodeToString(hash[:])
+
+	// Compare
+	if !strings.EqualFold(actualHash, expectedHash) {
+		return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHash, actualHash)
+	}
+
+	return nil
+}
+
 // downloadBinary downloads the binary from the given URL
 func downloadBinary(url string) ([]byte, error) {
 	client := &http.Client{
@@ -250,32 +299,31 @@ func replaceExecutable(newBinary []byte) error {
 		return fmt.Errorf("failed to set executable permissions: %w", err)
 	}
 
-	// On Windows, we need to rename the old executable first
-	// because we can't replace a running executable
+	// On Windows, we can't replace a running executable directly
+	// Write the new binary to a .new file and instruct the user
 	if runtime.GOOS == "windows" {
-		backupPath := execPath + ".old"
-		// Remove any existing backup
-		os.Remove(backupPath)
-
-		// Rename current executable to backup
-		if err := os.Rename(execPath, backupPath); err != nil {
-			return fmt.Errorf("failed to backup current executable: %w", err)
+		newPath := execPath + ".new"
+		
+		// Move new binary to .new path
+		if err := os.Rename(tempPath, newPath); err != nil {
+			return fmt.Errorf("failed to save new binary: %w", err)
 		}
 
-		// Move new binary to the executable path
-		if err := os.Rename(tempPath, execPath); err != nil {
-			// Try to restore backup on failure
-			os.Rename(backupPath, execPath)
-			return fmt.Errorf("failed to move new binary: %w", err)
-		}
+		// Mark tempFile as nil so defer doesn't try to clean it up
+		tempFile = nil
 
-		// Clean up backup (best effort, ignore errors)
-		os.Remove(backupPath)
-	} else {
-		// On Unix-like systems, we can atomically replace the file
-		if err := os.Rename(tempPath, execPath); err != nil {
-			return fmt.Errorf("failed to replace executable: %w", err)
-		}
+		fmt.Println(color.YellowString("\n⚠️  Windows requires manual completion:"))
+		fmt.Println(color.YellowString("   1. Close this terminal"))
+		fmt.Println(color.YellowString("   2. Rename or delete: %s", execPath))
+		fmt.Println(color.YellowString("   3. Rename %s to %s", newPath, execPath))
+		fmt.Println(color.YellowString("   4. Restart krknctl\n"))
+		
+		return nil
+	}
+
+	// On Unix-like systems, we can atomically replace the file
+	if err := os.Rename(tempPath, execPath); err != nil {
+		return fmt.Errorf("failed to replace executable: %w", err)
 	}
 
 	// Mark tempFile as nil so defer doesn't try to clean it up

@@ -11,7 +11,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"sort"
 	"sync"
 	"syscall"
@@ -70,11 +70,11 @@ func CommonRunGraph(
 			// honour custom log directory when provided
 			var logFilePath string
 			if logDir != "" {
-				logFilePath = path.Join(logDir, logFilename)
+				logFilePath = filepath.Join(logDir, logFilename)
 			} else {
 				logFilePath = logFilename
 			}
-			file, err := os.Create(path.Clean(logFilePath))
+			file, err := os.Create(filepath.Clean(logFilePath))
 			if err != nil {
 				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
