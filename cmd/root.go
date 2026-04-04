@@ -126,6 +126,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
 
+	upgradeCmd := NewUpgradeCommand(config)
+	rootCmd.AddCommand(upgradeCmd)
+
 	// update and deprecation check
 	isDeprecated, err := IsDeprecated(config)
 	if err != nil {
