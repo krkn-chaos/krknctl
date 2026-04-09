@@ -243,7 +243,9 @@ func pullImage(
 		if err != nil {
 			return err
 		}
-		pullOptions.RegistryAuth = *registryAuth
+		if registryAuth != nil {
+			pullOptions.RegistryAuth = *registryAuth
+		}
 	}
 	reader, err := cli.ImagePull(ctx, imageName, pullOptions)
 	if err != nil {
