@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	cerrdefs "github.com/containerd/errdefs"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimage "github.com/docker/docker/api/types/image"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
+	nat "github.com/docker/go-connections/nat"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -31,6 +34,30 @@ type ScenarioOrchestrator struct {
 	ContainerRuntime orchestratormodels.ContainerRuntime
 }
 
+// parseHostPortPublish splits hostPort:containerPort (HostIP defaults to 127.0.0.1) or hostIP:hostPort:containerPort.
+// SplitN avoids treating extra ":" in the container port segment as a fourth field (e.g. mistaken "a:b:c:d" input).
+func parseHostPortPublish(pub string) (hostIP, hostPort, containerPort string, err error) {
+	pub = strings.TrimSpace(pub)
+	if pub == "" {
+		return "", "", "", fmt.Errorf("invalid publish port: empty string")
+	}
+	parts := strings.SplitN(pub, ":", 3)
+	switch len(parts) {
+	case 2:
+		if parts[0] == "" || parts[1] == "" {
+			return "", "", "", fmt.Errorf("invalid publish port %q: empty host or container port", pub)
+		}
+		return "127.0.0.1", parts[0], parts[1], nil
+	case 3:
+		if parts[0] == "" || parts[1] == "" || parts[2] == "" {
+			return "", "", "", fmt.Errorf("invalid publish port %q: empty component", pub)
+		}
+		return parts[0], parts[1], parts[2], nil
+	default:
+		return "", "", "", fmt.Errorf("invalid publish port %q: want hostPort:containerPort or hostIP:hostPort:containerPort", pub)
+	}
+}
+
 func (c *ScenarioOrchestrator) Run(
 	image string,
 	containerName string,
@@ -40,6 +67,8 @@ func (c *ScenarioOrchestrator) Run(
 	commChan *chan *string,
 	ctx context.Context,
 	registry *providermodels.RegistryV2,
+	publishPorts []string,
+	_ *scenarioorchestrator.PodmanCreateOptions,
 ) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
@@ -72,13 +101,39 @@ func (c *ScenarioOrchestrator) Run(
 			Target: v,
 		})
 	}
-	resp, err := cli.ContainerCreate(ctx, &dockercontainer.Config{
+
+	containerCfg := &dockercontainer.Config{
 		Image: image,
 		Env:   envVars,
-	}, &dockercontainer.HostConfig{
-		Mounts:      volumes,
-		NetworkMode: "host",
-	}, nil, nil, containerName)
+	}
+	hostCfg := &dockercontainer.HostConfig{
+		Mounts: volumes,
+	}
+	if len(publishPorts) > 0 {
+		exposed := nat.PortSet{}
+		bindings := nat.PortMap{}
+		for _, pub := range publishPorts {
+			hostIP, hostPort, containerPort, err := parseHostPortPublish(pub)
+			if err != nil {
+				return nil, err
+			}
+			port, err := nat.NewPort("tcp", containerPort)
+			if err != nil {
+				return nil, fmt.Errorf("invalid publish port %q: %w", pub, err)
+			}
+			exposed[port] = struct{}{}
+			bindings[port] = []nat.PortBinding{{HostIP: hostIP, HostPort: hostPort}}
+		}
+		if len(exposed) == 0 || len(bindings) == 0 {
+			return nil, fmt.Errorf("no valid port bindings produced from publishPorts %#v", publishPorts)
+		}
+		containerCfg.ExposedPorts = exposed
+		hostCfg.PortBindings = bindings
+	} else {
+		hostCfg.NetworkMode = "host"
+	}
+
+	resp, err := cli.ContainerCreate(ctx, containerCfg, hostCfg, nil, nil, containerName)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +398,7 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 	}
 	inspectData, err := cli.ContainerInspect(ctx, container.ID)
 	if err != nil {
-		if strings.Contains(err.Error(), "No such container") {
+		if cerrdefs.IsNotFound(err) || strings.Contains(err.Error(), "No such container") {
 			return nil, nil
 		}
 		return nil, err
@@ -452,8 +507,10 @@ func (c *ScenarioOrchestrator) RunAttached(
 	commChan *chan *string,
 	ctx context.Context,
 	registry *providermodels.RegistryV2,
+	publishPorts []string,
+	podmanCreate *scenarioorchestrator.PodmanCreateOptions,
 ) (*string, error) {
-	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate)
 	return containerID, err
 }
 

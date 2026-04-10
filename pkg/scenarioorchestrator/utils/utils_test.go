@@ -2,15 +2,17 @@ package utils
 
 import (
 	"fmt"
-	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/stretchr/testify/assert"
 	"io/fs"
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"testing"
+
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/stretchr/testify/assert"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestFlatten(t *testing.T) {
@@ -31,6 +33,7 @@ func TestFlatten(t *testing.T) {
 	flatKubeconfigPath, err = PrepareKubeconfig(&kubeconfigPath, conf)
 	assert.Nil(t, err)
 	assert.NotNil(t, flatKubeconfigPath)
+	t.Cleanup(func() { _ = os.Remove(*flatKubeconfigPath) })
 
 	kubeconfig, err := clientcmd.LoadFromFile(*flatKubeconfigPath)
 	assert.Nil(t, err)
@@ -59,21 +62,27 @@ func TestFlatten(t *testing.T) {
 }
 
 func TestCleanKubeconfigFiles(t *testing.T) {
-	cwd, err := os.Getwd()
-	assert.Nil(t, err)
+	tmpDir := os.TempDir()
 	conf, err := krknctlconfig.LoadConfig()
 	assert.Nil(t, err)
 	kubeconfigPath := "../../../tests/data/kubeconfig"
 	flatKubeconfigPath, err := PrepareKubeconfig(&kubeconfigPath, conf)
 	assert.Nil(t, err)
 	assert.NotNil(t, flatKubeconfigPath)
-	root := os.DirFS(cwd)
+	t.Cleanup(func() { _ = os.Remove(*flatKubeconfigPath) })
+
+	_, err = os.Stat(*flatKubeconfigPath)
+	assert.Nil(t, err)
+	root := os.DirFS(tmpDir)
 	mdFiles, err := fs.Glob(root, "krknctl-kubeconfig-*")
 	assert.Nil(t, err)
-	assert.Greater(t, len(mdFiles), 0)
+	assert.Contains(t, mdFiles, filepath.Base(*flatKubeconfigPath))
+
 	num, err := CleanKubeconfigFiles(conf)
 	assert.Nil(t, err)
-	assert.Equal(t, *num, len(mdFiles))
+	assert.GreaterOrEqual(t, *num, 1)
+	_, err = os.Stat(*flatKubeconfigPath)
+	assert.True(t, os.IsNotExist(err))
 
 	mdFiles, err = fs.Glob(root, "krkctl-kubeconifig-*")
 	assert.Nil(t, err)

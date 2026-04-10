@@ -2,6 +2,7 @@
 package podman
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,7 +12,6 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/errorhandling"
 	"github.com/containers/podman/v5/pkg/specgen"
-
 	"github.com/docker/docker/api/types/mount"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -22,7 +22,9 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,7 +55,59 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+// podmanCreateViaCLI runs podman create as a subprocess (Darwin: avoids REST bind issues; uses -p when publishPorts is set).
+// Each element is passed verbatim to podman -p (e.g. 127.0.0.1:3000:3000).
+func podmanCreateViaCLI(ctx context.Context, containerName, image string, env map[string]string, volumeMounts map[string]string, publishPorts []string, extra *scenarioorchestrator.PodmanCreateOptions) (string, error) {
+	args := []string{"create", "--replace", "--name", containerName}
+	if extra != nil {
+		if extra.ImagePlatform != "" {
+			args = append(args, "--platform", extra.ImagePlatform)
+		}
+		for _, o := range extra.SecurityOpts {
+			args = append(args, "--security-opt", o)
+		}
+		for _, g := range extra.GroupAdd {
+			args = append(args, "--group-add", g)
+		}
+	}
+	if len(publishPorts) > 0 {
+		for _, p := range publishPorts {
+			args = append(args, "-p", p)
+		}
+	} else {
+		args = append(args, "--network", "host")
+	}
+	for k, v := range env {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", k, v))
+	}
+	for k, v := range volumeMounts {
+		src := k
+		if runtime.GOOS == "darwin" && v == "/run/podman/podman.sock" {
+			src = "/run/podman/podman.sock"
+		}
+		args = append(args, "-v", fmt.Sprintf("%s:%s:z", src, v))
+	}
+	args = append(args, image)
+
+	cmd := exec.CommandContext(ctx, "podman", args...) // #nosec G204 -- podman create requires dynamic -e/-v/-p args; image and mounts come from krknctl orchestration, not a shell
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return "", fmt.Errorf("podman create: %w: %s", err, msg)
+		}
+		return "", fmt.Errorf("podman create: %w", err)
+	}
+	id := strings.TrimSpace(string(out))
+	if id == "" {
+		return "", fmt.Errorf("podman create returned empty container id")
+	}
+	return id, nil
+}
+
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
 	imageExists, err := images.Exists(ctx, image, nil)
 	if !cache || !imageExists {
 
@@ -109,6 +163,18 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	if err != nil {
 		return nil, err
 	}
+
+	if runtime.GOOS == "darwin" {
+		containerID, err := podmanCreateViaCLI(ctx, containerName, image, env, volumeMounts, publishPorts, podmanCreate)
+		if err != nil {
+			return nil, err
+		}
+		if err := containers.Start(ctx, containerID, nil); err != nil {
+			return nil, err
+		}
+		return &containerID, nil
+	}
+
 	s := specgen.NewSpecGenerator(image, false)
 
 	s.Name = containerName
@@ -128,6 +194,18 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 
 	s.NetNS = specgen.Namespace{
 		NSMode: "host",
+	}
+	if podmanCreate != nil {
+		if podmanCreate.ImagePlatform != "" {
+			parts := strings.SplitN(podmanCreate.ImagePlatform, "/", 2)
+			if len(parts) == 2 {
+				s.ImageOS = parts[0]
+				s.ImageArch = parts[1]
+			}
+		}
+		if len(podmanCreate.GroupAdd) > 0 {
+			s.Groups = append(s.Groups, podmanCreate.GroupAdd...)
+		}
 	}
 	createResponse, err := containers.CreateWithSpec(ctx, s, nil)
 	if err != nil {
@@ -350,9 +428,11 @@ func (c *ScenarioOrchestrator) RunAttached(
 	commChan *chan *string,
 	ctx context.Context,
 	registry *providermodels.RegistryV2,
+	publishPorts []string,
+	podmanCreate *scenarioorchestrator.PodmanCreateOptions,
 ) (*string, error) {
 
-	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry)
+	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {

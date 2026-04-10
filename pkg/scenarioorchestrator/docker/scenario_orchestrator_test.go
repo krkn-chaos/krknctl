@@ -15,6 +15,42 @@ import (
 	"testing"
 )
 
+func TestParseHostPortPublish(t *testing.T) {
+	ip, hp, cp, err := parseHostPortPublish("3000:80")
+	assert.Nil(t, err)
+	assert.Equal(t, "127.0.0.1", ip)
+	assert.Equal(t, "3000", hp)
+	assert.Equal(t, "80", cp)
+
+	ip, hp, cp, err = parseHostPortPublish(" 0.0.0.0:3000:80 ")
+	assert.Nil(t, err)
+	assert.Equal(t, "0.0.0.0", ip)
+	assert.Equal(t, "3000", hp)
+	assert.Equal(t, "80", cp)
+
+	// SplitN: only first two ":" delimit fields; remainder is container port (invalid here → NewPort fails in Run)
+	ip, hp, cp, err = parseHostPortPublish("127.0.0.1:3000:3000")
+	assert.Nil(t, err)
+	assert.Equal(t, "127.0.0.1", ip)
+	assert.Equal(t, "3000", hp)
+	assert.Equal(t, "3000", cp)
+
+	_, _, _, err = parseHostPortPublish("bad")
+	assert.NotNil(t, err)
+
+	_, _, _, err = parseHostPortPublish("")
+	assert.NotNil(t, err)
+
+	_, _, _, err = parseHostPortPublish("   ")
+	assert.NotNil(t, err)
+
+	_, _, _, err = parseHostPortPublish("3000:")
+	assert.NotNil(t, err)
+
+	_, _, _, err = parseHostPortPublish(":80")
+	assert.NotNil(t, err)
+}
+
 func TestScenarioOrchestrator_Docker_Connect(t *testing.T) {
 	config := scenarioorchestratortest.CommonGetTestConfig(t)
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Docker}
