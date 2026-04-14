@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	imageAuth "github.com/containers/image/v5/pkg/docker/config"
-	"github.com/containers/image/v5/types"
 	dockerAPITypes "github.com/docker/docker/api/types/registry"
 	"github.com/sirupsen/logrus"
+	imageAuth "go.podman.io/image/v5/pkg/docker/config"
+	"go.podman.io/image/v5/types"
 )
 
 // xRegistryAuthHeader is the key to the encoded registry authentication configuration in an http-request header.
@@ -336,6 +336,9 @@ func parseMultiAuthHeader(authHeader string) (map[string]types.DockerAuthConfig,
 
 	// Now convert to the internal types.
 	authConfigs := make(map[string]types.DockerAuthConfig)
+	if len(dockerAuthConfigs) == 0 {
+		return nil, nil
+	}
 	for server := range dockerAuthConfigs {
 		authConfigs[server] = dockerAuthToImageAuth(dockerAuthConfigs[server])
 	}

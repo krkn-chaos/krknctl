@@ -20,8 +20,13 @@ type AuthConfig struct {
 
 type ImageInspect struct {
 	dockerImage.InspectResponse
-	// Container is for backwards compat but is basically unused
-	Container string
+	// When you embed a struct, the fields of the embedded struct are "promoted" to the outer struct.
+	// If a field in the outer struct has the same name as a field in the embedded struct,
+	// the outer struct's field will shadow or override the embedded one allowing for a clean way to
+	// hide fields from the swagger spec that still exist in the libraries struct.
+	Container       string `json:"-"`
+	ContainerConfig string `json:"-"`
+	VirtualSize     string `json:"-"`
 }
 
 type ContainerConfig struct {
@@ -81,6 +86,7 @@ type UpdateEntities struct {
 	define.UpdateContainerDevicesLimits
 	Env      []string
 	UnsetEnv []string
+	Rlimits  []specs.POSIXRlimit `json:"r_limits,omitempty"`
 }
 
 type Info struct {
