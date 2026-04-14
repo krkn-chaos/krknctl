@@ -3,6 +3,7 @@ package registryv2
 import (
 	json_parser "encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
@@ -49,6 +50,9 @@ curl -X GET \
 
 func TestScenarioProvider_GetRegistryImages_jwt(t *testing.T) {
 	utils.SkipTestIfForkPR(t)
+	if strings.TrimSpace(os.Getenv("QUAY_TOKEN")) == "" {
+		t.Skip("QUAY_TOKEN not set")
+	}
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -104,6 +108,7 @@ docker run -d \
 */
 
 func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
+	utils.SkipIfTCPDialFails(t, "localhost:5001")
 	basicAuthUsername := "testuser"
 	basicAuthPassword := "testpassword"
 
@@ -145,6 +150,9 @@ func TestScenarioProvider_GetRegistryImages_Htpasswd(t *testing.T) {
 
 func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 	utils.SkipTestIfForkPR(t)
+	if strings.TrimSpace(os.Getenv("QUAY_TOKEN")) == "" {
+		t.Skip("QUAY_TOKEN not set")
+	}
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -174,6 +182,9 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 
 func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	utils.SkipTestIfForkPR(t)
+	if strings.TrimSpace(os.Getenv("QUAY_TOKEN")) == "" {
+		t.Skip("QUAY_TOKEN not set")
+	}
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{
@@ -208,6 +219,9 @@ func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 
 func TestScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	utils.SkipTestIfForkPR(t)
+	if strings.TrimSpace(os.Getenv("QUAY_TOKEN")) == "" {
+		t.Skip("QUAY_TOKEN not set")
+	}
 	config := getConfig(t)
 	p := ScenarioProvider{
 		provider.BaseScenarioProvider{

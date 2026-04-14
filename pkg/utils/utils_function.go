@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func ExpandFolder(folder string, basePath *string) (*string, error) {
@@ -54,4 +56,14 @@ func SkipTestIfForkPR(t *testing.T) {
 	if os.Getenv("CI_FORK_PR") == "true" {
 		t.Skip("skipped on fork PR (no secrets / external repo)")
 	}
+}
+
+// SkipIfTCPDialFails skips the test when address is unreachable (e.g. local registry not running).
+func SkipIfTCPDialFails(t *testing.T, address string) {
+	t.Helper()
+	c, err := net.DialTimeout("tcp", address, 2*time.Second)
+	if err != nil {
+		t.Skipf("skip: %s not reachable: %v", address, err)
+	}
+	_ = c.Close()
 }
