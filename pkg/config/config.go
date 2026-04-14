@@ -107,11 +107,8 @@ func (c *Config) GetVisualizeImageURI() (string, error) {
 }
 
 func (c *Config) GetDashboardImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.DashboardImageName)
-	if err != nil {
-		return "", err
-	}
-	return imageURI + ":" + c.DashboardImageTag, nil
+	// Hardcoded test image; see https://quay.io/repository/rh-ee-khandrew/dashboard-test
+	return "quay.io/rh-ee-khandrew/dashboard-test:latest", nil
 }
 
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {

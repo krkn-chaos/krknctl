@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -16,23 +16,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Mount kubeconfig as a single file so we do not replace the image's entire src/assets tree
-// (Vite imports such as @/assets/scenario-icons/*.jpg would break if src/assets were a host dir).
-const dashboardKubeconfigMount = "/usr/src/chaos-dashboard/src/assets/kubeconfig"
-const dashboardDatabaseMount = "/usr/src/chaos-dashboard/database"
+// Default in-container paths for the stock krkn-dashboard image (override with flags).
+const defaultDashboardChaosAssetsDir = "/usr/src/chaos-dashboard/src/assets"
+const defaultDashboardDatabaseMount = "/usr/src/chaos-dashboard/database"
 
-// In-container assets dir (uploads, etc.). Podman -v for krkn-hub must use the host path in
-// KRKN_DASHBOARD_KUBECONFIG_BIND_SRC — see server start-kraken.
-const dashboardChaosAssetsDir = "/usr/src/chaos-dashboard/src/assets"
+// dashboardKubeconfigMountPath returns the in-container kubeconfig file path under chaos assets.
+func dashboardKubeconfigMountPath(chaosAssetsDir string) string {
+	return path.Join(chaosAssetsDir, "kubeconfig")
+}
 
-func dashboardPublishPorts(bindAllInterfaces bool) []string {
-	host := "127.0.0.1"
-	if bindAllInterfaces {
-		host = "0.0.0.0"
-	}
+func dashboardPublishPorts() []string {
 	return []string{
-		fmt.Sprintf("%s:3000:3000", host),
-		fmt.Sprintf("%s:8000:8000", host),
+		"127.0.0.1:3000:3000",
+		"127.0.0.1:8000:8000",
 	}
 }
 
@@ -53,40 +49,41 @@ func NewDashboardCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrch
 		Short: "runs the krkn-dashboard web UI in a container",
 		Long: `Runs the krkn-dashboard container with the container runtime socket mounted and a kubeconfig file bind-mounted into the dashboard.
 
-When --kubeconfig is omitted, the kubeconfig path is resolved the same way as kubectl (KUBECONFIG if set, otherwise the default file such as ~/.kube/config). Pass --kubeconfig explicitly to use a specific file.`,
+--kubeconfig is required: pass the host path to the kubeconfig file to use inside the dashboard.
+
+The kubeconfig bind mount targets {chaos-assets-dir}/kubeconfig only (not the whole src/assets tree). CHAOS_ASSETS is set to --chaos-assets-dir. KRKN_DASHBOARD_KUBECONFIG_BIND_SRC is the absolute host path used for that bind (often a flattened temp file when PrepareKubeconfig inlined certs/keys).
+
+Optional --chaos-assets-dir and --database-dir default to the stock image paths. Operators configure host paths; in-container paths match the image unless overridden.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
-			dataDir, _ := cmd.Flags().GetString("data-dir")
 			podmanPlatform, _ := cmd.Flags().GetString("podman-platform")
-			bindAll, _ := cmd.Flags().GetBool("bind-all-interfaces")
+			chaosAssetsDir, _ := cmd.Flags().GetString("chaos-assets-dir")
+			databaseDir, _ := cmd.Flags().GetString("database-dir")
+			kubeconfigMount := dashboardKubeconfigMountPath(chaosAssetsDir)
+
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+			dataDir := filepath.Join(home, ".krknctl", "krkn-dashboard-data")
 
 			(*scenarioOrchestrator).PrintContainerRuntime()
 
-			var foundKubeconfig *string
-			if kubeconfigPath != "" {
-				foundKubeconfig = &kubeconfigPath
+			kube := strings.TrimSpace(kubeconfigPath)
+			if kube == "" {
+				return fmt.Errorf("--kubeconfig is required")
 			}
-			preparedKubeconfig, err := utils.PrepareKubeconfig(foundKubeconfig, cfg)
+			preparedKubeconfig, err := utils.PrepareKubeconfig(&kube, cfg)
 			if err != nil {
 				return err
 			}
 			if preparedKubeconfig == nil {
-				return fmt.Errorf("kubeconfig not found at the default path or the path given by --kubeconfig; ensure the file exists or set --kubeconfig to a valid kubeconfig")
+				return fmt.Errorf("kubeconfig not found or unreadable at %q", kube)
 			}
 			defer func() { _ = os.Remove(*preparedKubeconfig) }()
 
-			assetsDir, err := os.MkdirTemp("", "krknctl-dashboard-assets-*")
-			if err != nil {
-				return err
-			}
-			defer func() { _ = os.RemoveAll(assetsDir) }()
-
-			kubeconfigDest := filepath.Join(assetsDir, "kubeconfig")
-			if err := copyFile(*preparedKubeconfig, kubeconfigDest); err != nil {
-				return err
-			}
-			kubeconfigDestAbs, err := filepath.Abs(kubeconfigDest)
+			kubeconfigBindAbs, err := filepath.Abs(*preparedKubeconfig)
 			if err != nil {
 				return err
 			}
@@ -111,17 +108,16 @@ When --kubeconfig is omitted, the kubeconfig path is resolved the same way as ku
 			containerRuntime := (*scenarioOrchestrator).GetContainerRuntime()
 
 			volumes := map[string]string{
-				kubeconfigDest: dashboardKubeconfigMount,
-				dataAbs:        dashboardDatabaseMount,
+				kubeconfigBindAbs: kubeconfigMount,
+				dataAbs:           databaseDir,
 			}
-
 			displayEnv := map[string]ParsedField{
-				"CHAOS_ASSETS":                       {value: fmt.Sprintf("%s (file → %s)", kubeconfigDestAbs, dashboardKubeconfigMount)},
-				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": {value: kubeconfigDestAbs},
+				"CHAOS_ASSETS":                       {value: fmt.Sprintf("%s (in-container); kubeconfig bind %s → %s", chaosAssetsDir, kubeconfigBindAbs, kubeconfigMount)},
+				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": {value: kubeconfigBindAbs},
 			}
 			environment := map[string]string{
-				"CHAOS_ASSETS":                       dashboardChaosAssetsDir,
-				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": kubeconfigDestAbs,
+				"CHAOS_ASSETS":                       chaosAssetsDir,
+				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": kubeconfigBindAbs,
 			}
 
 			resolvedPodmanPlatform := podmanPlatform
@@ -145,16 +141,18 @@ When --kubeconfig is omitted, the kubeconfig path is resolved the same way as ku
 			}
 
 			var podmanCreate *scenarioorchestrator.PodmanCreateOptions
-			if containerRuntime == orcmodels.Podman && runtime.GOOS == "darwin" {
+			if containerRuntime == orcmodels.Podman {
 				podmanCreate = &scenarioorchestrator.PodmanCreateOptions{
-					ImagePlatform: resolvedPodmanPlatform,
-					SecurityOpts:  []string{"label=disable"},
+					SecurityOpts: []string{"label=disable"},
+				}
+				if resolvedPodmanPlatform != "" {
+					podmanCreate.ImagePlatform = resolvedPodmanPlatform
+				} else if podmanPlatform != "" {
+					podmanCreate.ImagePlatform = podmanPlatform
 				}
 				if gid, err := podmanAPISocketGID(hostSock); err == nil && gid != "" {
 					podmanCreate.GroupAdd = []string{gid}
 				}
-			} else if containerRuntime == orcmodels.Podman && podmanPlatform != "" {
-				podmanCreate = &scenarioorchestrator.PodmanCreateOptions{ImagePlatform: podmanPlatform}
 			}
 
 			NewEnvironmentTable(displayEnv, cfg).Print()
@@ -180,11 +178,8 @@ When --kubeconfig is omitted, the kubeconfig path is resolved the same way as ku
 			if err != nil {
 				return err
 			}
-			if bindAll {
-				_, _ = color.New(color.FgYellow).Println("Dashboard ports bind to all interfaces (0.0.0.0); reachable from the network.")
-			}
 			_, _ = color.New(color.FgYellow).Println("Starting krkn-dashboard - open http://localhost:3000 when the app is ready (Ctrl+C to stop).")
-			_, err = (*scenarioOrchestrator).RunAttached(dashboardImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, dashboardPublishPorts(bindAll), podmanCreate)
+			_, err = (*scenarioOrchestrator).RunAttached(dashboardImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, dashboardPublishPorts(), podmanCreate)
 			if err != nil {
 				return err
 			}
@@ -194,36 +189,13 @@ When --kubeconfig is omitted, the kubeconfig path is resolved the same way as ku
 		},
 	}
 
-	command.Flags().String("kubeconfig", "", "path to kubeconfig file; if omitted, uses kubectl-style default resolution (e.g. KUBECONFIG or ~/.kube/config)")
-	command.Flags().String("data-dir", "", "host directory for dashboard SQLite data (defaults to ~/.krknctl/krkn-dashboard-data)")
+	command.Flags().String("kubeconfig", "", "host path to kubeconfig file (required)")
+	command.Flags().String("chaos-assets-dir", defaultDashboardChaosAssetsDir, "in-container CHAOS_ASSETS directory")
+	command.Flags().String("database-dir", defaultDashboardDatabaseMount, "in-container mount path for dashboard SQLite data")
 	command.Flags().String("podman-platform", "", "platform for the dashboard image (PODMAN_PLATFORM env); default linux/amd64 on macOS Podman")
-	command.Flags().Bool("bind-all-interfaces", false, "publish dashboard ports on 0.0.0.0 instead of localhost only (reachable from the network)")
-
-	command.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if cmd.Flags().Changed("data-dir") {
-			return nil
-		}
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
-		return cmd.Flags().Set("data-dir", filepath.Join(home, ".krknctl", "krkn-dashboard-data"))
+	if err := command.MarkFlagRequired("kubeconfig"); err != nil {
+		panic(fmt.Sprintf("dashboard: MarkFlagRequired(kubeconfig): %v", err))
 	}
 
 	return command
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src) // #nosec G304 -- paths are PrepareKubeconfig temp file and dashboard MkdirTemp assets dir, not arbitrary traversal
-	if err != nil {
-		return err
-	}
-	defer func() { _ = in.Close() }()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600) // #nosec G304 -- dst is always under krknctl-created temp dir for dashboard bind mounts
-	if err != nil {
-		return err
-	}
-	defer func() { _ = out.Close() }()
-	_, err = io.Copy(out, in)
-	return err
 }

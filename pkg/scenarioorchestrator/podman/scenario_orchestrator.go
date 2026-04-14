@@ -164,7 +164,9 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		return nil, err
 	}
 
-	if runtime.GOOS == "darwin" {
+	// Darwin always uses CLI create (REST/bind quirks). Linux uses CLI when publishing ports
+	// (e.g. krknctl dashboard) so -p, --security-opt, and --group-add match containers/podman-run.sh.
+	if runtime.GOOS == "darwin" || len(publishPorts) > 0 {
 		containerID, err := podmanCreateViaCLI(ctx, containerName, image, env, volumeMounts, publishPorts, podmanCreate)
 		if err != nil {
 			return nil, err
