@@ -13,7 +13,7 @@ func TestNewDashboardCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assert.Equal(t, "dashboard", cmd.Use)
 	assert.Contains(t, cmd.Long, "--kubeconfig is required")
-	assert.Contains(t, cmd.Long, "KRKN_DASHBOARD_KUBECONFIG_BIND_SRC")
+	assert.Contains(t, cmd.Long, "KUBECONFIG_PATH")
 	assert.Contains(t, cmd.Long, "--chaos-assets-dir")
 }
 

@@ -51,7 +51,7 @@ func NewDashboardCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrch
 
 --kubeconfig is required: pass the host path to the kubeconfig file to use inside the dashboard.
 
-The kubeconfig bind mount targets {chaos-assets-dir}/kubeconfig only (not the whole src/assets tree). CHAOS_ASSETS is set to --chaos-assets-dir. KRKN_DASHBOARD_KUBECONFIG_BIND_SRC is the absolute host path used for that bind (often a flattened temp file when PrepareKubeconfig inlined certs/keys).
+The kubeconfig bind mount targets {chaos-assets-dir}/kubeconfig only (not the whole src/assets tree). CHAOS_ASSETS is set to --chaos-assets-dir. KUBECONFIG_PATH is the absolute host path to the prepared kubeconfig (same as the bind source for the dashboard mount, suitable as a host bind source for nested podman: often a flattened temp file when PrepareKubeconfig inlined certs/keys).
 
 Optional --chaos-assets-dir and --database-dir default to the stock image paths. Operators configure host paths; in-container paths match the image unless overridden.`,
 		Args: cobra.NoArgs,
@@ -112,12 +112,12 @@ Optional --chaos-assets-dir and --database-dir default to the stock image paths.
 				dataAbs:           databaseDir,
 			}
 			displayEnv := map[string]ParsedField{
-				"CHAOS_ASSETS":                       {value: fmt.Sprintf("%s (in-container); kubeconfig bind %s → %s", chaosAssetsDir, kubeconfigBindAbs, kubeconfigMount)},
-				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": {value: kubeconfigBindAbs},
+				"CHAOS_ASSETS":    {value: fmt.Sprintf("%s (in-container); kubeconfig bind %s → %s", chaosAssetsDir, kubeconfigBindAbs, kubeconfigMount)},
+				"KUBECONFIG_PATH": {value: fmt.Sprintf("%s (host path, bind source; same as for nested -v) → %s in container", kubeconfigBindAbs, kubeconfigMount)},
 			}
 			environment := map[string]string{
-				"CHAOS_ASSETS":                       chaosAssetsDir,
-				"KRKN_DASHBOARD_KUBECONFIG_BIND_SRC": kubeconfigBindAbs,
+				"CHAOS_ASSETS":    chaosAssetsDir,
+				"KUBECONFIG_PATH": kubeconfigBindAbs,
 			}
 
 			resolvedPodmanPlatform := podmanPlatform
