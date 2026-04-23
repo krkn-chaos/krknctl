@@ -106,13 +106,12 @@ func (c *Config) GetVisualizeImageURI() (string, error) {
 	return imageURI + ":" + c.VisualizeImageTag, nil
 }
 
-// GetDashboardImageURI returns the container image for krkn-dashboard.
-//
-// TEMPORARY "quay test" (revert before merge): pinned to rh-ee-khandrew/dashboard-test for local/CI testing.
-// https://quay.io/repository/rh-ee-khandrew/dashboard-test?tab=tags
 func (c *Config) GetDashboardImageURI() (string, error) {
-	_ = c // quay test override ignores embedded config image fields
-	return "quay.io/rh-ee-khandrew/dashboard-test:latest", nil
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.DashboardImageName)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.DashboardImageTag, nil
 }
 
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
