@@ -64,7 +64,7 @@ jobs:
       - name: run gosec security scanner
         uses: securego/gosec@master
         with:
-          args: --exclude G402 ./...
+          args: --exclude G402 -tags=containers_image_openpgp ./...
 
       - name: run staticcheck static code analyzer
         run: |

@@ -57,6 +57,8 @@ type Config struct {
 	TableMaxStepScenarioLength  int    `json:"table_max_step_scenario_length"`
 	VisualizeImageName          string `json:"visualize_image_name"`
 	VisualizeImageTag           string `json:"visualize_image_tag"`
+	DashboardImageName          string `json:"dashboard_image_name"`
+	DashboardImageTag           string `json:"dashboard_image_tag"`
 }
 
 //go:embed config.json
@@ -102,6 +104,14 @@ func (c *Config) GetVisualizeImageURI() (string, error) {
 		return "", err
 	}
 	return imageURI + ":" + c.VisualizeImageTag, nil
+}
+
+func (c *Config) GetDashboardImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.DashboardImageName)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.DashboardImageTag, nil
 }
 
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {

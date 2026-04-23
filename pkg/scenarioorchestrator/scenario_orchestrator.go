@@ -10,6 +10,13 @@ import (
 	"os"
 )
 
+// PodmanCreateOptions are optional podman create flags (ignored by Docker).
+type PodmanCreateOptions struct {
+	ImagePlatform string
+	GroupAdd      []string
+	SecurityOpts  []string
+}
+
 type ScenarioOrchestrator interface {
 	Connect(containerRuntimeURI string) (context.Context, error)
 
@@ -22,6 +29,8 @@ type ScenarioOrchestrator interface {
 		commChan *chan *string,
 		ctx context.Context,
 		registry *models.RegistryV2,
+		publishPorts []string,
+		podmanCreate *PodmanCreateOptions,
 	) (*string, error)
 
 	RunAttached(
@@ -35,6 +44,8 @@ type ScenarioOrchestrator interface {
 		commChan *chan *string,
 		ctx context.Context,
 		registry *models.RegistryV2,
+		publishPorts []string,
+		podmanCreate *PodmanCreateOptions,
 	) (*string, error)
 
 	RunGraph(

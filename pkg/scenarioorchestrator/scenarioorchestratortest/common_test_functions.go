@@ -26,6 +26,45 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// findRepoRootKubeconfigFixture walks upward from the test working directory to locate tests/data/kubeconfig.
+func findRepoRootKubeconfigFixture(t *testing.T) (string, bool) {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", false
+	}
+	for range 12 {
+		candidate := filepath.Join(dir, "tests", "data", "kubeconfig")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", false
+}
+
+// prepareTestKubeconfigForOrchestrator uses the default kubeconfig when present, otherwise the repo fixture tests/data/kubeconfig.
+func prepareTestKubeconfigForOrchestrator(t *testing.T, conf krknctlconfig.Config) *string {
+	t.Helper()
+	kc, err := utils.PrepareKubeconfig(nil, conf)
+	assert.Nil(t, err)
+	if kc != nil {
+		return kc
+	}
+	path, ok := findRepoRootKubeconfigFixture(t)
+	if !ok {
+		t.Skip("no kubeconfig at default path and tests/data/kubeconfig not found (run tests from krknctl repo checkout)")
+	}
+	kc, err = utils.PrepareKubeconfig(&path, conf)
+	assert.Nil(t, err)
+	assert.NotNil(t, kc)
+	return kc
+}
+
 func CommonGetConfig(t *testing.T) krknctlconfig.Config {
 	conf, err := krknctlconfig.LoadConfig()
 	assert.Nil(t, err)
@@ -58,9 +97,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -81,7 +118,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerID)
 	pr := providermodels.RegistryV2{}
@@ -98,7 +135,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 
 		timestamp = time.Now().Unix()
 		containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-		containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+		containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil)
 		if so.GetContainerRuntime() == models.Docker {
 			if err != nil {
 				fmt.Println(err.Error())
@@ -114,6 +151,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	}
 
 	//pulling image from private registry with username and password
+	krknctlutils.SkipIfTCPDialFails(t, "localhost:5001")
 	basicAuthUsername := "testuser"
 	basicAuthPassword := "testpassword"
 
@@ -128,7 +166,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	timestamp = time.Now().Unix()
 
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr)
+	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -158,9 +196,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenarioorchestr
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -180,7 +216,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenarioorchestr
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil)
+	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -192,7 +228,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenarioorchestr
 	env["END"] = fmt.Sprintf("%d", duration)
 	env["EXIT_STATUS"] = fmt.Sprintf("%d", exitStatus)
 	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err = so.RunAttached(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil)
+	containerID, err = so.RunAttached(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -301,9 +337,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, config)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, config)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -437,9 +471,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 }
 
 func CommonTestScenarioOrchestratorListRunningContainers(t *testing.T, so scenarioorchestrator.ScenarioOrchestrator, config krknctlconfig.Config) {
-	kubeconfig, err := utils.PrepareKubeconfig(nil, config)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, config)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -538,9 +570,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 	scenario, err := quayProvider.GetScenarioDetail("failing-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -560,7 +590,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil)
+	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerID)
 
@@ -594,9 +624,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenarioorche
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -617,7 +645,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenarioorche
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-kill-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
 	time.Sleep(2 * time.Second)
 	containers, err := so.ListRunningContainers(ctx)
@@ -666,9 +694,7 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -693,9 +719,9 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 
 	//starting containers in inverted order to check if lisRunningScenarios returns them sorted
 	sortedContainers := make(map[int]string)
-	_, err = so.Run(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, nil, ctx, nil)
+	_, err = so.Run(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
-	_, err = so.Run(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, nil)
+	_, err = so.Run(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
 	time.Sleep(1 * time.Second)
 
@@ -737,9 +763,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	scenario, err := quayProvider.GetScenarioDetail("dummy-scenario", nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	kubeconfig, err := utils.PrepareKubeconfig(nil, conf)
-	assert.Nil(t, err)
-	assert.NotNil(t, kubeconfig)
+	kubeconfig := prepareTestKubeconfigForOrchestrator(t, conf)
 	fmt.Println("KUBECONFIG PARSED -> " + *kubeconfig)
 
 	envuid := os.Getenv("USERID")
@@ -760,7 +784,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 
 	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
 	assert.Nil(t, err)
 	time.Sleep(1 * time.Second)
 
