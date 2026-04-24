@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 
@@ -38,9 +39,20 @@ type OverallResiliencyReport struct {
 
 // ----------------------------------------------------------------------------
 
+type ScenarioDetail struct {
+	Name      string                 `json:"name"`
+	Window    map[string]string      `json:"window,omitempty"`
+	Score     float64                `json:"score"`
+	Weight    float64                `json:"weight,omitempty"`
+	Breakdown map[string]interface{} `json:"breakdown,omitempty"`
+	SloResults map[string]bool       `json:"slo_results,omitempty"`
+	HealthCheckResults map[string]interface{} `json:"health_check_results,omitempty"`
+}
+
 type DetailedScenarioReport struct {
-	OverallReport OverallResiliencyReport
-	ScenarioWeights map[string]float64 `json:"scenario_weights,omitempty"`
+	OverallReport   OverallResiliencyReport `json:"overall_report"`
+	ScenarioWeights map[string]float64      `json:"scenario_weights,omitempty"`
+	Scenarios       []ScenarioDetail        `json:"scenarios,omitempty"`
 }
 
 // ----------------------------------------------------------------------------
@@ -121,16 +133,8 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 	}
 
 	// 4. scenarios as an array of objects with name+score.
-	type scenarioItem struct {
-		Name      string  `json:"name"`
-		Score     float64 `json:"score"`
-		Breakdown struct {
-			Passed int `json:"passed"`
-			Failed int `json:"failed"`
-		} `json:"breakdown"`
-	}
 	type arrayRoot struct {
-		Scenarios []scenarioItem `json:"scenarios"`
+		Scenarios []ScenarioDetail `json:"scenarios"`
 	}
 	var aRoot arrayRoot
 	if err := json.Unmarshal(raw, &aRoot); err == nil && len(aRoot.Scenarios) > 0 {
@@ -140,8 +144,16 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 		for _, it := range aRoot.Scenarios {
 			m[it.Name] = it.Score
 			total += it.Score
-			passed += it.Breakdown.Passed
-			totalSLOs += it.Breakdown.Passed + it.Breakdown.Failed
+			// Extract passed/failed from breakdown if available
+			if it.Breakdown != nil {
+				if p, ok := it.Breakdown["passed"].(float64); ok {
+					passed += int(p)
+				}
+				if f, ok := it.Breakdown["failed"].(float64); ok {
+					totalSLOs += int(f)
+				}
+				totalSLOs += passed
+			}
 		}
 		avg := total / float64(len(aRoot.Scenarios))
 		rep.OverallReport = OverallResiliencyReport{
@@ -150,6 +162,8 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 			PassedSlos:      passed,
 			TotalSlos:       totalSLOs,
 		}
+		// Store the detailed scenarios
+		rep.Scenarios = aRoot.Scenarios
 		return &rep, nil
 	}
 

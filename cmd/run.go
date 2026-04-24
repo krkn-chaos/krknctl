@@ -323,22 +323,29 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				}()
 
 				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings)
+				
+				// Parse resiliency report from captured logs and generate report
+				fmt.Fprintf(os.Stderr, "DEBUG: Attempting to parse resiliency report from %d bytes of logs\n", len(logBuf.Bytes()))
+				if rep, perr := resiliency.ParseResiliencyReport(logBuf.Bytes()); perr == nil {
+					fmt.Fprintf(os.Stderr, "DEBUG: Successfully parsed resiliency report\n")
+					if reportErr := resiliency.GenerateAndWriteReport(
+						[]resiliency.DetailedScenarioReport{*rep},
+						"resiliency-report.json",
+					); reportErr != nil {
+						log.Printf("Error generating resiliency report: %v", reportErr)
+					} else {
+						fmt.Println("Detailed resiliency report written to resiliency-report.json")
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "Failed to parse resiliency report: %v\n", perr)
+				}
+
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
 						os.Exit(staterr.ExitStatus)
 					}
 					return err
-				}
-
-				// Parse resiliency report from captured logs and generate report
-				if rep, perr := resiliency.ParseResiliencyReport(logBuf.Bytes()); perr == nil {
-					if err := resiliency.GenerateAndWriteReport(
-						[]resiliency.DetailedScenarioReport{*rep},
-						"resiliency-report.json",
-					); err != nil {
-						log.Printf("Error generating resiliency report: %v", err)
-					}
 				}
 
 				scenarioDuration := time.Since(startTime)
