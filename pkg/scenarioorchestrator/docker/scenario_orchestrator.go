@@ -466,8 +466,9 @@ func (c *ScenarioOrchestrator) RunGraph(
 	commChannel chan *orchestratormodels.GraphCommChannel,
 	registry *providermodels.RegistryV2,
 	userID *int,
+	logDir string,
 ) {
-	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID, logDir)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
