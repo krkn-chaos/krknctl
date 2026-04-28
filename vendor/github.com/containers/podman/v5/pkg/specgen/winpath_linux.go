@@ -1,12 +1,13 @@
 package specgen
 
 import (
-	"github.com/containers/common/pkg/machine"
-	"github.com/containers/storage/pkg/fileutils"
+	"go.podman.io/common/pkg/machine"
+	"go.podman.io/storage/pkg/fileutils"
 )
 
 func shouldResolveWinPaths() bool {
-	return machine.HostType() == "wsl"
+	hostType := machine.HostType()
+	return hostType == machine.Wsl || hostType == machine.HyperV
 }
 
 func shouldResolveUnixWinVariant(path string) bool {
@@ -17,6 +18,6 @@ func resolveRelativeOnWindows(path string) string {
 	return path
 }
 
-func winPathExists(path string) bool {
+func winPathExists(_ string) bool {
 	return false
 }
