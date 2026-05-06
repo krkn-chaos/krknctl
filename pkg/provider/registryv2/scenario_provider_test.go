@@ -2,7 +2,6 @@ package registryv2
 
 import (
 	json_parser "encoding/json"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -433,7 +432,7 @@ func startMockOAuth2Server(t *testing.T, validUsername, validPassword string) *h
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(token)
+		json_parser.NewEncoder(w).Encode(token)
 	}))
 }
 
@@ -492,7 +491,7 @@ func TestOAuth2Flow_CachedToken(t *testing.T) {
 			IssuedAt:  time.Now(),
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(token)
+		json_parser.NewEncoder(w).Encode(token)
 	}))
 	defer authServer.Close()
 
