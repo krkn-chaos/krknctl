@@ -111,6 +111,7 @@ func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os
 	}()
 	errorChan := make(chan error)
 	finishChan := make(chan error)
+	copyDoneChan := make(chan struct{})
 
 	// copies demultiplexed reader to Stdout and Stderr
 	go func() {
@@ -118,6 +119,7 @@ func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os
 		if err != nil {
 			errorChan <- err
 		}
+		close(copyDoneChan)
 	}()
 
 	// waits for:
@@ -130,6 +132,8 @@ func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os
 		case err := <-errCH:
 			errorChan <- err
 		case <-respCh:
+			// Wait for StdCopy to finish before signaling completion
+			<-copyDoneChan
 			finishChan <- nil
 		}
 	}()

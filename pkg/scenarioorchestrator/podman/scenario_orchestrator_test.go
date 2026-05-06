@@ -160,3 +160,17 @@ func TestScenarioOrchestrator_Podman_ResolveContainerId(t *testing.T) {
 	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
 	scenarioorchestratortest.CommonTestScenarioOrchestratorResolveContainerName(t, &sopodman, config, 3)
 }
+
+func TestScenarioOrchestrator_Podman_AttachRaceCondition(t *testing.T) {
+	config := scenarioorchestratortest.CommonGetTestConfig(t)
+	sopodman := ScenarioOrchestrator{Config: config, ContainerRuntime: models.Podman}
+	
+	// Run the test multiple times to increase chance of catching race condition
+	for i := 0; i < 5; i++ {
+		fileContent := scenarioorchestratortest.CommonAttachWait(t, &sopodman, config)
+		
+		// Verify that the expected output is present... this ensures logs weren't truncated
+		assert.True(t, strings.Contains(fileContent, "Release the krkn 4"), 
+			"Expected log output not found in iteration %d, logs may have been truncated due to race condition", i)
+	}
+}
