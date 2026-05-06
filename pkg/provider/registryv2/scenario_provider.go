@@ -278,7 +278,7 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 
 		// Handle 401 Unauthorized with OAuth2 flow
 		if resp.StatusCode == http.StatusUnauthorized && retryCount < maxRetries {
-			resp.Body.Close()
+			_ = resp.Body.Close() // #nosec G104 -- ignoring close error on retry path, body is being discarded
 
 			// Skip OAuth2 flow if user already provided a token
 			if token != nil {
