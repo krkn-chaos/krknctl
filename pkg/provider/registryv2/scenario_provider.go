@@ -452,6 +452,33 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
 	foundDescription := provider.GetKrknctlLabel(descriptionLabel, layers)
 	foundInputFields := provider.GetKrknctlLabel(inputFieldsLabel, layers)
+	if !isGlobalEnvironment {
+
+		foundIsAScenario := provider.GetKrknctlLabel(s.Config.LabelIsAScenario, layers)
+		foundHasRollback := provider.GetKrknctlLabel(s.Config.LabelHasRollback, layers)
+
+		if foundIsAScenario != nil {
+			parsedIsAScenario, err := s.ParseIsAScenario(*foundIsAScenario)
+			if err != nil {
+				return nil, err
+			}
+			scenarioDetail.IsAScenario = *parsedIsAScenario
+		} else {
+			scenarioDetail.IsAScenario = false
+		}
+
+		if foundHasRollback != nil {
+			parsedHasRollback, err := s.ParseHasRollback(*foundHasRollback)
+			if err != nil {
+				return nil, err
+			}
+
+			scenarioDetail.HasRollback = *parsedHasRollback
+		} else {
+			scenarioDetail.HasRollback = false
+		}
+
+	}
 
 	if foundTitle == nil {
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
@@ -479,7 +506,9 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 
 	scenarioDetail.Title = *parsedTitle
 	scenarioDetail.Description = *parsedDescription
+
 	scenarioDetail.Fields = parsedInputFields
+
 	return &scenarioDetail, nil
 
 }

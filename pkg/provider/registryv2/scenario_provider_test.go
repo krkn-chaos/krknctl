@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/cache"
+	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/utils"
@@ -188,11 +188,13 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.NotNil(t, res)
 	assert.Equal(t, res.Name, "dummy-scenario")
 	assert.Equal(t, res.Title, "Dummy Scenario")
-	assert.Equal(t, len(res.Fields), 2)
+	assert.Equal(t, len(res.Fields), 4)
 	assert.NotNil(t, res.ScenarioTag.Name)
 	assert.Nil(t, res.ScenarioTag.Size)
 	assert.Nil(t, res.ScenarioTag.LastModified)
 	assert.Nil(t, res.ScenarioTag.Digest)
+	assert.True(t, res.IsAScenario)
+	assert.True(t, res.HasRollback)
 
 }
 
@@ -377,7 +379,7 @@ func TestGetCachedToken_Expired(t *testing.T) {
 	// Create a token that expired 10 seconds ago
 	token := &tokenResponse{
 		Token:     "expired-token",
-		ExpiresIn: 60, // 60 seconds expiry
+		ExpiresIn: 60,                                // 60 seconds expiry
 		IssuedAt:  time.Now().Add(-70 * time.Second), // Issued 70 seconds ago
 	}
 

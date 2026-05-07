@@ -6,6 +6,8 @@ LABEL krknctl.title.global="Krkn Base Image"
 LABEL krknctl.description.global="This is the krkn base image."
 LABEL krknctl.input_fields.global='$KRKNCTL_GLOBAL_INPUT'
 
+LABEL krknctl.is_a_scenario="true"
+LABEL krknctl.has_rollback="true"
 LABEL krknctl.kubeconfig_path="/home/krkn/.kube/config"
 LABEL krknctl.title="Dummy Scenario"
 LABEL krknctl.description="The dummy scenario simply waits for a specified amount of time without introducing any chaos. It serves as a root node in a flat graph structure to run multiple scenarios in parallel or can be used for testing purposes."
