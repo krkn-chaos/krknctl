@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"io"
 	"os"
 	"regexp"
 	"strconv"
+
+	"github.com/krkn-chaos/krknctl/pkg/utils"
 )
 
 const MaxFileSize int64 = 10_485_760
@@ -35,6 +36,20 @@ type InputField struct {
 
 type alias InputField
 
+func (f *InputField) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		*alias
+		Type     string `json:"type"`
+		Required string `json:"required,omitempty"`
+		Secret   string `json:"secret,omitempty"` // #nosec G117 -- metadata flag, not a hardcoded secret
+	}{
+		alias:    (*alias)(f),
+		Type:     f.Type.String(),
+		Required: strconv.FormatBool(f.Required),
+		Secret:   strconv.FormatBool(f.Secret),
+	})
+}
+
 func (f *InputField) UnmarshalJSON(data []byte) error {
 	aux := &struct {
 		*alias
@@ -42,7 +57,7 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		Type     *string `json:"type"`
 		Variable *string `json:"variable"`
 		Required *string `json:"required"`
-		Secret   *string `json:"secret"`
+		Secret   *string `json:"secret"` // #nosec G117 -- metadata flag, not a hardcoded secret
 	}{alias: (*alias)(f)}
 
 	if err := json.Unmarshal(data, &aux); err != nil {

@@ -605,3 +605,128 @@ func TestFieldFile(t *testing.T) {
 	_, err = field.Validate(&fileFieldNoMountPath)
 	assert.NotNil(t, err)
 }
+
+func TestMarshalJSON(t *testing.T) {
+	name := "test-field"
+	variable := "TEST_VAR"
+	description := "Test description"
+	defaultValue := "default-value"
+	separator := ";"
+	allowedValues := "val1;val2;val3"
+	mountPath := "/test/path"
+
+	// Test with all fields populated
+	field := InputField{
+		Name:         &name,
+		Description:  &description,
+		Variable:     &variable,
+		Type:         Enum,
+		Default:      &defaultValue,
+		Separator:    &separator,
+		AllowedValues: &allowedValues,
+		Required:     true,
+		MountPath:    &mountPath,
+		Secret:       false,
+	}
+
+	data, err := json.Marshal(&field)
+	assert.Nil(t, err)
+	assert.NotNil(t, data)
+
+	// Unmarshal to map to check string conversion
+	var result map[string]interface{}
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+
+	// Verify Type is converted to string
+	assert.Equal(t, "enum", result["type"])
+
+	// Verify Required is converted to string
+	assert.Equal(t, "true", result["required"])
+
+	// Verify Secret is converted to string
+	assert.Equal(t, "false", result["secret"])
+
+	// Verify other fields are preserved
+	assert.Equal(t, name, result["name"])
+	assert.Equal(t, variable, result["variable"])
+	assert.Equal(t, description, result["description"])
+	assert.Equal(t, defaultValue, result["default"])
+
+	// Test with different Type values
+	field.Type = Boolean
+	field.Required = false
+	field.Secret = true
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "boolean", result["type"])
+	assert.Equal(t, "false", result["required"])
+	assert.Equal(t, "true", result["secret"])
+
+	// Test with Number type
+	field.Type = Number
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "number", result["type"])
+
+	// Test with String type
+	field.Type = String
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "string", result["type"])
+
+	// Test with File type
+	field.Type = File
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "file", result["type"])
+
+	// Test with FileBase64 type
+	field.Type = FileBase64
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "file_base64", result["type"])
+
+	// Test round-trip: Unmarshal -> Marshal -> Unmarshal
+	originalJSON := `{
+		"name": "round-trip-test",
+		"variable": "ROUND_TRIP_VAR",
+		"type": "enum",
+		"allowed_values": "a,b,c",
+		"required": "true",
+		"secret": "false"
+	}`
+
+	var field2 InputField
+	err = json.Unmarshal([]byte(originalJSON), &field2)
+	assert.Nil(t, err)
+
+	marshaledData, err := json.Marshal(&field2)
+	assert.Nil(t, err)
+
+	var field3 InputField
+	err = json.Unmarshal(marshaledData, &field3)
+	assert.Nil(t, err)
+
+	// Verify fields match after round-trip
+	assert.Equal(t, field2.Type, field3.Type)
+	assert.Equal(t, field2.Required, field3.Required)
+	assert.Equal(t, field2.Secret, field3.Secret)
+	assert.Equal(t, *field2.Name, *field3.Name)
+	assert.Equal(t, *field2.Variable, *field3.Variable)
+}

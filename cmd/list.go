@@ -45,9 +45,6 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 				logPrivateRegistry(registrySettings.RegistryURL)
 			}
 
-			if err != nil {
-				return err
-			}
 			privateRegistry := false
 			if registrySettings != nil {
 				privateRegistry = true

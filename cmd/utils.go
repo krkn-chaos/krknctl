@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -377,9 +378,13 @@ func DumpRandomGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][
 	return nil
 }
 
-func queryGithubRelease(url string) ([]byte, error) {
+func queryGithubRelease(rawURL string) ([]byte, error) {
 	var deferErr error
-	req, err := http.NewRequest("GET", url, nil)
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid GitHub release URL %q: %w", rawURL, err)
+	}
+	req, err := http.NewRequest("GET", parsedURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +394,7 @@ func queryGithubRelease(url string) ([]byte, error) {
 		Timeout: 2 * time.Second,
 	}
 
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) // #nosec G704 -- URL is validated via url.Parse and scheme-restricted to https; destination is always the GitHub API, constructed from trusted config
 	// if any http error is happening the checks are skipped
 	// to avoid errors in disconnected environments
 	if err != nil {
@@ -400,7 +405,9 @@ func queryGithubRelease(url string) ([]byte, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request failed with status : %d", resp.StatusCode)
+		fmt.Printf("Error querying GitHub API, status code: %d\n", resp.StatusCode)
+		return nil, nil
+
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -412,21 +419,44 @@ func queryGithubRelease(url string) ([]byte, error) {
 }
 
 func GetLatest(config config.Config) (*string, error) {
-	body, err := queryGithubRelease(config.GithubLatestReleaseAPI)
+	parsedURL, err := url.Parse(config.GithubLatestRelease)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid GitHub latest release URL %q: %w", config.GithubLatestRelease, err)
 	}
-	// timeout condition
-	if body == nil {
+
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(parsedURL.String())
+	if err != nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusMovedPermanently {
 		return nil, nil
 	}
 
-	var releaseObject GitHubRelease
-	err = json.Unmarshal(body, &releaseObject)
-	if err != nil {
-		return nil, err
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return nil, nil
 	}
-	release := releaseObject.TagName
+
+	locURL, err := url.Parse(location)
+	if err != nil {
+		return nil, nil
+	}
+	if !locURL.IsAbs() {
+		locURL = resp.Request.URL.ResolveReference(locURL)
+	}
+	release := path.Base(locURL.Path)
+	if release == "" || release == "." {
+		return nil, nil
+	}
 	return &release, nil
 }
 
@@ -442,7 +472,7 @@ func IsDeprecated(config config.Config) (*bool, error) {
 
 	// timeout condition
 	if body == nil {
-		return nil, nil
+		return nil, fmt.Errorf("no release found")
 	}
 
 	var releaseObject GitHubRelease

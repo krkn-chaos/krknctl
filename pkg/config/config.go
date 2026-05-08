@@ -51,7 +51,6 @@ type Config struct {
 	EnvPrivateRegistryScenarios string `json:"env_private_registry_scenarios"`
 	EnvPrivateRegistryInsecure  string `json:"env_private_registry_insecure"`
 	GithubLatestRelease         string `json:"github_latest_release"`
-	GithubLatestReleaseAPI      string `json:"github_latest_release_api"`
 	GithubReleaseAPI            string `json:"github_release_api"`
 	GithubReleaseAPIDeprecated  string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength         int    `json:"table_field_max_length"`
@@ -60,6 +59,8 @@ type Config struct {
 	ResiliencyReportRegex       string `json:"resiliency_report_regex"`
 	EnvResiliencyEnabledMode    string `json:"env_resiliency_enabled_mode"`
 	EnvKrknAlertsYamlContent    string `json:"env_krkn_alerts_yaml_content"`
+	VisualizeImageName          string `json:"visualize_image_name"`
+	VisualizeImageTag           string `json:"visualize_image_tag"`
 }
 
 //go:embed config.json
@@ -97,6 +98,14 @@ func (c *Config) GetQuayScenarioRepositoryAPIURI() (string, error) {
 		return "", err
 	}
 	return repositoryURI, nil
+}
+
+func (c *Config) GetVisualizeImageURI() (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.VisualizeImageName)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + c.VisualizeImageTag, nil
 }
 
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {

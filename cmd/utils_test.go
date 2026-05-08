@@ -346,11 +346,11 @@ func TestGetLatest(t *testing.T) {
 	latest, err := GetLatest(config)
 	assert.Nil(t, err)
 	assert.NotNil(t, latest)
-	config.GithubLatestReleaseAPI = "https://httpstat.us/200?sleep=3000"
+	config.GithubLatestRelease = "https://httpstat.us/200?sleep=3000"
 	_, err = GetLatest(config)
 	assert.Nil(t, err)
 	assert.Nil(t, err)
-	config.GithubLatestReleaseAPI = "https://httpstat.us/404"
+	config.GithubLatestRelease = "https://httpstat.us/404"
 	latest, err = GetLatest(config)
 	assert.Nil(t, err)
 	assert.Nil(t, latest)

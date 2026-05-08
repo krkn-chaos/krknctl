@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"testing"
 )
 
 func ExpandFolder(folder string, basePath *string) (*string, error) {
@@ -46,4 +47,11 @@ func RandomInt64(max *int64) int64 {
 		panic(err)
 	}
 	return bigRand.Int64()
+}
+
+func SkipTestIfForkPR(t *testing.T) {
+	t.Helper()
+	if os.Getenv("CI_FORK_PR") == "true" {
+		t.Skip("skipped on fork PR (no secrets / external repo)")
+	}
 }

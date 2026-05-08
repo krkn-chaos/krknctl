@@ -145,8 +145,9 @@ func scaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *mode
 			}
 
 			for _, field := range globalDetail.Fields {
-				scenarioNode.Env[*field.Variable] = *field.Default
-
+				if field.Variable != nil && field.Default != nil {
+					scenarioNode.Env[*field.Variable] = *field.Default
+				}
 			}
 		}
 		scenarioNodes[indexes[i]] = scenarioNode

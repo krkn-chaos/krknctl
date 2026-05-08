@@ -145,6 +145,7 @@ func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os
 
 	errorChannel := make(chan error, 1)
 	finishChannel := make(chan bool, 1)
+	attachDoneChan := make(chan struct{})
 	var mu sync.Mutex
 	go func() {
 		mu.Lock()
@@ -153,6 +154,12 @@ func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os
 		if err != nil {
 			errorChannel <- err
 		}
+		close(attachDoneChan)
+	}()
+
+	go func() {
+		// Wait for attach to complete before signaling finish
+		<-attachDoneChan
 		finishChannel <- true
 	}()
 

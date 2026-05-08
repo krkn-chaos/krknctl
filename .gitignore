@@ -25,11 +25,13 @@ go.work
 go.work.sum
 .krknctl-*
 krknctl-*
+krknctl
 
 # env file
 .env
 .idea
 bin/
+.beads
 
 .DS_Store
 node_modules

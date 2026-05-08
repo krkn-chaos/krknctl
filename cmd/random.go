@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -15,10 +20,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
-	"strings"
-	"time"
 )
 
 func NewRandomCommand() *cobra.Command {
@@ -100,7 +101,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 					return fmt.Errorf("file %s does not exist", metricsProfile)
 				}
 			}
-			maxParallel, err := cmd.Flags().GetInt64("max-parallel")
+			maxParallel, err := cmd.Flags().GetInt("max-parallel")
 			if err != nil {
 				return err
 			}
@@ -120,7 +121,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return err
 			}
 
-			if randomGraphFile != "" {
+			if randomGraphFile == "" {
 				randomGraphFile = fmt.Sprintf(config.RandomGraphPath, time.Now().Unix())
 			}
 
@@ -182,7 +183,8 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 
 			spinner.Stop()
 
-			executionPlan := randomgraph.NewRandomGraph(nodes, maxParallel, numberOfScenarios)
+			executionPlan := randomgraph.NewRandomGraph(nodes, int64(maxParallel),
+				numberOfScenarios)
 			if err = DumpRandomGraph(nodes, executionPlan, randomGraphFile, config.LabelRootNode); err != nil {
 				return err
 			}
@@ -294,9 +296,6 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 					return err
 				}
 			}
-			if err != nil {
-				return err
-			}
 			dataProvider := GetProvider(registrySettings != nil, factory)
 			includeGlobalEnv, err := cmd.Flags().GetBool("global-env")
 			if err != nil {
@@ -327,10 +326,6 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 				if len(args) == 0 {
 					return fmt.Errorf("please provide at least one scenario")
 				}
-			}
-
-			if err != nil {
-				return err
 			}
 
 			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, seed)

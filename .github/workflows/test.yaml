@@ -73,6 +73,8 @@ jobs:
           ./staticcheck/staticcheck -checks all ./...
           
       - name: run test suite
+        env:
+          CI_FORK_PR: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
         run: |
          export USERID=$(id -u)
          go test -tags containers_image_openpgp -race -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
@@ -88,6 +90,7 @@ jobs:
           echo "TOTAL_COVERAGE=$COVERAGE" >> $GITHUB_ENV
 
       - name: check out doc repo
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         uses: actions/checkout@v4
         with:
           repository: krkn-chaos/krkn-lib-docs
@@ -95,6 +98,7 @@ jobs:
           ssh-key: ${{ secrets.KRKN_LIB_DOCS_PRIV_KEY }}
 
       - name: push updated coverage badge
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         env:
           COLOR: yellow
         run: |
