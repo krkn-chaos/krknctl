@@ -157,6 +157,10 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 
 		foundScenario.Digest = imageHash
 		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
+		if err != nil {
+			return nil, err
+		}
+		
 		err = json.Unmarshal(bodyBytes, &manifest)
 		if err != nil {
 			return nil, err
