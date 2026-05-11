@@ -56,6 +56,34 @@ type Manifest struct {
 	Layers              []Layer `json:"layers"`
 }
 
+// ManifestList represents a Docker manifest list (multi-architecture image)
+type ManifestList struct {
+	SchemaVersion int             `json:"schemaVersion"`
+	MediaType     string          `json:"mediaType"`
+	Manifests     []ManifestEntry `json:"manifests"`
+}
+
+func (q ManifestList) GetFirstAvailableHash() *string {
+	for _, m := range q.Manifests {
+		return &m.Digest
+	}
+	return nil
+}
+
+// ManifestEntry represents a single platform-specific manifest
+type ManifestEntry struct {
+	MediaType string   `json:"mediaType"`
+	Digest    string   `json:"digest"`
+	Size      int      `json:"size"`
+	Platform  Platform `json:"platform"`
+}
+
+// Platform represents the target platform for a manifest
+type Platform struct {
+	Architecture string `json:"architecture"`
+	OS           string `json:"os"`
+}
+
 func (m *Manifest) GetKrknctlLabel(label string) *string {
 	for _, v := range m.Layers {
 		for _, c := range v.Command {
