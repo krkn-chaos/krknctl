@@ -43,6 +43,10 @@ type Config struct {
 	LabelDescriptionRegexGlobal string `json:"label_description_regex_global"`
 	LabelInputFieldsRegexGlobal string `json:"label_input_fields_regex_global"`
 	LabelRootNode               string `json:"label_root_node"`
+	LabelIsAScenario            string `json:"label_is_a_scenario"`
+	LabelHasRollback            string `json:"label_has_rollback"`
+	LabelIsAScenarioRegex       string `json:"label_is_a_scenario_regex"`
+	LabelHasRollbackRegex       string `json:"label_has_rollback_regex"`
 	EnvPrivateRegistry          string `json:"env_private_registry"`
 	EnvPrivateRegistryUsername  string `json:"env_private_registry_username"`
 	EnvPrivateRegistryPassword  string `json:"env_private_registry_password"`

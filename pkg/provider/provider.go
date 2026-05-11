@@ -4,11 +4,13 @@ package provider
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/cache"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	"regexp"
+	"strconv"
 )
 
 type Mode int64
@@ -60,6 +62,30 @@ func (p *BaseScenarioProvider) ParseDescription(s string, isGlobalEnvironment bo
 		return nil, errors.New("description not found in image manifest")
 	}
 	return &matches[1], nil
+}
+func (p *BaseScenarioProvider) ParseIsAScenario(s string) (*bool,
+	error) {
+	return parseBoolLabel(s, p.Config.LabelIsAScenarioRegex, "is_a_scenario")
+}
+
+func (p *BaseScenarioProvider) ParseHasRollback(s string) (*bool, error) {
+	return parseBoolLabel(s, p.Config.LabelHasRollbackRegex, "has_rollback")
+}
+
+func parseBoolLabel(s string, regex string, labelName string) (*bool, error) {
+	re, err := regexp.Compile(regex)
+	if err != nil {
+		return nil, err
+	}
+	matches := re.FindStringSubmatch(s)
+	if matches == nil {
+		return nil, fmt.Errorf("label %s not found in image manifest", labelName)
+	}
+	boolValue, err := strconv.ParseBool(matches[1])
+	if err != nil {
+		return nil, err
+	}
+	return &boolValue, nil
 }
 
 func (p *BaseScenarioProvider) ParseInputFields(s string, isGlobalEnvironment bool) ([]typing.InputField, error) {
