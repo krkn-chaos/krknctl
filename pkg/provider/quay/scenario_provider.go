@@ -132,6 +132,9 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 
 	var manifest Manifest
 	err = json.Unmarshal(bodyBytes, &manifest)
+	if err != nil {
+		return nil, err
+	}
 
 	// if the manifest is a manifestList (multiarch image) image metadata
 	// will be fetched from the first available image in the registry
@@ -144,18 +147,20 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		}
 		var ml ManifestList
 		err = json.Unmarshal([]byte(manifest.ManifestData), &ml)
-		imageHash := ml.GetFirstAvailableHash()
-		if imageHash != nil {
-
-		} else {
-			return nil, errors.New("scenario image not found for target architecture")
-		}
 		if err != nil {
 			return nil, err
 		}
+		imageHash := ml.GetFirstAvailableHash()
+		if imageHash == nil {
+			return nil, errors.New("scenario image not found for target architecture")
+		}
+
 		foundScenario.Digest = imageHash
 		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
 		err = json.Unmarshal(bodyBytes, &manifest)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	scenarioDetail := models.ScenarioDetail{
