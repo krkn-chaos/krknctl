@@ -114,6 +114,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	visualizeCmd := NewVisualizeCommand(scenarioOrchestrator, config)
 	rootCmd.AddCommand(visualizeCmd)
 
+	dashboardCmd := NewDashboardCommand(scenarioOrchestrator, config)
+	rootCmd.AddCommand(dashboardCmd)
+
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)

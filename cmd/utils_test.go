@@ -8,6 +8,7 @@ import (
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providerModels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	krknctlutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"os"
@@ -56,6 +57,7 @@ func TestGetProvider(t *testing.T) {
 		Insecure:           true,
 	}
 
+	krknctlutils.SkipIfTCPDialFails(t, "localhost:5001")
 	privateProvider := providerFactory.NewInstance(provider.Private)
 	scenario, err = privateProvider.GetScenarioDetail("dummy-scenario", &pr)
 	assert.Nil(t, err)
@@ -83,6 +85,7 @@ func TestFetchScenarios(t *testing.T) {
 		Insecure:           true,
 	}
 
+	krknctlutils.SkipIfTCPDialFails(t, "localhost:5001")
 	privateProvider := providerFactory.NewInstance(provider.Private)
 	scenarios, err = FetchScenarios(privateProvider, &pr)
 	assert.Nil(t, err)

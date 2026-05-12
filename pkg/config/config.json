@@ -48,5 +48,7 @@
   "table_field_max_length": 20,
   "table_max_step_scenario_length": 7,
   "visualize_image_name": "krkn-visualize",
-  "visualize_image_tag": "latest"
+  "visualize_image_tag": "latest",
+  "dashboard_image_name": "krkn-dashboard",
+  "dashboard_image_tag": "latest"
 }
