@@ -65,7 +65,9 @@ type ManifestList struct {
 
 func (q ManifestList) GetFirstAvailableHash() *string {
 	for _, m := range q.Manifests {
-		return &m.Digest
+		if m.Digest != "" {
+			return &m.Digest
+		}
 	}
 	return nil
 }

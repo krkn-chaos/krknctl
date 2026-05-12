@@ -154,13 +154,12 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if imageHash == nil {
 			return nil, errors.New("scenario image not found for target architecture")
 		}
-
-		foundScenario.Digest = imageHash
+		
 		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		err = json.Unmarshal(bodyBytes, &manifest)
 		if err != nil {
 			return nil, err
