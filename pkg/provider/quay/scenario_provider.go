@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/krkn-chaos/krknctl/pkg/provider"
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 )
 
 type ScenarioProvider struct {
@@ -87,12 +88,9 @@ func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, p.Config, p, random, seed)
 }
 
-func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
+func (p *ScenarioProvider) getScenarioBytes(dataSource string, scenarioDigest string) ([]byte,
+	error) {
 	var deferErr error = nil
-	scenarioDigest := ""
-	if ((*foundScenario).Digest) != nil {
-		scenarioDigest = *((*foundScenario).Digest)
-	}
 	baseURL, err := url.Parse(dataSource + "/manifest/" + scenarioDigest)
 	if err != nil {
 		return nil, err
@@ -118,11 +116,54 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		p.Cache.Set(baseURL.String(), bodyBytes)
 
 	}
+	return bodyBytes, deferErr
+}
+
+func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
+
+	scenarioDigest := ""
+	if ((*foundScenario).Digest) != nil {
+		scenarioDigest = *((*foundScenario).Digest)
+	}
+	bodyBytes, err := p.getScenarioBytes(dataSource, scenarioDigest)
+	if err != nil {
+		return nil, err
+	}
 
 	var manifest Manifest
 	err = json.Unmarshal(bodyBytes, &manifest)
 	if err != nil {
 		return nil, err
+	}
+
+	// if the manifest is a manifestList (multiarch image) image metadata
+	// will be fetched from the first available image in the registry
+	// keeps retrocompatibility with registries with no manifests
+
+	if manifest.IsManifestList {
+		if manifest.ManifestData == "" {
+			return nil, errors.New("scenario image is a manifest without data, " +
+				"impossible to fetch details")
+		}
+		var ml ManifestList
+		err = json.Unmarshal([]byte(manifest.ManifestData), &ml)
+		if err != nil {
+			return nil, err
+		}
+		imageHash := ml.GetFirstAvailableHash()
+		if imageHash == nil {
+			return nil, errors.New("scenario image not found for target architecture")
+		}
+
+		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(bodyBytes, &manifest)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	scenarioDetail := models.ScenarioDetail{
@@ -176,7 +217,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail.Title = *parsedTitle
 	scenarioDetail.Description = *parsedDescription
 	scenarioDetail.Fields = parsedInputFields
-	return &scenarioDetail, deferErr
+	return &scenarioDetail, nil
 }
 
 func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
