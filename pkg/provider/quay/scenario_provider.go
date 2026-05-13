@@ -120,7 +120,7 @@ func (p *ScenarioProvider) getScenarioBytes(dataSource string, scenarioDigest st
 }
 
 func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
-	var deferErr error = nil
+
 	scenarioDigest := ""
 	if ((*foundScenario).Digest) != nil {
 		scenarioDigest = *((*foundScenario).Digest)
@@ -154,7 +154,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if imageHash == nil {
 			return nil, errors.New("scenario image not found for target architecture")
 		}
-		
+
 		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
 		if err != nil {
 			return nil, err
@@ -217,7 +217,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail.Title = *parsedTitle
 	scenarioDetail.Description = *parsedDescription
 	scenarioDetail.Fields = parsedInputFields
-	return &scenarioDetail, deferErr
+	return &scenarioDetail, nil
 }
 
 func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
