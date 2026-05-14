@@ -142,6 +142,11 @@ func TestQuayScenarioProvider_ScaffoldScenarios(t *testing.T) {
 	}
 
 	json, err = provider.ScaffoldScenarios(scenarioNames, true, nil, false, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "american-english dictionary") || strings.Contains(err.Error(), "babble") {
+			t.Skipf("dictionary dependency missing: %v", err)
+		}
+	}
 	assert.Nil(t, err)
 	assert.NotNil(t, json)
 
