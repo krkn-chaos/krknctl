@@ -1,6 +1,6 @@
 module github.com/krkn-chaos/krknctl
 
-go 1.26.3
+go 1.26.2
 
 require (
 	github.com/briandowns/spinner v1.23.1
