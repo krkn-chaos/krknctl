@@ -46,6 +46,7 @@ type ScenarioOrchestrator interface {
 		commChannel chan *orchestrator_models.GraphCommChannel,
 		registry *models.RegistryV2,
 		userID *int,
+		logDir string,
 	)
 
 	CleanContainers(ctx context.Context) (*int, error)
