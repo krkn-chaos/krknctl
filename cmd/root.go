@@ -63,6 +63,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("alerts-profile", "", "custom alerts profile file path")
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
+	runCmd.LocalFlags().String("dry-run", "", "validate scenario locally without cluster calls; only accepted value: client (e.g. --dry-run=client)")
 
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
@@ -93,11 +94,18 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
 	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
 	randomRunCmd.Flags().String("graph-dump", "", "specifies the name of the file where the randomly generated dependency graph will be persisted")
+	randomRunCmd.Flags().BoolP("detach", "d", false, "run in background and return immediately; default is foreground (attached)")
+	randomRunCmd.Flags().String("log-dir", "", "directory to store scenario log files (created if it does not exist)")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
 		os.Exit(1)
 	}
+
+	randomStatusCmd := NewRandomStatusCommand()
+	randomAbortCmd := NewRandomAbortCommand()
+	randomCmd.AddCommand(randomStatusCmd)
+	randomCmd.AddCommand(randomAbortCmd)
 
 	randomScaffoldCmd := NewRandomScaffoldCommand(providerFactory, config)
 	randomScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
@@ -117,6 +125,9 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	queryCmd := NewQueryStatusCommand(scenarioOrchestrator)
 	queryCmd.Flags().String("graph", "", "to query the exit status of a previously run graph file")
 	rootCmd.AddCommand(queryCmd)
+
+	upgradeCmd := NewUpgradeCommand(config)
+	rootCmd.AddCommand(upgradeCmd)
 
 	// update and deprecation check
 	isDeprecated, err := IsDeprecated(config)

@@ -11,7 +11,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
-	"path"
+	"path/filepath"
 	"sort"
 	"sync"
 	"syscall"
@@ -28,6 +28,7 @@ func CommonRunGraph(
 	config config.Config,
 	registry *providermodels.RegistryV2,
 	userID *int,
+	logDir string,
 ) {
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
@@ -65,21 +66,27 @@ func CommonRunGraph(
 			}
 
 			containerName := utils.GenerateContainerName(config, scenario.Name, &scID)
-			filename := fmt.Sprintf("%s.log", containerName)
-			file, err := os.Create(path.Clean(filename))
-
+			logFilename := fmt.Sprintf("%s.log", containerName)
+			// honour custom log directory when provided
+			var logFilePath string
+			if logDir != "" {
+				logFilePath = filepath.Join(logDir, logFilename)
+			} else {
+				logFilePath = logFilename
+			}
+			file, err := os.Create(filepath.Clean(logFilePath))
 			if err != nil {
 				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
-			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: nil}
+			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &logFilePath, Err: nil}
 			wg.Add(1)
 
 			go func() {
 				defer wg.Done()
 				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry)
 				if err != nil {
-					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
+					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &logFilePath, Err: err}
 					return
 				}
 			}()
