@@ -17,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/krkn-chaos/krknctl/pkg/text"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -79,7 +81,16 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			scenarioFlags := pflag.NewFlagSet("scenario", pflag.ExitOnError)
 
 			if scenarioDetail == nil {
-				return fmt.Errorf("%s scenario not found", scenarioName)
+				// Fetch available scenarios to provide suggestions
+				scenarios, fetchErr := FetchScenarios(provider, registrySettings)
+				if fetchErr == nil && scenarios != nil {
+					suggestions := text.FindSimilarStrings(scenarioName, *scenarios, 3)
+					if len(suggestions) > 0 {
+						return fmt.Errorf("scenario '%s' not found. Did you mean: %s?",
+							scenarioName, strings.Join(suggestions, ", "))
+					}
+				}
+				return fmt.Errorf("scenario '%s' not found. Use 'krknctl list available' to see all scenarios", scenarioName)
 			}
 
 			for _, field := range scenarioDetail.Fields {
