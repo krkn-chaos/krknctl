@@ -52,7 +52,7 @@ type Manifest struct {
 	IsManifestList      bool    `json:"is_manifest_list"`
 	ManifestData        string  `json:"manifest_data"`
 	ConfigMediaType     string  `json:"config_media_type"`
-	LayerCompressedSize string  `json:"layer_compressed_size"`
+	LayerCompressedSize int64   `json:"layers_compressed_size"`
 	Layers              []Layer `json:"layers"`
 }
 
