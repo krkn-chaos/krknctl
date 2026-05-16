@@ -246,7 +246,15 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 
 		// If a scenario was detected, show scenario details
 		if response.ScenarioName != nil && *response.ScenarioName != "" {
-			fmt.Printf("\n📋 fetching details for scenario: %s\n", *response.ScenarioName)
+			var matchedScenario *ScenarioMatch
+			if len(response.Scenarios) > 0 {
+				matchedScenario = &response.Scenarios[0]
+			}
+			if matchedScenario != nil && matchedScenario.Name != "" && matchedScenario.Name != *response.ScenarioName {
+				printAssistScenarioDocumentation(*matchedScenario)
+			}
+
+			fmt.Printf("\n📋 fetching runnable details for scenario: %s\n", *response.ScenarioName)
 
 			scenarioDetail, err := scenarioProvider.GetScenarioDetail(*response.ScenarioName, nil)
 			if err != nil {
@@ -320,6 +328,29 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 	}
 
 	return nil
+}
+
+// printAssistScenarioDocumentation shows source documentation from the assist index when
+// it differs from the runnable krkn-hub scenario tag used for forms and execution.
+func printAssistScenarioDocumentation(match ScenarioMatch) {
+	title := match.Title
+	if title == "" {
+		title = match.Name
+	}
+	if title == "" && match.Summary == "" && match.RunCommand == "" {
+		return
+	}
+
+	fmt.Print("\n")
+	_, _ = color.New(color.FgGreen, color.Underline).Println(title)
+	if match.Summary != "" {
+		for _, line := range text.Justify(match.Summary, 65) {
+			fmt.Println(line)
+		}
+	}
+	if match.RunCommand != "" {
+		fmt.Printf("\nCommand: %s\n", match.RunCommand)
+	}
 }
 
 // queryAssistService sends a query to the assist service and returns the response
