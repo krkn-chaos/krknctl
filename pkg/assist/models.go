@@ -53,5 +53,18 @@ type QueryResponse struct {
 		CompletionTokens int `json:"completion_tokens"`
 		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
-	ScenarioName *string `json:"scenario_name,omitempty"` // krknctl scenario name if detected
+	ScenarioName *string         `json:"scenario_name,omitempty"` // krknctl scenario name if detected
+	Scenarios    []ScenarioMatch `json:"scenarios,omitempty"`
+}
+
+// ScenarioMatch represents a scenario matched by the assist service.
+type ScenarioMatch struct {
+	Name         string  `json:"name,omitempty"`
+	RunnableName string  `json:"runnable_name,omitempty"`
+	Title        string  `json:"title,omitempty"`
+	Summary      string  `json:"summary,omitempty"`
+	RunCommand   string  `json:"run_command,omitempty"`
+	Score        float64 `json:"score,omitempty"`
+	Rank         int     `json:"rank,omitempty"`
+	IsPrimary    bool    `json:"is_primary,omitempty"`
 }
