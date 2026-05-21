@@ -117,7 +117,7 @@ func NewVisualizeCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrch
 			if err != nil {
 				return err
 			}
-			_, err = (*scenarioOrchestrator).RunAttached(visualizeImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil)
+			_, err = (*scenarioOrchestrator).RunAttached(visualizeImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, nil, nil)
 			if err != nil {
 				return err
 			}

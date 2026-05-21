@@ -30,6 +30,7 @@ type SigTermChannel struct {
 func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, error) {
 	var configPath string
 	var configFolder string
+	// Nil or empty path: same default filename kubectl uses (honors KUBECONFIG and client-go loading rules).
 	if kubeconfigPath == nil || *kubeconfigPath == "" {
 		configPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	} else {
@@ -99,13 +100,9 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	if err != nil {
 		return nil, err
 	}
-	currentDirectory, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
 	filename := fmt.Sprintf("%s-%s-%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
-	path := filepath.Join(currentDirectory, filename)
-	err = os.WriteFile(path, flattenedConfig, 0644) /* #nosec */
+	path := filepath.Join(os.TempDir(), filename)
+	err = os.WriteFile(path, flattenedConfig, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -121,19 +118,32 @@ func CleanKubeconfigFiles(config config.Config) (*int, error) {
 	if err != nil {
 		return nil, err
 	}
+	tempDir := os.TempDir()
 
-	files, err := os.ReadDir(currentDir)
-	if err != nil {
-		return nil, err
-	}
 	deletedFiles := 0
-	for _, file := range files {
-		if regex.MatchString(file.Name()) {
-			err := os.Remove(filepath.Join(currentDir, file.Name()))
-			if err != nil {
-				return nil, err
+	seen := map[string]struct{}{}
+	for _, dir := range []string{currentDir, tempDir} {
+		absDir, err := filepath.Abs(dir)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seen[absDir]; ok {
+			continue
+		}
+		seen[absDir] = struct{}{}
+
+		files, err := os.ReadDir(absDir)
+		if err != nil {
+			return nil, err
+		}
+		for _, file := range files {
+			if regex.MatchString(file.Name()) {
+				err := os.Remove(filepath.Join(absDir, file.Name()))
+				if err != nil {
+					return nil, err
+				}
+				deletedFiles++
 			}
-			deletedFiles++
 		}
 	}
 	return &deletedFiles, nil

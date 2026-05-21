@@ -31,26 +31,32 @@ func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
 func ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, config config.Config, p ScenarioDataProvider, random bool, seed *ScaffoldSeed) (*string, error) {
 	var scenarioNodes map[string]models2.ScenarioNode
 	var err error
+	var panicErr error
 	babbler := babble.NewBabbler()
-	// handles babble panic when american word dictionary is not installed
-	defer func() {
-		if err := recover(); err != nil {
-			_, err = color.New(color.FgRed, color.Underline).Println("impossible to locate american words dictionary " +
-				"please refer to the documentation on how to install this dependency https://github.com/krkn-chaos/krknctl#Requirements")
+	babbler.Count = 1
+
+	// Recover in an inner function so the outer function does not "return normally" with zero values
+	// (recover in ScaffoldScenarios' own defer would clear the panic but yield (*string)(nil), nil).
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicErr = fmt.Errorf("scaffolding failed (american-english dictionary required for babble): %v", r)
+				_, _ = color.New(color.FgRed, color.Underline).Println("impossible to locate american words dictionary " +
+					"please refer to the documentation on how to install this dependency https://github.com/krkn-chaos/krknctl#Requirements")
+			}
+		}()
+		if seed == nil {
+			scenarioNodes, err = scaffoldScenarios(scenarios, includeGlobalEnv, registry, config, p, random, babbler)
+		} else {
+			scenarioNodes, err = scaffoldSeededScenarios(seed)
 		}
 	}()
 
-	babbler.Count = 1
-	if seed == nil {
-		scenarioNodes, err = scaffoldScenarios(scenarios, includeGlobalEnv, registry, config, p, random, babbler)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		scenarioNodes, err = scaffoldSeededScenarios(seed)
-		if err != nil {
-			return nil, err
-		}
+	if panicErr != nil {
+		return nil, panicErr
+	}
+	if err != nil {
+		return nil, err
 	}
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
