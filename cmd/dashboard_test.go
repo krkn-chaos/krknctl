@@ -60,6 +60,22 @@ func TestDashboardPublishPortsLoopback(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1:3000:3000", "127.0.0.1:8000:8000"}, ports)
 }
 
+func TestValidatePodmanMachineName(t *testing.T) {
+	assert.Nil(t, validatePodmanMachineName("podman-machine-default"))
+	assert.Nil(t, validatePodmanMachineName("my_machine"))
+	assert.NotNil(t, validatePodmanMachineName(""))
+	assert.NotNil(t, validatePodmanMachineName("bad name"))
+	assert.NotNil(t, validatePodmanMachineName("$(id)"))
+}
+
+func TestValidatePodmanSocketPath(t *testing.T) {
+	assert.Nil(t, validatePodmanSocketPath("/run/podman/podman.sock"))
+	assert.Nil(t, validatePodmanSocketPath("/run/user/501/podman/podman.sock"))
+	assert.NotNil(t, validatePodmanSocketPath(""))
+	assert.NotNil(t, validatePodmanSocketPath("/tmp/evil.sock"))
+	assert.NotNil(t, validatePodmanSocketPath("/run/podman/podman.sock; rm -rf /"))
+}
+
 func TestHostSocketPath(t *testing.T) {
 	assert.Equal(t, "/var/run/docker.sock", hostSocketPath("unix:///var/run/docker.sock"))
 	assert.Equal(t, "/run/user/501/podman/podman.sock", hostSocketPath("unix://run/user/501/podman/podman.sock"))
