@@ -87,7 +87,9 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 	// Run the RAG container in detached mode
 	containerID, err := orchestrator.Run(ragImageURI, containerName, env, true, nil, &devices,
 		&commChan, ctx, registry, portMappings)
-	pullSpinner.Stop()
+	if pullSpinner != nil {
+		pullSpinner.Stop()
+	}
 
 	// The orchestrator closes the channel automatically, so we don't need to close it manually
 	if err != nil {

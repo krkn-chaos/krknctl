@@ -113,7 +113,7 @@ func (r *RegistryV2) ToDockerV2AuthString() (*string, error) {
 		}
 	}
 
-	encodedJSON, err := json.Marshal(authConfig)
+	encodedJSON, err := json.Marshal(authConfig) // #nosec G117 -- not a hardcoded credential, holds runtime user input
 	if err != nil {
 		return nil, err
 	}
