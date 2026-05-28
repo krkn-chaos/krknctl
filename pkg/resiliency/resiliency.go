@@ -232,7 +232,7 @@ func GenerateAndWriteReport(reports []DetailedScenarioReport, outputPath string)
 		return fmt.Errorf("failed to marshal report: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, data, 0o644); err != nil {
+	if err := os.WriteFile(outputPath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write report to %s: %w", outputPath, err)
 	}
 

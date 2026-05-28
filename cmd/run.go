@@ -405,7 +405,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings, nil, nil)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings, nil, nil)
 				
 				// Parse resiliency report from captured logs and generate report
 				fmt.Fprintf(os.Stderr, "DEBUG: Attempting to parse resiliency report from %d bytes of logs\n", len(logBuf.Bytes()))

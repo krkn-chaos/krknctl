@@ -102,11 +102,11 @@ func CommonRunGraph(
 			go func(scenario models.Scenario) {
 				defer wg.Done()
 				mw := io.MultiWriter(os.Stdout, file)
-				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry)
+				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry, nil, nil)
 				_ = file.Sync()
 				_ = file.Close()
 
-				if data, readErr := os.ReadFile(filename); readErr == nil {
+				if data, readErr := os.ReadFile(path.Clean(filename)); readErr == nil {
 					if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
 						// Attach weight information for this scenario.
 						weight := scenario.ResiliencyWeight
@@ -147,9 +147,9 @@ func CommonRunGraph(
 	commChannel <- nil
 }
 
-func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2) (*string, error) {
+func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *PodmanCreateOptions) (*string, error) {
 
-	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry)
+	containerID, err := c.Run(image, containerName, env, cache, volumeMounts, commChan, ctx, registry, publishPorts, podmanCreate)
 	if err != nil {
 		return nil, err
 	}
