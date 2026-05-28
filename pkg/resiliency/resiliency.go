@@ -1,5 +1,3 @@
-package resiliency
-
 // Package resiliency centralises all logic related to parsing and aggregating
 // resiliency reports that are emitted by the krkn engine.  A report is printed
 // on a single log line prefixed by the token `KRKN_RESILIENCY_REPORT_JSON:`
@@ -13,6 +11,7 @@ package resiliency
 //   3.  Helper utilities to merge many individual reports into a single final
 //       summary which is later persisted to `resiliency-report.json` by the
 //       CLI.
+package resiliency
 
 import (
 	"encoding/json"
