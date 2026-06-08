@@ -58,7 +58,6 @@ func SkipTestIfForkPR(t *testing.T) {
 	}
 }
 
-// SkipIfTCPDialFails skips the test when address is unreachable (e.g. local registry not running).
 func SkipIfTCPDialFails(t *testing.T, address string) {
 	t.Helper()
 	c, err := net.DialTimeout("tcp", address, 2*time.Second)
