@@ -460,9 +460,12 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if foundIsAScenario != nil {
 			parsedIsAScenario, err := s.ParseIsAScenario(*foundIsAScenario)
 			if err != nil {
-				return nil, err
+				// Label exists but cannot be parsed - use default value
+				// This can happen if the label format is invalid
+				scenarioDetail.IsAScenario = false
+			} else {
+				scenarioDetail.IsAScenario = *parsedIsAScenario
 			}
-			scenarioDetail.IsAScenario = *parsedIsAScenario
 		} else {
 			scenarioDetail.IsAScenario = false
 		}
@@ -470,10 +473,12 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if foundHasRollback != nil {
 			parsedHasRollback, err := s.ParseHasRollback(*foundHasRollback)
 			if err != nil {
-				return nil, err
+				// Label exists but cannot be parsed - use default value
+				// This can happen if the label format is invalid
+				scenarioDetail.HasRollback = false
+			} else {
+				scenarioDetail.HasRollback = *parsedHasRollback
 			}
-
-			scenarioDetail.HasRollback = *parsedHasRollback
 		} else {
 			scenarioDetail.HasRollback = false
 		}
