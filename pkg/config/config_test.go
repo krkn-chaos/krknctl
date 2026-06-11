@@ -290,3 +290,32 @@ func TestConfigBackwardCompatibility(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, assistURI)
 }
+
+func TestGetAssistImageURIWithRegistry(t *testing.T) {
+	config, err := LoadConfig()
+	assert.NoError(t, err)
+
+	// Test with custom registry and custom repository
+	uri, err := config.GetAssistImageURIWithRegistry("my-registry.example.com", "custom-assist")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, uri)
+	assert.Contains(t, uri, "my-registry.example.com")
+	assert.Contains(t, uri, "custom-assist")
+	// Tag is platform-specific (either AssistModelTagApple or AssistModelTagIntel)
+	assert.True(t, strings.HasSuffix(uri, ":"+config.AssistModelTagApple) ||
+		strings.HasSuffix(uri, ":"+config.AssistModelTagIntel))
+
+	// Test with custom registry but default repository
+	uri, err = config.GetAssistImageURIWithRegistry("my-registry.example.com", "")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, uri)
+	assert.Contains(t, uri, "my-registry.example.com")
+	assert.Contains(t, uri, config.AssistRegistry)
+
+	// Test with empty registry (should fall back to public registry)
+	uri, err = config.GetAssistImageURIWithRegistry("", "")
+	assert.NoError(t, err)
+	assert.NotEmpty(t, uri)
+	publicURI, _ := config.GetAssistImageURI()
+	assert.Equal(t, publicURI, uri)
+}

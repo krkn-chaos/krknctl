@@ -141,12 +141,39 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 	return repositoryURI, nil
 }
 
-// GetAssistImageURI returns the assist RAG image URI with faiss-latest tag
+// GetAssistImageURI returns the assist RAG image URI with faiss-latest tag from public registry
 func (c *Config) GetAssistImageURI() (string, error) {
 	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
 	if err != nil {
 		return "", err
 	}
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		return imageURI + ":" + c.AssistModelTagApple, nil
+	}
+	return imageURI + ":" + c.AssistModelTagIntel, nil
+}
+
+// GetAssistImageURIWithRegistry returns the assist RAG image URI from a custom registry
+// If registryURL is empty, falls back to public registry
+func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo string) (string, error) {
+	// If no custom registry, use default public registry
+	if registryURL == "" {
+		return c.GetAssistImageURI()
+	}
+
+	// Use assist repository from parameter, or fall back to config default
+	repo := assistRepo
+	if repo == "" {
+		repo = c.AssistRegistry
+	}
+
+	// Build image URI with custom registry
+	imageURI, err := url.JoinPath(registryURL, repo)
+	if err != nil {
+		return "", err
+	}
+
+	// Append platform-specific tag
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 		return imageURI + ":" + c.AssistModelTagApple, nil
 	}

@@ -81,6 +81,9 @@ func parseBoolLabel(s string, regex string, labelName string) (*bool, error) {
 	if matches == nil {
 		return nil, fmt.Errorf("label %s not found in image manifest", labelName)
 	}
+	if len(matches) < 2 {
+		return nil, fmt.Errorf("label %s regex does not contain a capture group", labelName)
+	}
 	boolValue, err := strconv.ParseBool(matches[1])
 	if err != nil {
 		return nil, err

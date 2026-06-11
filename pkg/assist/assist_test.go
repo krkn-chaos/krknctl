@@ -407,3 +407,53 @@ func TestRAGDeploymentResult_Fields(t *testing.T) {
 		t.Errorf("Expected HostPort '9090', got '%s'", result.HostPort)
 	}
 }
+
+func TestDeployAssistModel_WithPrivateRegistry(t *testing.T) {
+	// Setup
+	ctx := context.Background()
+	testConfig := createTestConfig()
+	testConfig.QuayHost = "quay.io"
+	testConfig.QuayOrg = "krkn-chaos"
+	testConfig.AssistRegistry = "krknctl-assist"
+	testConfig.AssistModelTagApple = "faiss-latest"
+	testConfig.AssistModelTagIntel = "faiss-latest"
+
+	// Create private registry configuration
+	username := "testuser"
+	password := "testpass"
+	privateRegistry := &models.RegistryV2{
+		RegistryURL:        "my-registry.example.com",
+		Username:           &username,
+		Password:           &password,
+		Token:              nil,
+		Insecure:           false,
+		SkipTLS:            false,
+		ScenarioRepository: "custom-assist-repo",
+	}
+
+	mockOrchestrator := &MockScenarioOrchestrator{
+		containerID: "test-private-container-456",
+	}
+
+	mockSpinner := spinner.New(spinner.CharSets[35], 100*time.Millisecond)
+
+	// Execute
+	result, err := DeployAssistModel(ctx, mockOrchestrator, testConfig, privateRegistry, mockSpinner)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected result, got nil")
+	}
+
+	if result.ContainerID != "test-private-container-456" {
+		t.Errorf("Expected ContainerID 'test-private-container-456', got '%s'", result.ContainerID)
+	}
+
+	if result.HostPort != "8080" {
+		t.Errorf("Expected HostPort '8080', got '%s'", result.HostPort)
+	}
+}

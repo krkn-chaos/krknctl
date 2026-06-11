@@ -41,10 +41,22 @@ type ParsedField struct {
 
 // DeployAssistModel deploys the RAG model container using faiss-latest image
 func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, pullSpinner *spinner.Spinner) (*RAGDeploymentResult, error) {
-	// Get the assist image URI with faiss-latest tag
-	ragImageURI, err := config.GetAssistImageURI()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get assist image URI: %w", err)
+	// Get the assist image URI - use private registry if provided
+	var ragImageURI string
+	var err error
+
+	if registry != nil && registry.RegistryURL != "" {
+		// Use private registry
+		ragImageURI, err = config.GetAssistImageURIWithRegistry(registry.RegistryURL, registry.ScenarioRepository)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get assist image URI from private registry: %w", err)
+		}
+	} else {
+		// Use default public registry
+		ragImageURI, err = config.GetAssistImageURI()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get assist image URI: %w", err)
+		}
 	}
 
 	// Generate unique container name using config
