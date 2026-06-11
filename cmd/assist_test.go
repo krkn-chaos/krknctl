@@ -39,12 +39,12 @@ func (m *MockScenarioOrchestrator) Connect(containerRuntimeURI string) (context.
 	return context.Background(), nil
 }
 
-func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
 
-func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, devices *map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2) (*string, error) {
+func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
