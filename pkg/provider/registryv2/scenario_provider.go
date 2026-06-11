@@ -460,12 +460,9 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if foundIsAScenario != nil {
 			parsedIsAScenario, err := s.ParseIsAScenario(*foundIsAScenario)
 			if err != nil {
-				// Label exists but cannot be parsed with regex - try simple string matching as fallback
-				// This handles cases where the label format is slightly different than expected
-				scenarioDetail.IsAScenario = parseBoolFallback(*foundIsAScenario)
-			} else {
-				scenarioDetail.IsAScenario = *parsedIsAScenario
+				return nil, err
 			}
+			scenarioDetail.IsAScenario = *parsedIsAScenario
 		} else {
 			scenarioDetail.IsAScenario = false
 		}
@@ -473,12 +470,10 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if foundHasRollback != nil {
 			parsedHasRollback, err := s.ParseHasRollback(*foundHasRollback)
 			if err != nil {
-				// Label exists but cannot be parsed with regex - try simple string matching as fallback
-				// This handles cases where the label format is slightly different than expected
-				scenarioDetail.HasRollback = parseBoolFallback(*foundHasRollback)
-			} else {
-				scenarioDetail.HasRollback = *parsedHasRollback
+				return nil, err
 			}
+
+			scenarioDetail.HasRollback = *parsedHasRollback
 		} else {
 			scenarioDetail.HasRollback = false
 		}
