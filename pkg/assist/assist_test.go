@@ -13,6 +13,7 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 )
 
@@ -25,7 +26,7 @@ type MockScenarioOrchestrator struct {
 	shouldFailList bool
 }
 
-func (m *MockScenarioOrchestrator) Run(imageURI string, containerName string, env map[string]string, waitForCompletion bool, volumes map[string]string, devices *map[string]string, commChan *chan *string, ctx context.Context, registrySettings *models.RegistryV2, portMappings *map[string]string) (*string, error) {
+func (m *MockScenarioOrchestrator) Run(imageURI string, containerName string, env map[string]string, waitForCompletion bool, volumes map[string]string, commChan *chan *string, ctx context.Context, registrySettings *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
 	if m.shouldFailRun {
 		return nil, fmt.Errorf("mock run failure")
 	}
@@ -79,7 +80,7 @@ func (m *MockScenarioOrchestrator) GetContainerRuntimeSocket(*int) (*string, err
 func (m *MockScenarioOrchestrator) Connect(string) (context.Context, error) {
 	return context.Background(), nil
 }
-func (m *MockScenarioOrchestrator) RunAttached(string, string, map[string]string, bool, map[string]string, *map[string]string, io.Writer, io.Writer, *chan *string, context.Context, *models.RegistryV2) (*string, error) {
+func (m *MockScenarioOrchestrator) RunAttached(string, string, map[string]string, bool, map[string]string, io.Writer, io.Writer, *chan *string, context.Context, *models.RegistryV2, []string, *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
 	return nil, nil
 }
 func (m *MockScenarioOrchestrator) RunGraph(orchestratormodels.ScenarioSet, orchestratormodels.ResolvedGraph, map[string]string, map[string]string, bool, chan *orchestratormodels.GraphCommChannel, *models.RegistryV2, *int) {

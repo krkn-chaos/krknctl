@@ -69,6 +69,14 @@ type Config struct {
 	AssistHealthMaxRetries           int    `json:"assist_health_max_retries"`
 	AssistHealthRetryIntervalSeconds int    `json:"assist_health_retry_interval_seconds"`
 	AssistQueryMaxResults            int    `json:"assist_query_max_results"`
+	VisualizeImageName               string `json:"visualize_image_name"`
+	VisualizeImageTag                string `json:"visualize_image_tag"`
+	DashboardImageName               string `json:"dashboard_image_name"`
+	DashboardImageTag                string `json:"dashboard_image_tag"`
+	LabelIsAScenarioRegex            string `json:"label_is_ascenario_regex"`
+	LabelHasRollbackRegex            string `json:"label_has_rollback_regex"`
+	LabelIsAScenario                 string `json:"label_is_ascenario"`
+	LabelHasRollback                 string `json:"label_has_rollback"`
 }
 
 //go:embed config.json

@@ -7,14 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"regexp"
-	"strconv"
-	"strings"
-	"sync"
-
-	nettypes "github.com/containers/common/libnetwork/types"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
@@ -30,12 +22,14 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"io"
 	"os"
-	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+
+	"os/exec"
+
+	"runtime"
 )
 
 type ScenarioOrchestrator struct {
@@ -76,6 +70,9 @@ func podmanCreateViaCLI(ctx context.Context, containerName, image string, env ma
 		}
 		for _, g := range extra.GroupAdd {
 			args = append(args, "--group-add", g)
+		}
+		for hostDev, containerDev := range extra.Devices {
+			args = append(args, "--device", fmt.Sprintf("%s:%s", hostDev, containerDev))
 		}
 	}
 	if len(publishPorts) > 0 {
@@ -198,16 +195,16 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
-	if devices != nil {
-		for _, v := range *devices {
-			driDevice := specs.LinuxDevice{
+	if podmanCreate != nil {
+		// Add device mounts if specified
+		for _, v := range podmanCreate.Devices {
+			deviceSpec := specs.LinuxDevice{
 				Path: v,
 				Type: "c",
 			}
-			s.Devices = append(s.Devices, driDevice)
+			s.Devices = append(s.Devices, deviceSpec)
 		}
-	}
-	if podmanCreate != nil {
+
 		if podmanCreate.ImagePlatform != "" {
 			parts := strings.SplitN(podmanCreate.ImagePlatform, "/", 2)
 			if len(parts) == 2 {

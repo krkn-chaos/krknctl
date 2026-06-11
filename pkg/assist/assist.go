@@ -81,11 +81,14 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		}
 	}
 
-	// Set up port mapping using config
-	hostPort := config.AssistServicePort      // Host port (e.g., "8080")
-	containerPort := config.AssistServicePort // Container port (e.g., "8080")
-	portMappings := &map[string]string{
-		hostPort: containerPort, // host port -> container port
+	// Set up port mapping using config (publishPorts format: "host:container")
+	publishPorts := []string{
+		fmt.Sprintf("%s:%s", config.AssistServicePort, config.AssistServicePort),
+	}
+
+	// Create PodmanCreateOptions with device mounts
+	podmanOpts := &scenarioorchestrator.PodmanCreateOptions{
+		Devices: devices,
 	}
 
 	// Use provided spinner for pull progress
@@ -108,20 +111,22 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 	}()
 
 	// Run the RAG container in detached mode
-	containerID, err := orchestrator.Run(ragImageURI, containerName, env, true, nil, &devices,
-		&commChan, ctx, registry, portMappings)
-	pullSpinner.Stop()
+	containerID, err := orchestrator.Run(ragImageURI, containerName, env, true, nil,
+		&commChan, ctx, registry, publishPorts, podmanOpts)
+	if pullSpinner != nil {
+		pullSpinner.Stop()
+	}
 
 	// The orchestrator closes the channel automatically, so we don't need to close it manually
 	if err != nil {
 		return nil, fmt.Errorf("failed to run Assist container: %w", err)
 	}
 	fmt.Printf("🚀 Assist container started: %s\n", *containerID)
-	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.AssistHost, hostPort, config.AssistServicePort)
+	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.AssistHost, config.AssistServicePort, config.AssistServicePort)
 
 	return &RAGDeploymentResult{
 		ContainerID: *containerID,
-		HostPort:    hostPort,
+		HostPort:    config.AssistServicePort,
 	}, nil
 }
 
@@ -602,7 +607,7 @@ func executeScenario(scenarioName string, scenarioDetail *models.ScenarioDetail,
 	}()
 
 	startTime := time.Now()
-	_, err = orchestrator.RunAttached(scenarioImageURI, containerName, environment, false, volumes, nil, os.Stdout, os.Stderr, &commChan, conn, nil)
+	_, err = orchestrator.RunAttached(scenarioImageURI, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, nil, nil)
 	if err != nil {
 		var staterr *utils.ExitError
 		if errors.As(err, &staterr) {

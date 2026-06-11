@@ -55,7 +55,7 @@
   "visualize_image_name": "krkn-visualize",
   "visualize_image_tag": "latest",
   "dashboard_image_name": "krkn-dashboard",
-  "dashboard_image_tag": "latest"
+  "dashboard_image_tag": "latest",
   "lightspeed_registry": "krknctl-lightspeed",
   "assist_registry": "krknctl-assist",
   "assist_model_tag_apple": "apple-silicon",

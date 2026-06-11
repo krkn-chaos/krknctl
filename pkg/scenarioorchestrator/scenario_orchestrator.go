@@ -15,6 +15,7 @@ type PodmanCreateOptions struct {
 	ImagePlatform string
 	GroupAdd      []string
 	SecurityOpts  []string
+	Devices       map[string]string // host device path -> container device path
 }
 
 type ScenarioOrchestrator interface {
