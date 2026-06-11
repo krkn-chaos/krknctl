@@ -25,8 +25,10 @@ func TestLoadConfig(t *testing.T) {
 	// Test assist specific fields that were added
 	assert.NotEmpty(t, config.AssistRegistry)
 	assert.NotEmpty(t, config.AssistModelTagApple)
+	assert.NotEmpty(t, config.AssistModelTagIntel)
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
-	assert.Equal(t, "faiss-latest", config.AssistModelTagApple)
+	assert.Equal(t, "apple-silicon", config.AssistModelTagApple)
+	assert.Equal(t, "intel", config.AssistModelTagIntel)
 }
 
 func TestGetQuayImageURI(t *testing.T) {
@@ -109,14 +111,15 @@ func TestGetAssistImageURI(t *testing.T) {
 	assert.Contains(t, uri, config.QuayHost)
 	assert.Contains(t, uri, config.QuayOrg)
 	assert.Contains(t, uri, config.AssistRegistry)
-	assert.Contains(t, uri, config.AssistModelTagApple)
 
-	// Should be in the format: host/org/registry:tag
-	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry + ":" + config.AssistModelTagApple
-	assert.Equal(t, expected, uri)
+	// Tag depends on platform - either apple-silicon or intel
+	assert.True(t, strings.Contains(uri, config.AssistModelTagApple) ||
+		strings.Contains(uri, config.AssistModelTagIntel),
+		"URI should contain either apple-silicon or intel tag")
 
-	// Verify it matches the expected default image
-	assert.Equal(t, "quay.io/krkn-chaos/krknctl-assist:faiss-latest", uri)
+	// Verify base format (without tag assertion since it's platform-specific)
+	baseURI := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry
+	assert.Contains(t, uri, baseURI)
 }
 
 func TestConfigStructFields(t *testing.T) {
@@ -126,10 +129,12 @@ func TestConfigStructFields(t *testing.T) {
 	// Test that all assist related fields are properly loaded
 	assert.IsType(t, "", config.AssistRegistry)
 	assert.IsType(t, "", config.AssistModelTagApple)
+	assert.IsType(t, "", config.AssistModelTagIntel)
 
 	// Test that the values are correct
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
-	assert.Equal(t, "faiss-latest", config.AssistModelTagApple)
+	assert.Equal(t, "apple-silicon", config.AssistModelTagApple)
+	assert.Equal(t, "intel", config.AssistModelTagIntel)
 
 	// Test that other existing fields are still working
 	assert.Equal(t, "quay.io", config.QuayHost)
@@ -205,13 +210,17 @@ func TestConfigGithubFields(t *testing.T) {
 	// Test GitHub related URLs
 	assert.Contains(t, config.GithubLatestRelease, "github.com")
 	assert.Contains(t, config.GithubLatestRelease, "releases/latest")
-	assert.Contains(t, config.GithubLatestReleaseAPI, "api.github.com")
 	assert.Contains(t, config.GithubReleaseAPI, "api.github.com")
 
 	// Test that URLs are properly formatted
 	assert.True(t, strings.HasPrefix(config.GithubLatestRelease, "https://"))
-	assert.True(t, strings.HasPrefix(config.GithubLatestReleaseAPI, "https://"))
 	assert.True(t, strings.HasPrefix(config.GithubReleaseAPI, "https://"))
+
+	// GithubLatestReleaseAPI is optional/deprecated - only test if present
+	if config.GithubLatestReleaseAPI != "" {
+		assert.Contains(t, config.GithubLatestReleaseAPI, "api.github.com")
+		assert.True(t, strings.HasPrefix(config.GithubLatestReleaseAPI, "https://"))
+	}
 }
 
 func TestConfigLabelFields(t *testing.T) {
