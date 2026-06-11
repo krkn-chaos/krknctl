@@ -24,9 +24,9 @@ func TestLoadConfig(t *testing.T) {
 
 	// Test assist specific fields that were added
 	assert.NotEmpty(t, config.AssistRegistry)
-	assert.NotEmpty(t, config.RAGModelTag)
+	assert.NotEmpty(t, config.AssistModelTagApple)
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
-	assert.Equal(t, "faiss-latest", config.RAGModelTag)
+	assert.Equal(t, "faiss-latest", config.AssistModelTagApple)
 }
 
 func TestGetQuayImageURI(t *testing.T) {
@@ -109,10 +109,10 @@ func TestGetAssistImageURI(t *testing.T) {
 	assert.Contains(t, uri, config.QuayHost)
 	assert.Contains(t, uri, config.QuayOrg)
 	assert.Contains(t, uri, config.AssistRegistry)
-	assert.Contains(t, uri, config.RAGModelTag)
+	assert.Contains(t, uri, config.AssistModelTagApple)
 
 	// Should be in the format: host/org/registry:tag
-	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry + ":" + config.RAGModelTag
+	expected := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry + ":" + config.AssistModelTagApple
 	assert.Equal(t, expected, uri)
 
 	// Verify it matches the expected default image
@@ -125,11 +125,11 @@ func TestConfigStructFields(t *testing.T) {
 
 	// Test that all assist related fields are properly loaded
 	assert.IsType(t, "", config.AssistRegistry)
-	assert.IsType(t, "", config.RAGModelTag)
+	assert.IsType(t, "", config.AssistModelTagApple)
 
 	// Test that the values are correct
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
-	assert.Equal(t, "faiss-latest", config.RAGModelTag)
+	assert.Equal(t, "faiss-latest", config.AssistModelTagApple)
 
 	// Test that other existing fields are still working
 	assert.Equal(t, "quay.io", config.QuayHost)
@@ -170,7 +170,7 @@ func TestConfigJSONStructure(t *testing.T) {
 		config.DockerRunningState,
 		config.DefaultContainerPlatform,
 		config.AssistRegistry,
-		config.RAGModelTag,
+		config.AssistModelTagApple,
 	}
 
 	for _, field := range requiredStringFields {
@@ -255,7 +255,7 @@ func TestConfigTypes(t *testing.T) {
 
 	// Verify field types are correct
 	assert.IsType(t, "", config.AssistRegistry)
-	assert.IsType(t, "", config.RAGModelTag)
+	assert.IsType(t, "", config.AssistModelTagApple)
 	assert.IsType(t, "", config.Version)
 	assert.IsType(t, "", config.QuayHost)
 	assert.IsType(t, "", config.QuayOrg)

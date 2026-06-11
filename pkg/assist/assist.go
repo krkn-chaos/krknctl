@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -47,7 +48,7 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 	}
 
 	// Generate unique container name using config
-	containerName := fmt.Sprintf("%s-%d", config.RAGContainerPrefix, time.Now().Unix())
+	containerName := fmt.Sprintf("%s-%d", config.AssistContainerPrefix, time.Now().Unix())
 
 	// Set up environment variables (basic configuration only)
 	env := map[string]string{
@@ -55,19 +56,41 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		"MKL_NUM_THREADS": "4",
 	}
 
-	// No device mounts needed for simplified version
+	// Set up device mounts based on platform
 	devices := map[string]string{}
 
+	// On macOS arm64, mount /dev/dri for GPU acceleration (container runs in Linux VM via libkrun)
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		devices["/dev/dri"] = "/dev/dri"
+	} else if runtime.GOOS == "linux" {
+		// On Linux, check for NVIDIA GPU devices and mount them if available
+		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
+		hasNvidia := true
+		for _, dev := range nvidiaDevices {
+			if _, err := os.Stat(dev); err != nil {
+				hasNvidia = false
+				break
+			}
+		}
+
+		if hasNvidia {
+			// Mount all NVIDIA devices
+			for _, dev := range nvidiaDevices {
+				devices[dev] = dev
+			}
+		}
+	}
+
 	// Set up port mapping using config
-	hostPort := config.RAGServicePort      // Host port (e.g., "8080")
-	containerPort := config.RAGServicePort // Container port (e.g., "8080")
+	hostPort := config.AssistServicePort      // Host port (e.g., "8080")
+	containerPort := config.AssistServicePort // Container port (e.g., "8080")
 	portMappings := &map[string]string{
 		hostPort: containerPort, // host port -> container port
 	}
 
 	// Use provided spinner for pull progress
 	if pullSpinner != nil {
-		pullSpinner.Suffix = " pulling RAG model image..."
+		pullSpinner.Suffix = " pulling Assist model image..."
 		pullSpinner.Start()
 	}
 
@@ -91,10 +114,10 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 
 	// The orchestrator closes the channel automatically, so we don't need to close it manually
 	if err != nil {
-		return nil, fmt.Errorf("failed to run RAG container: %w", err)
+		return nil, fmt.Errorf("failed to run Assist container: %w", err)
 	}
-	fmt.Printf("🚀 RAG container started: %s\n", *containerID)
-	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.RAGHost, hostPort, config.RAGServicePort)
+	fmt.Printf("🚀 Assist container started: %s\n", *containerID)
+	fmt.Printf("📡 Port mapping: %s:%s -> container:%s\n", config.AssistHost, hostPort, config.AssistServicePort)
 
 	return &RAGDeploymentResult{
 		ContainerID: *containerID,
@@ -105,9 +128,9 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 // PerformAssistHealthCheck performs health checking with timeout and cleanup on failure
 func PerformAssistHealthCheck(containerID string, hostPort string, orchestrator scenarioorchestrator.ScenarioOrchestrator, ctx context.Context, config config.Config) (bool, error) {
 	// Health URL is constructed from trusted config values and validated port
-	healthURL := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGHealthEndpoint)
-	maxRetries := config.RAGHealthMaxRetries
-	retryInterval := time.Duration(config.RAGHealthRetryIntervalSeconds) * time.Second
+	healthURL := fmt.Sprintf("http://%s:%s%s", config.AssistHost, hostPort, config.AssistHealthEndpoint)
+	maxRetries := config.AssistHealthMaxRetries
+	retryInterval := time.Duration(config.AssistHealthRetryIntervalSeconds) * time.Second
 
 	fmt.Printf("🩺 health checking assist service at %s...\n", healthURL)
 
@@ -158,7 +181,7 @@ func PerformAssistHealthCheck(containerID string, hostPort string, orchestrator 
 	}
 
 	// Health check failed, clean up the container
-	timeoutMinutes := (maxRetries * config.RAGHealthRetryIntervalSeconds) / 60
+	timeoutMinutes := (maxRetries * config.AssistHealthRetryIntervalSeconds) / 60
 	fmt.Printf("❌ health check timed out after %d minutes, cleaning up container...\n",
 		timeoutMinutes)
 	if err := orchestrator.Kill(&containerID, ctx); err != nil {
@@ -190,7 +213,7 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 
 	fmt.Printf("⚡ assist AI Assistant ready! Ask me about krknctl commands or chaos" +
 		" engineering:\n")
-	fmt.Printf("📍 service available at: http://%s:%s\n", config.RAGHost, hostPort)
+	fmt.Printf("📍 service available at: http://%s:%s\n", config.AssistHost, hostPort)
 	fmt.Printf("💡 try asking: 'How do I run a pod deletion scenario?'\n")
 	fmt.Printf("🚪 type 'exit', 'quit', or press Ctrl+C to stop.\n\n")
 
@@ -325,7 +348,7 @@ func StartInteractivePrompt(containerID string, hostPort string, orchestrator sc
 // queryAssistService sends a query to the assist service and returns the response
 func queryAssistService(hostPort string, query string, config config.Config) (*QueryResponse, error) {
 	// Query URL is constructed from trusted config values and validated port
-	url := fmt.Sprintf("http://%s:%s%s", config.RAGHost, hostPort, config.RAGQueryEndpoint)
+	url := fmt.Sprintf("http://%s:%s%s", config.AssistHost, hostPort, config.AssistQueryEndpoint)
 
 	requestBody := QueryRequest{
 		Model: "llama",

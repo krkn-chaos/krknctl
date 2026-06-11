@@ -58,13 +58,14 @@
   "dashboard_image_tag": "latest"
   "lightspeed_registry": "krknctl-lightspeed",
   "assist_registry": "krknctl-assist",
-  "rag_model_tag": "faiss-latest",
-  "rag_container_prefix": "krknctl-assist-rag",
-  "rag_service_port": "8080",
-  "rag_health_endpoint": "/health",
-  "rag_query_endpoint": "/v1/chat/completions",
-  "rag_host": "localhost",
-  "rag_health_max_retries": 60,
-  "rag_health_retry_interval_seconds": 10,
-  "rag_query_max_results": 5
+  "assist_model_tag_apple": "apple-silicon",
+  "assist_model_tag_intel": "intel",
+  "assist_container_prefix": "krknctl-assist",
+  "assist_service_port": "8080",
+  "assist_health_endpoint": "/health",
+  "assist_query_endpoint": "/v1/chat/completions",
+  "assist_host": "localhost",
+  "assist_health_max_retries": 60,
+  "assist_health_retry_interval_seconds": 10,
+  "assist_query_max_results": 5
 }

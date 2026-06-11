@@ -102,16 +102,15 @@ func (m *MockScenarioOrchestrator) ResolveContainerName(string, context.Context)
 	return nil, nil
 }
 
-
 func createTestConfig() config.Config {
 	return config.Config{
-		RAGContainerPrefix:            "test-assist",
-		RAGServicePort:                "8080",
-		RAGHost:                       "127.0.0.1",
-		RAGHealthEndpoint:             "/health",
-		RAGQueryEndpoint:              "/v1/chat/completions",
-		RAGHealthMaxRetries:           3,
-		RAGHealthRetryIntervalSeconds: 1,
+		AssistContainerPrefix:            "test-assist",
+		AssistServicePort:                "8080",
+		AssistHost:                       "127.0.0.1",
+		AssistHealthEndpoint:             "/health",
+		AssistQueryEndpoint:              "/v1/chat/completions",
+		AssistHealthMaxRetries:           3,
+		AssistHealthRetryIntervalSeconds: 1,
 	}
 }
 
@@ -122,7 +121,7 @@ func TestDeployAssistModel_Success(t *testing.T) {
 	testConfig.QuayHost = "quay.io"
 	testConfig.QuayOrg = "krkn-chaos"
 	testConfig.AssistRegistry = "krknctl-assist"
-	testConfig.RAGModelTag = "faiss-latest"
+	testConfig.AssistModelTagApple = "faiss-latest"
 
 	mockOrchestrator := &MockScenarioOrchestrator{
 		containerID: "test-container-123",
@@ -158,7 +157,7 @@ func TestDeployAssistModel_RunFailure(t *testing.T) {
 	testConfig.QuayHost = "quay.io"
 	testConfig.QuayOrg = "krkn-chaos"
 	testConfig.AssistRegistry = "krknctl-assist"
-	testConfig.RAGModelTag = "faiss-latest"
+	testConfig.AssistModelTagApple = "faiss-latest"
 
 	mockOrchestrator := &MockScenarioOrchestrator{
 		shouldFailRun: true,
@@ -176,7 +175,7 @@ func TestDeployAssistModel_RunFailure(t *testing.T) {
 		t.Fatal("Expected nil result on error")
 	}
 
-	if err.Error() != "failed to run RAG container: mock run failure" {
+	if err.Error() != "failed to run Assist container: mock run failure" {
 		t.Errorf("Unexpected error message: %v", err)
 	}
 }
@@ -200,7 +199,7 @@ func TestPerformAssistHealthCheck_Success(t *testing.T) {
 
 	// Extract port from server URL
 	config := createTestConfig()
-	config.RAGHost = "127.0.0.1"
+	config.AssistHost = "127.0.0.1"
 	// Parse port from server.URL (format: http://127.0.0.1:PORT)
 	serverURL := server.URL
 	port := serverURL[len("http://127.0.0.1:"):]
@@ -245,8 +244,8 @@ func TestPerformAssistHealthCheck_Unhealthy(t *testing.T) {
 	defer server.Close()
 
 	config := createTestConfig()
-	config.RAGHost = "127.0.0.1"
-	config.RAGHealthMaxRetries = 2
+	config.AssistHost = "127.0.0.1"
+	config.AssistHealthMaxRetries = 2
 	serverURL := server.URL
 	port := serverURL[len("http://127.0.0.1:"):]
 
@@ -335,7 +334,7 @@ func TestQueryAssistService_Success(t *testing.T) {
 	defer server.Close()
 
 	config := createTestConfig()
-	config.RAGHost = "127.0.0.1"
+	config.AssistHost = "127.0.0.1"
 	serverURL := server.URL
 	port := serverURL[len("http://127.0.0.1:"):]
 
@@ -370,7 +369,7 @@ func TestQueryAssistService_ServerError(t *testing.T) {
 	defer server.Close()
 
 	config := createTestConfig()
-	config.RAGHost = "127.0.0.1"
+	config.AssistHost = "127.0.0.1"
 	serverURL := server.URL
 	port := serverURL[len("http://127.0.0.1:"):]
 

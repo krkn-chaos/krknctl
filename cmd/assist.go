@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/krkn-chaos/krknctl/pkg/assist"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
@@ -33,7 +34,6 @@ Examples:
 
 	return command
 }
-
 
 // buildAssistRegistryFromFlags builds assist registry configuration from command flags
 func buildAssistRegistryFromFlags(cmd *cobra.Command, config config.Config) (*models.RegistryV2, error) {
@@ -123,12 +123,12 @@ Examples:
 			fmt.Println("🚀 deploying assist model...")
 
 			// Create spinners for the operations
-			pullSpinner := NewSpinnerWithSuffix(" pulling RAG model image...")
+			pullSpinner := NewSpinnerWithSuffix(" pulling Assist model image...")
 			thinkingSpinner := NewSpinnerWithSuffix(" thinking...", 37)
 
 			ragResult, err := assist.DeployAssistModel(ctx, *scenarioOrchestrator, config, registry, pullSpinner)
 			if err != nil {
-				return fmt.Errorf("failed to deploy RAG model: %w", err)
+				return fmt.Errorf("failed to deploy Assist model: %w", err)
 			}
 
 			// Health check
