@@ -334,7 +334,13 @@ func TestConfigBooleanLabelRegex(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
 
-	// Test that boolean label regex fields are loaded
+	// Test that boolean label NAME fields are loaded
+	assert.NotEmpty(t, config.LabelIsAScenario, "LabelIsAScenario should not be empty")
+	assert.NotEmpty(t, config.LabelHasRollback, "LabelHasRollback should not be empty")
+	assert.Equal(t, "krknctl.is_a_scenario=", config.LabelIsAScenario)
+	assert.Equal(t, "krknctl.has_rollback=", config.LabelHasRollback)
+
+	// Test that boolean label REGEX fields are loaded
 	assert.NotEmpty(t, config.LabelIsAScenarioRegex, "LabelIsAScenarioRegex should not be empty")
 	assert.NotEmpty(t, config.LabelHasRollbackRegex, "LabelHasRollbackRegex should not be empty")
 
@@ -350,6 +356,8 @@ func TestConfigBooleanLabelRegex(t *testing.T) {
 	assert.NoError(t, err, "LabelHasRollbackRegex should be valid regex")
 
 	// Debug output
+	t.Logf("LabelIsAScenario: %q", config.LabelIsAScenario)
+	t.Logf("LabelHasRollback: %q", config.LabelHasRollback)
 	t.Logf("LabelIsAScenarioRegex: %q", config.LabelIsAScenarioRegex)
 	t.Logf("LabelHasRollbackRegex: %q", config.LabelHasRollbackRegex)
 }

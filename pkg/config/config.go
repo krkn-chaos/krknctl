@@ -75,7 +75,7 @@ type Config struct {
 	DashboardImageTag                string `json:"dashboard_image_tag"`
 	LabelIsAScenarioRegex            string `json:"label_is_a_scenario_regex"`
 	LabelHasRollbackRegex            string `json:"label_has_rollback_regex"`
-	LabelIsAScenario                 string `json:"label_is_ascenario"`
+	LabelIsAScenario                 string `json:"label_is_a_scenario"`
 	LabelHasRollback                 string `json:"label_has_rollback"`
 }
 
