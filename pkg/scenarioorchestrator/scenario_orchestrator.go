@@ -3,11 +3,12 @@ package scenarioorchestrator
 
 import (
 	"context"
+	"io"
+	"os"
+
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"io"
-	"os"
 )
 
 // PodmanCreateOptions are optional podman create flags (ignored by Docker).
@@ -15,6 +16,7 @@ type PodmanCreateOptions struct {
 	ImagePlatform string
 	GroupAdd      []string
 	SecurityOpts  []string
+	Devices       map[string]string // host device path -> container device path
 }
 
 type ScenarioOrchestrator interface {

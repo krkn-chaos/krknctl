@@ -1,4 +1,5 @@
 {
+  "_comment": "Assisted by Claude Sonnet 4",
   "version": "v0.0.1-alpha",
   "quay_host": "quay.io",
   "quay_org": "krkn-chaos",
@@ -36,8 +37,8 @@
   "label_title_regex_global": "LABEL krknctl\\.title\\.global=\\\"?([^\"]+)\\\"?",
   "label_description_regex_global": "LABEL krknctl\\.description\\.global=\\\"?([^\"]+)\\\"?",
   "label_input_fields_regex_global": "LABEL krknctl\\.input_fields\\.global=\\'?(\\[.*\\])\\'?",
-  "label_is_a_scenario_regex": "LABEL krknctl\\.is_a_scenario=\\\"?([^\"]+)\\\"?",
-  "label_has_rollback_regex" : "LABEL krknctl\\.has_rollback=\\\"?([^\"]+)\\\"?",
+  "label_is_a_scenario_regex": "LABEL krknctl\\.is_a_scenario\\s*=\\s*\\\"?([^\"]*)\\\"?",
+  "label_has_rollback_regex" : "LABEL krknctl\\.has_rollback\\s*=\\s*\\\"?([^\"]*)\\\"?",
   "label_root_node": "I'm the root Node!",
   "env_private_registry": "KRKNCTL_PRIVATE_REGISTRY",
   "env_private_registry_username": "KRKNCTL_PRIVATE_REGISTRY_USERNAME",
@@ -54,5 +55,17 @@
   "visualize_image_name": "krkn-visualize",
   "visualize_image_tag": "latest",
   "dashboard_image_name": "krkn-dashboard",
-  "dashboard_image_tag": "latest"
+  "dashboard_image_tag": "latest",
+  "lightspeed_registry": "krknctl-lightspeed",
+  "assist_registry": "krknctl-assist",
+  "assist_model_tag_apple": "apple-silicon",
+  "assist_model_tag_intel": "intel",
+  "assist_container_prefix": "krknctl-assist",
+  "assist_service_port": "8080",
+  "assist_health_endpoint": "/health",
+  "assist_query_endpoint": "/v1/chat/completions",
+  "assist_host": "localhost",
+  "assist_health_max_retries": 60,
+  "assist_health_retry_interval_seconds": 10,
+  "assist_query_max_results": 5
 }

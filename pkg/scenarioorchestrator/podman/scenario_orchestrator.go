@@ -22,12 +22,14 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"io"
 	"os"
-	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+
+	"os/exec"
+
+	"runtime"
 )
 
 type ScenarioOrchestrator struct {
@@ -68,6 +70,9 @@ func podmanCreateViaCLI(ctx context.Context, containerName, image string, env ma
 		}
 		for _, g := range extra.GroupAdd {
 			args = append(args, "--group-add", g)
+		}
+		for hostDev, containerDev := range extra.Devices {
+			args = append(args, "--device", fmt.Sprintf("%s:%s", hostDev, containerDev))
 		}
 	}
 	if len(publishPorts) > 0 {
@@ -190,10 +195,16 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 		s.Mounts = append(s.Mounts, containerMount)
 	}
 
-	s.NetNS = specgen.Namespace{
-		NSMode: "host",
-	}
 	if podmanCreate != nil {
+		// Add device mounts if specified
+		for _, v := range podmanCreate.Devices {
+			deviceSpec := specs.LinuxDevice{
+				Path: v,
+				Type: "c",
+			}
+			s.Devices = append(s.Devices, deviceSpec)
+		}
+
 		if podmanCreate.ImagePlatform != "" {
 			parts := strings.SplitN(podmanCreate.ImagePlatform, "/", 2)
 			if len(parts) == 2 {
@@ -215,7 +226,12 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	return &createResponse.ID, nil
 }
 
-func (c *ScenarioOrchestrator) Attach(containerID *string, signalChannel chan os.Signal, stdout io.Writer, stderr io.Writer, ctx context.Context) (bool, error) {
+func (c *ScenarioOrchestrator) Attach(containerID *string,
+	signalChannel chan os.Signal,
+	stdout io.Writer,
+	stderr io.Writer,
+	ctx context.Context,
+) (bool, error) {
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 
