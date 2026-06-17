@@ -3,11 +3,12 @@ package scenarioorchestrator
 
 import (
 	"context"
+	"io"
+	"os"
+
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	orchestrator_models "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"io"
-	"os"
 )
 
 // PodmanCreateOptions are optional podman create flags (ignored by Docker).
