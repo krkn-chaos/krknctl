@@ -73,7 +73,7 @@ type Config struct {
 	VisualizeImageTag                string `json:"visualize_image_tag"`
 	DashboardImageName               string `json:"dashboard_image_name"`
 	DashboardImageTag                string `json:"dashboard_image_tag"`
-	LabelIsAScenarioRegex            string `json:"label_is_ascenario_regex"`
+	LabelIsAScenarioRegex            string `json:"label_is_a_scenario_regex"`
 	LabelHasRollbackRegex            string `json:"label_has_rollback_regex"`
 	LabelIsAScenario                 string `json:"label_is_ascenario"`
 	LabelHasRollback                 string `json:"label_has_rollback"`

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -327,4 +328,28 @@ func TestGetAssistImageURIWithRegistry(t *testing.T) {
 	assert.NotEmpty(t, uri)
 	publicURI, _ := config.GetAssistImageURI()
 	assert.Equal(t, publicURI, uri)
+}
+
+func TestConfigBooleanLabelRegex(t *testing.T) {
+	config, err := LoadConfig()
+	assert.NoError(t, err)
+
+	// Test that boolean label regex fields are loaded
+	assert.NotEmpty(t, config.LabelIsAScenarioRegex, "LabelIsAScenarioRegex should not be empty")
+	assert.NotEmpty(t, config.LabelHasRollbackRegex, "LabelHasRollbackRegex should not be empty")
+
+	// Test that regex contains the expected pattern with spaces support
+	assert.Contains(t, config.LabelIsAScenarioRegex, "\\s*=\\s*", "Regex should support spaces around =")
+	assert.Contains(t, config.LabelHasRollbackRegex, "\\s*=\\s*", "Regex should support spaces around =")
+
+	// Test that regex can be compiled
+	_, err = regexp.Compile(config.LabelIsAScenarioRegex)
+	assert.NoError(t, err, "LabelIsAScenarioRegex should be valid regex")
+
+	_, err = regexp.Compile(config.LabelHasRollbackRegex)
+	assert.NoError(t, err, "LabelHasRollbackRegex should be valid regex")
+
+	// Debug output
+	t.Logf("LabelIsAScenarioRegex: %q", config.LabelIsAScenarioRegex)
+	t.Logf("LabelHasRollbackRegex: %q", config.LabelHasRollbackRegex)
 }
