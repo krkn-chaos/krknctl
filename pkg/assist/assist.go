@@ -11,10 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -23,6 +23,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/forms"
+	"github.com/krkn-chaos/krknctl/pkg/gpudetect"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -68,29 +69,32 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		"MKL_NUM_THREADS": "4",
 	}
 
-	// Set up device mounts based on platform
+	// Set up device mounts based on detected GPU type
 	devices := map[string]string{}
 
-	// On macOS arm64, mount /dev/dri for GPU acceleration (container runs in Linux VM via libkrun)
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		devices["/dev/dri"] = "/dev/dri"
-	} else if runtime.GOOS == "linux" {
-		// On Linux, check for NVIDIA GPU devices and mount them if available
-		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
-		hasNvidia := true
-		for _, dev := range nvidiaDevices {
-			if _, err := os.Stat(dev); err != nil {
-				hasNvidia = false
-				break
-			}
-		}
+	gpuType, err := gpudetect.DetectGPU()
+	if err != nil {
+		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
+		gpuType = gpudetect.GPUTypeCPU
+	}
 
-		if hasNvidia {
-			// Mount all NVIDIA devices
-			for _, dev := range nvidiaDevices {
+	switch gpuType {
+	case gpudetect.GPUTypeAppleSilicon:
+		// Mount /dev/dri for Vulkan acceleration (container runs in Linux VM via libkrun)
+		devices["/dev/dri"] = "/dev/dri"
+
+	case gpudetect.GPUTypeNvidiaConsumer, gpudetect.GPUTypeNvidiaDatacenter:
+		// Mount NVIDIA devices for CUDA acceleration
+		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
+		for _, dev := range nvidiaDevices {
+			if _, err := os.Stat(dev); err == nil {
 				devices[dev] = dev
 			}
 		}
+
+	case gpudetect.GPUTypeCPU:
+		// No device mounts needed for CPU-only mode
+		log.Println("Running in CPU-only mode, no GPU acceleration")
 	}
 
 	// Set up port mapping using config (publishPorts format: "host:container")

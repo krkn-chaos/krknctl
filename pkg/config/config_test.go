@@ -26,10 +26,14 @@ func TestLoadConfig(t *testing.T) {
 	// Test assist specific fields that were added
 	assert.NotEmpty(t, config.AssistRegistry)
 	assert.NotEmpty(t, config.AssistModelTagApple)
-	assert.NotEmpty(t, config.AssistModelTagIntel)
+	assert.NotEmpty(t, config.AssistModelTagNvidiaConsumer)
+	assert.NotEmpty(t, config.AssistModelTagNvidiaDatacenter)
+	assert.NotEmpty(t, config.AssistModelTagCPU)
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
 	assert.Equal(t, "apple-silicon", config.AssistModelTagApple)
-	assert.Equal(t, "intel", config.AssistModelTagIntel)
+	assert.Equal(t, "nvidia-consumer", config.AssistModelTagNvidiaConsumer)
+	assert.Equal(t, "nvidia-datacenter", config.AssistModelTagNvidiaDatacenter)
+	assert.Equal(t, "cpu", config.AssistModelTagCPU)
 }
 
 func TestGetQuayImageURI(t *testing.T) {
@@ -113,12 +117,23 @@ func TestGetAssistImageURI(t *testing.T) {
 	assert.Contains(t, uri, config.QuayOrg)
 	assert.Contains(t, uri, config.AssistRegistry)
 
-	// Tag depends on platform - either apple-silicon or intel
-	assert.True(t, strings.Contains(uri, config.AssistModelTagApple) ||
-		strings.Contains(uri, config.AssistModelTagIntel),
-		"URI should contain either apple-silicon or intel tag")
+	// Tag depends on detected GPU - apple-silicon, nvidia-consumer, nvidia-datacenter, or cpu
+	validTags := []string{
+		config.AssistModelTagApple,
+		config.AssistModelTagNvidiaConsumer,
+		config.AssistModelTagNvidiaDatacenter,
+		config.AssistModelTagCPU,
+	}
+	hasValidTag := false
+	for _, tag := range validTags {
+		if strings.Contains(uri, tag) {
+			hasValidTag = true
+			break
+		}
+	}
+	assert.True(t, hasValidTag, "URI should contain one of the valid GPU tags")
 
-	// Verify base format (without tag assertion since it's platform-specific)
+	// Verify base format (without tag assertion since it's GPU-specific)
 	baseURI := config.QuayHost + "/" + config.QuayOrg + "/" + config.AssistRegistry
 	assert.Contains(t, uri, baseURI)
 }
@@ -130,12 +145,16 @@ func TestConfigStructFields(t *testing.T) {
 	// Test that all assist related fields are properly loaded
 	assert.IsType(t, "", config.AssistRegistry)
 	assert.IsType(t, "", config.AssistModelTagApple)
-	assert.IsType(t, "", config.AssistModelTagIntel)
+	assert.IsType(t, "", config.AssistModelTagNvidiaConsumer)
+	assert.IsType(t, "", config.AssistModelTagNvidiaDatacenter)
+	assert.IsType(t, "", config.AssistModelTagCPU)
 
 	// Test that the values are correct
 	assert.Equal(t, "krknctl-assist", config.AssistRegistry)
 	assert.Equal(t, "apple-silicon", config.AssistModelTagApple)
-	assert.Equal(t, "intel", config.AssistModelTagIntel)
+	assert.Equal(t, "nvidia-consumer", config.AssistModelTagNvidiaConsumer)
+	assert.Equal(t, "nvidia-datacenter", config.AssistModelTagNvidiaDatacenter)
+	assert.Equal(t, "cpu", config.AssistModelTagCPU)
 
 	// Test that other existing fields are still working
 	assert.Equal(t, "quay.io", config.QuayHost)
@@ -311,9 +330,21 @@ func TestGetAssistImageURIWithRegistry(t *testing.T) {
 	assert.NotEmpty(t, uri)
 	assert.Contains(t, uri, "my-registry.example.com")
 	assert.Contains(t, uri, "custom-assist")
-	// Tag is platform-specific (either AssistModelTagApple or AssistModelTagIntel)
-	assert.True(t, strings.HasSuffix(uri, ":"+config.AssistModelTagApple) ||
-		strings.HasSuffix(uri, ":"+config.AssistModelTagIntel))
+	// Tag is GPU-specific (one of the valid GPU tags)
+	validTags := []string{
+		config.AssistModelTagApple,
+		config.AssistModelTagNvidiaConsumer,
+		config.AssistModelTagNvidiaDatacenter,
+		config.AssistModelTagCPU,
+	}
+	hasValidTag := false
+	for _, tag := range validTags {
+		if strings.HasSuffix(uri, ":"+tag) {
+			hasValidTag = true
+			break
+		}
+	}
+	assert.True(t, hasValidTag, "URI should end with a valid GPU tag")
 
 	// Test with custom registry but default repository
 	uri, err = config.GetAssistImageURIWithRegistry("my-registry.example.com", "")
