@@ -35,15 +35,29 @@ func DetectGPU() (GPUType, error) {
 	}
 
 	// Linux: Check for NVIDIA device files (must be readable)
-	nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
+	// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
+	devRoot, err := os.OpenRoot("/dev")
+	if err != nil {
+		// Cannot access /dev directory, use CPU mode
+		return GPUTypeCPU, nil
+	}
+	defer func() {
+		if err := devRoot.Close(); err != nil {
+			log.Printf("Warning: failed to close /dev root: %v", err)
+		}
+	}()
+
+	nvidiaDevices := []string{"nvidia0", "nvidiactl", "nvidia-uvm"}
 	for _, dev := range nvidiaDevices {
-		// Use os.Open to verify both existence and read access
-		f, err := os.Open(dev)
+		// Verify both existence and read access
+		f, err := devRoot.Open(dev)
 		if err != nil {
 			// NVIDIA device not accessible (missing or permission denied), use CPU mode
 			return GPUTypeCPU, nil
 		}
-		f.Close()
+		if err := f.Close(); err != nil {
+			log.Printf("Warning: failed to close /dev/%s: %v", dev, err)
+		}
 	}
 
 	// NVIDIA devices exist, try to detect GPU type via NVML

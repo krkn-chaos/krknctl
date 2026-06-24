@@ -80,12 +80,25 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 
 	case gpudetect.GPUTypeNvidiaConsumer, gpudetect.GPUTypeNvidiaDatacenter:
 		// Mount NVIDIA devices for CUDA acceleration (verify still accessible)
-		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
-		for _, dev := range nvidiaDevices {
-			// Verify device is still accessible before mounting
-			if f, err := os.Open(dev); err == nil {
-				f.Close()
-				devices[dev] = dev
+		// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
+		devRoot, err := os.OpenRoot("/dev")
+		if err == nil {
+			defer func() {
+				if closeErr := devRoot.Close(); closeErr != nil {
+					log.Printf("Warning: failed to close /dev root: %v", closeErr)
+				}
+			}()
+
+			nvidiaDeviceNames := []string{"nvidia0", "nvidiactl", "nvidia-uvm"}
+			for _, devName := range nvidiaDeviceNames {
+				// Verify device is still accessible before mounting
+				if f, err := devRoot.Open(devName); err == nil {
+					if closeErr := f.Close(); closeErr != nil {
+						log.Printf("Warning: failed to close /dev/%s: %v", devName, closeErr)
+					}
+					// Add full path for container mount
+					devices["/dev/"+devName] = "/dev/" + devName
+				}
 			}
 		}
 
