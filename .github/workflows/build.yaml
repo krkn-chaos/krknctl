@@ -22,7 +22,11 @@ jobs:
 
     - name: install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev    
+        sudo apt-get update && sudo apt-get install libbtrfs-dev
+
+    - name: sync vendor directory
+      run: |
+        go mod vendor
 
     - name: advance version
       run: |
