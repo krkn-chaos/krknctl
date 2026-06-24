@@ -108,9 +108,10 @@ func TestGetAssistImageURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
 
-	uri, err := config.GetAssistImageURI()
+	uri, gpuType, err := config.GetAssistImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
+	assert.NotEmpty(t, gpuType)
 
 	// Should contain the host, org, and assist registry
 	assert.Contains(t, uri, config.QuayHost)
@@ -315,9 +316,10 @@ func TestConfigBackwardCompatibility(t *testing.T) {
 	assert.NotEmpty(t, baseImageAPI)
 
 	// Test the assist image URI method
-	assistURI, err := config.GetAssistImageURI()
+	assistURI, gpuType, err := config.GetAssistImageURI()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, assistURI)
+	assert.NotEmpty(t, gpuType)
 }
 
 func TestGetAssistImageURIWithRegistry(t *testing.T) {
@@ -325,9 +327,10 @@ func TestGetAssistImageURIWithRegistry(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test with custom registry and custom repository
-	uri, err := config.GetAssistImageURIWithRegistry("my-registry.example.com", "custom-assist")
+	uri, gpuType, err := config.GetAssistImageURIWithRegistry("my-registry.example.com", "custom-assist")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
+	assert.NotEmpty(t, gpuType)
 	assert.Contains(t, uri, "my-registry.example.com")
 	assert.Contains(t, uri, "custom-assist")
 	// Tag is GPU-specific (one of the valid GPU tags)
@@ -347,18 +350,21 @@ func TestGetAssistImageURIWithRegistry(t *testing.T) {
 	assert.True(t, hasValidTag, "URI should end with a valid GPU tag")
 
 	// Test with custom registry but default repository
-	uri, err = config.GetAssistImageURIWithRegistry("my-registry.example.com", "")
+	uri, gpuType, err = config.GetAssistImageURIWithRegistry("my-registry.example.com", "")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
+	assert.NotEmpty(t, gpuType)
 	assert.Contains(t, uri, "my-registry.example.com")
 	assert.Contains(t, uri, config.AssistRegistry)
 
 	// Test with empty registry (should fall back to public registry)
-	uri, err = config.GetAssistImageURIWithRegistry("", "")
+	uri, gpuType, err = config.GetAssistImageURIWithRegistry("", "")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, uri)
-	publicURI, _ := config.GetAssistImageURI()
+	assert.NotEmpty(t, gpuType)
+	publicURI, publicGPUType, _ := config.GetAssistImageURI()
 	assert.Equal(t, publicURI, uri)
+	assert.Equal(t, publicGPUType, gpuType)
 }
 
 func TestConfigBooleanLabelRegex(t *testing.T) {

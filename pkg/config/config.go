@@ -146,16 +146,22 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 }
 
 // GetAssistImageURI returns the assist container image URI based on detected GPU type
-func (c *Config) GetAssistImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
-	if err != nil {
-		return "", err
-	}
-
+func (c *Config) GetAssistImageURI() (string, gpudetect.GPUType, error) {
 	gpuType, err := gpudetect.DetectGPU()
 	if err != nil {
 		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
 		gpuType = gpudetect.GPUTypeCPU
+	}
+
+	imageURI, err := c.GetAssistImageURIForGPU(gpuType)
+	return imageURI, gpuType, err
+}
+
+// GetAssistImageURIForGPU returns the assist container image URI for a specific GPU type
+func (c *Config) GetAssistImageURIForGPU(gpuType gpudetect.GPUType) (string, error) {
+	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
+	if err != nil {
+		return "", err
 	}
 
 	var tag string
@@ -177,10 +183,22 @@ func (c *Config) GetAssistImageURI() (string, error) {
 
 // GetAssistImageURIWithRegistry returns the assist container image URI from a custom registry
 // If registryURL is empty, falls back to public registry
-func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo string) (string, error) {
+func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo string) (string, gpudetect.GPUType, error) {
+	gpuType, err := gpudetect.DetectGPU()
+	if err != nil {
+		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
+		gpuType = gpudetect.GPUTypeCPU
+	}
+
+	imageURI, err := c.GetAssistImageURIWithRegistryForGPU(registryURL, assistRepo, gpuType)
+	return imageURI, gpuType, err
+}
+
+// GetAssistImageURIWithRegistryForGPU returns the assist container image URI from a custom registry for a specific GPU type
+func (c *Config) GetAssistImageURIWithRegistryForGPU(registryURL string, assistRepo string, gpuType gpudetect.GPUType) (string, error) {
 	// If no custom registry, use default public registry
 	if registryURL == "" {
-		return c.GetAssistImageURI()
+		return c.GetAssistImageURIForGPU(gpuType)
 	}
 
 	// Use assist repository from parameter, or fall back to config default
@@ -193,13 +211,6 @@ func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo st
 	imageURI, err := url.JoinPath(registryURL, repo)
 	if err != nil {
 		return "", err
-	}
-
-	// Detect GPU type
-	gpuType, err := gpudetect.DetectGPU()
-	if err != nil {
-		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
-		gpuType = gpudetect.GPUTypeCPU
 	}
 
 	var tag string
