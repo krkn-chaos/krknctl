@@ -1,6 +1,7 @@
 package resiliency
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -198,14 +199,46 @@ func TestGenerateAndWriteReport(t *testing.T) {
 	assert.Contains(t, string(data), "details")
 }
 
+func TestWriteFinalReport(t *testing.T) {
+	report := FinalReport{
+		Scenarios: map[string]float64{
+			"scenario-a": 85.0,
+			"scenario-b": 90.0,
+		},
+		ResiliencyScore: 87.5,
+		PassedSlos:      17,
+		TotalSlos:       20,
+	}
+
+	tmpFile := t.TempDir() + "/final-report.json"
+	err := WriteFinalReport(report, tmpFile)
+	assert.Nil(t, err)
+
+	// Verify file exists and contains the report data
+	data, err := os.ReadFile(tmpFile)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, data)
+
+	// Verify the written report matches input
+	var written FinalReport
+	err = json.Unmarshal(data, &written)
+	assert.Nil(t, err)
+	assert.Equal(t, report.ResiliencyScore, written.ResiliencyScore)
+	assert.Equal(t, report.PassedSlos, written.PassedSlos)
+	assert.Equal(t, report.TotalSlos, written.TotalSlos)
+	assert.Equal(t, 2, len(written.Scenarios))
+	assert.Equal(t, 85.0, written.Scenarios["scenario-a"])
+	assert.Equal(t, 90.0, written.Scenarios["scenario-b"])
+}
+
 func TestComputeResiliencyMode(t *testing.T) {
 	cfg := config.Config{
 		ResiliencyEnabledMode: "enabled",
 	}
-	
+
 	mode := ComputeResiliencyMode("http://prometheus:9090", cfg)
 	assert.Equal(t, "enabled", mode)
-	
+
 	mode = ComputeResiliencyMode("", cfg)
 	assert.Equal(t, "disabled", mode)
 }

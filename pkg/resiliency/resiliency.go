@@ -207,7 +207,18 @@ func AggregateReports(reports []DetailedScenarioReport) FinalReport {
 }
 
 func WriteFinalReport(report FinalReport, path string) error {
-	return GenerateAndWriteReport([]DetailedScenarioReport{}, path)
+	PrintHumanSummary(report)
+
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal report: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("failed to write report to %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // GenerateAndWriteReport generates a resiliency report and writes it to a file
