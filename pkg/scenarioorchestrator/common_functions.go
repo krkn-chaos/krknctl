@@ -96,17 +96,23 @@ func CommonRunGraph(
 				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
-			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: nil}
+
+			// Copy loop variables to avoid pointer race in goroutine
+			stepCopy := step
+			scIDCopy := scID
+			filenameCopy := filename
+
+			commChannel <- &models.GraphCommChannel{Layer: &stepCopy, ScenarioID: &scIDCopy, ScenarioLogFile: &filenameCopy, Err: nil}
 			wg.Add(1)
 
-			go func(scenario models.Scenario) {
+			go func(scenario models.Scenario, stepVal int, scIDVal string, filenameVal string) {
 				defer wg.Done()
 				mw := io.MultiWriter(os.Stdout, file)
-				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry, nil, nil)
+				_, runErr := orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry, nil, nil)
 				_ = file.Sync()
 				_ = file.Close()
 
-				if data, readErr := os.ReadFile(path.Clean(filename)); readErr == nil {
+				if data, readErr := os.ReadFile(path.Clean(filenameVal)); readErr == nil {
 					if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
 						// Attach weight information for this scenario.
 						weight := scenario.ResiliencyWeight
@@ -118,20 +124,20 @@ func CommonRunGraph(
 						}
 						rep.ScenarioWeights[scenario.Name] = weight
 
-						fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filename)
+						fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filenameVal)
 						reportsMu.Lock()
 						allReports = append(allReports, *rep)
 						reportsMu.Unlock()
 					} else {
-						fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filename, parseErr)
+						fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filenameVal, parseErr)
 					}
 				}
 
-				if err != nil {
-					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
+				if runErr != nil {
+					commChannel <- &models.GraphCommChannel{Layer: &stepVal, ScenarioID: &scIDVal, ScenarioLogFile: &filenameVal, Err: runErr}
 					return
 				}
-			}(scCopy.Scenario)
+			}(scCopy.Scenario, stepCopy, scIDCopy, filenameCopy)
 
 		}
 		wg.Wait()
