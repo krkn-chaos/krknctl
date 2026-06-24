@@ -37,7 +37,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
@@ -50,7 +50,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
@@ -63,7 +63,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
@@ -76,7 +76,7 @@ jobs:
         GH_TOKEN: ${{ github.token }}
       run: |
         export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
