@@ -138,7 +138,7 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 	if err := json.Unmarshal(raw, &aRoot); err == nil && len(aRoot.Scenarios) > 0 {
 		m := make(map[string]float64)
 		var total float64
-		var passed, totalSLOs int
+		var passed, failed int
 		for _, it := range aRoot.Scenarios {
 			m[it.Name] = it.Score
 			total += it.Score
@@ -148,11 +148,11 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 					passed += int(p)
 				}
 				if f, ok := it.Breakdown["failed"].(float64); ok {
-					totalSLOs += int(f)
+					failed += int(f)
 				}
-				totalSLOs += passed
 			}
 		}
+		totalSLOs := passed + failed
 		avg := total / float64(len(aRoot.Scenarios))
 		rep.OverallReport = OverallResiliencyReport{
 			Scenarios:       m,

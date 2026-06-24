@@ -50,9 +50,23 @@ func TestParseResiliencyReport_ArrayRoot(t *testing.T) {
 	assert.Equal(t, 92.0, rep.Scenarios[0].Score)
 }
 
+func TestParseResiliencyReport_ArrayRootWithBreakdown(t *testing.T) {
+	// Test that totalSLOs is correctly calculated as passed + failed, not double-counted
+	logContent := []byte(`KRKN_RESILIENCY_REPORT_JSON: {"scenarios": [{"name": "scenario-1", "score": 90.0, "breakdown": {"passed": 9.0, "failed": 1.0}}, {"name": "scenario-2", "score": 80.0, "breakdown": {"passed": 8.0, "failed": 2.0}}]}`)
+
+	rep, err := ParseResiliencyReport(logContent)
+	assert.Nil(t, err)
+	assert.NotNil(t, rep)
+	assert.Equal(t, 2, len(rep.OverallReport.Scenarios))
+
+	// Verify passed/failed counts are correctly summed
+	assert.Equal(t, 17, rep.OverallReport.PassedSlos, "PassedSlos should be 9 + 8 = 17")
+	assert.Equal(t, 20, rep.OverallReport.TotalSlos, "TotalSlos should be (9+1) + (8+2) = 20, not double-counted")
+}
+
 func TestParseResiliencyReport_NotFound(t *testing.T) {
 	logContent := []byte(`Some random log output without the marker`)
-	
+
 	rep, err := ParseResiliencyReport(logContent)
 	assert.NotNil(t, err)
 	assert.Nil(t, rep)
