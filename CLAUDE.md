@@ -121,16 +121,22 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 
 ### Major Implementation Tasks Completed
 
-#### 1. GPU Detection System Redesign
-**Previous System**: Complex container-based GPU detection using test images
-- Removed complex GPU check implementation using container images
-- Eliminated `GetSupportedGPUTypes()` and container-based testing approach
-
-**New System**: Platform-based automatic detection
-- **macOS arm64**: Automatically assumes Apple Silicon GPU support (Metal via libkrun)
-- **Linux with NVIDIA devices**: Detects physical NVIDIA devices (`/dev/nvidia0`, `/dev/nvidiactl`, `/dev/nvidia-uvm`)
+#### 1. GPU Detection System
+**NVIDIA Compute Capability Detection**: Uses NVML (NVIDIA Management Library) to detect GPU type
+- **macOS arm64**: Automatically uses Apple Silicon GPU support (Metal via libkrun)
+- **Linux with NVIDIA GPU**: Queries compute capability via NVML to select optimal container
+  - **Consumer GPUs** (compute capability 7.5, 8.6, 8.9): RTX 20xx/30xx/40xx, GTX 1660 series → `nvidia-consumer` image
+  - **Datacenter GPUs** (compute capability 7.0, 8.0, 9.0): V100, A100, H100, DGX series → `nvidia-datacenter` image
+  - **Detection failure**: Graceful fallback to `cpu` image with warning
 - **Generic fallback**: CPU-only mode for all other platforms
 - Added `--no-gpu` flag to force CPU-only mode without device mounting
+
+**GPU Detection Flow**:
+1. Platform detection: macOS arm64 → Apple Silicon
+2. Linux: Check for NVIDIA device files (`/dev/nvidia0`, `/dev/nvidiactl`, `/dev/nvidia-uvm`)
+3. NVML initialization and compute capability query
+4. Map compute capability to consumer/datacenter GPU type
+5. Automatic fallback to CPU mode if NVML unavailable (drivers not installed)
 
 #### 2. Container Runtime Support
 - **Podman Only**: Lightspeed exclusively supports Podman container runtime
@@ -138,19 +144,24 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 - **Error Handling**: Provides links to Podman GPU documentation (https://podman-desktop.io/docs/podman/gpu)
 
 #### 3. Container Architecture
-**Three Specialized Containers**:
-- **Apple Silicon** (`rag-model-apple-silicon`): Vulkan backend for Apple M1/M2/M3/M4 GPUs
-- **NVIDIA** (`rag-model-nvidia`): CUDA backend for NVIDIA GPUs  
-- **Generic** (`rag-model-generic`): CPU-only fallback for all other platforms
+**Four Specialized Containers**:
+- **Apple Silicon** (`krknctl-assist:apple-silicon`): Vulkan backend for Apple M1/M2/M3/M4 GPUs (linux/arm64)
+- **NVIDIA Consumer** (`krknctl-assist:nvidia-consumer`): CUDA backend for consumer GPUs - arch 75, 86, 89 (linux/amd64, linux/arm64)
+- **NVIDIA Datacenter** (`krknctl-assist:nvidia-datacenter`): CUDA backend for datacenter GPUs - arch 70, 80, 90 (linux/amd64, linux/arm64)
+- **CPU** (`krknctl-assist:cpu`): CPU-only fallback for all other platforms (linux/amd64, linux/arm64)
 
 **Container Selection Logic**:
-- Uses `PlatformGPUDetector.GetLightspeedImageURI()` to select appropriate container
-- Tag construction follows `{rag_model_tag}-{architecture}` pattern from config
-- Device mounting handled by `PlatformGPUDetector.GetDeviceMounts()`
+- Uses `gpudetect.DetectGPU()` to query GPU type via NVML
+- Config methods `GetAssistImageURI()` and `GetAssistImageURIWithRegistry()` select appropriate tag
+- Device mounting in `pkg/assist/assist.go` based on detected GPU type
 
 #### 4. Configuration Integration
-- **Config-Based Tags**: Uses `rag_model_tag` from `pkg/config/config.json` to construct container tags
-- **Centralized Settings**: All RAG service parameters (ports, endpoints, timeouts) in configuration
+- **Config-Based Tags**: Uses GPU-specific tags from `pkg/config/config.json`:
+  - `assist_model_tag_apple`: "apple-silicon"
+  - `assist_model_tag_nvidia_consumer`: "nvidia-consumer"
+  - `assist_model_tag_nvidia_datacenter`: "nvidia-datacenter"
+  - `assist_model_tag_cpu`: "cpu"
+- **Centralized Settings**: All assist service parameters (ports, endpoints, timeouts) in configuration
 - **Private Registry Support**: Full integration with existing private registry authentication
 
 #### 5. Multi-Stage Container Build Fix
@@ -189,20 +200,29 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 ### Technical Implementation
 
 #### Core Components
-- **`pkg/gpucheck/gpucheck.go`**: Platform-based GPU detection logic
-- **`cmd/lightspeed_check.go`**: Lightspeed commands with Docker runtime blocking
-- **`cmd/lightspeed.go`**: RAG model deployment with GPU-specific container selection
-- **`pkg/config/config.go`**: Enhanced with Lightspeed-specific configuration methods
+- **`pkg/gpudetect/detector.go`**: NVML-based GPU detection with compute capability mapping
+- **`cmd/assist.go`**: Assist commands with GPU-aware container deployment
+- **`pkg/config/config.go`**: Enhanced with GPU-specific tag selection methods
+- **`pkg/assist/assist.go`**: Container deployment with GPU device mounting
 
 #### Container Files
-- **`containers/lightspeed-rag/Containerfile.apple-silicon`**: Single-stage Vulkan build
-- **`containers/lightspeed-rag/Containerfile.nvidia`**: Multi-stage CUDA build  
-- **`containers/lightspeed-rag/Containerfile.generic`**: Multi-stage CPU-only build
+- **`containers/assist/Containerfile.apple-silicon`**: Single-stage Vulkan build for Apple Silicon
+- **`containers/assist/Containerfile.nvidia-consumer`**: Multi-stage CUDA build (arch 75, 86, 89)
+- **`containers/assist/Containerfile.nvidia-datacenter`**: Multi-stage CUDA build (arch 70, 80, 90)
+- **`containers/assist/Containerfile.cpu`**: Multi-stage CPU-only build
 
 #### Key Functions
-- **`DetectGPUAcceleration()`**: Platform-based GPU type detection
-- **`deployRAGModelWithGPUType()`**: GPU-aware container deployment
-- **`HandleContainerError()`**: Enhanced error reporting with helpful suggestions
+- **`gpudetect.DetectGPU()`**: NVML-based GPU type detection with graceful fallback
+- **`gpudetect.detectNvidiaGPUType()`**: CUDA compute capability query and mapping
+- **`gpudetect.mapComputeCapability()`**: Maps compute capability to consumer/datacenter
+- **`config.GetAssistImageURI()`**: GPU-aware image URI selection
+- **`assist.DeployAssistModel()`**: GPU-aware container deployment with device mounting
+
+#### NVIDIA Detection Requirements
+- **NVIDIA Drivers**: Must be installed on host (same requirement as using NVIDIA GPUs)
+- **NVML Library**: Accessed via `github.com/NVIDIA/go-nvml` Go bindings
+- **No Container Dependencies**: Detection runs on host before container launch
+- **Graceful Degradation**: Falls back to CPU mode if NVML initialization fails
 
 ### Usage Examples
 

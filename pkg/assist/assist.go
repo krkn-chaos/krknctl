@@ -11,10 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -23,6 +23,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/forms"
+	"github.com/krkn-chaos/krknctl/pkg/gpudetect"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -39,21 +40,22 @@ type ParsedField struct {
 	secret bool
 }
 
-// DeployAssistModel deploys the RAG model container using faiss-latest image
+// DeployAssistModel deploys the RAG model container using GPU-specific image
 func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.ScenarioOrchestrator, config config.Config, registry *models.RegistryV2, pullSpinner *spinner.Spinner) (*RAGDeploymentResult, error) {
-	// Get the assist image URI - use private registry if provided
+	// Get the assist image URI and detected GPU type in single call
 	var ragImageURI string
+	var gpuType gpudetect.GPUType
 	var err error
 
 	if registry != nil && registry.RegistryURL != "" {
 		// Use private registry
-		ragImageURI, err = config.GetAssistImageURIWithRegistry(registry.RegistryURL, registry.ScenarioRepository)
+		ragImageURI, gpuType, err = config.GetAssistImageURIWithRegistry(registry.RegistryURL, registry.ScenarioRepository)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get assist image URI from private registry: %w", err)
 		}
 	} else {
 		// Use default public registry
-		ragImageURI, err = config.GetAssistImageURI()
+		ragImageURI, gpuType, err = config.GetAssistImageURI()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get assist image URI: %w", err)
 		}
@@ -68,29 +70,41 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		"MKL_NUM_THREADS": "4",
 	}
 
-	// Set up device mounts based on platform
+	// Set up device mounts based on detected GPU type (uses same gpuType from image selection)
 	devices := map[string]string{}
 
-	// On macOS arm64, mount /dev/dri for GPU acceleration (container runs in Linux VM via libkrun)
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+	switch gpuType {
+	case gpudetect.GPUTypeAppleSilicon:
+		// Mount /dev/dri for Vulkan acceleration (container runs in Linux VM via libkrun)
 		devices["/dev/dri"] = "/dev/dri"
-	} else if runtime.GOOS == "linux" {
-		// On Linux, check for NVIDIA GPU devices and mount them if available
-		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
-		hasNvidia := true
-		for _, dev := range nvidiaDevices {
-			if _, err := os.Stat(dev); err != nil {
-				hasNvidia = false
-				break
+
+	case gpudetect.GPUTypeNvidiaConsumer, gpudetect.GPUTypeNvidiaDatacenter:
+		// Mount NVIDIA devices for CUDA acceleration (verify still accessible)
+		// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
+		devRoot, err := os.OpenRoot("/dev")
+		if err == nil {
+			defer func() {
+				if closeErr := devRoot.Close(); closeErr != nil {
+					log.Printf("Warning: failed to close /dev root: %v", closeErr)
+				}
+			}()
+
+			nvidiaDeviceNames := []string{"nvidia0", "nvidiactl", "nvidia-uvm"}
+			for _, devName := range nvidiaDeviceNames {
+				// Verify device is still accessible before mounting
+				if f, err := devRoot.Open(devName); err == nil {
+					if closeErr := f.Close(); closeErr != nil {
+						log.Printf("Warning: failed to close /dev/%s: %v", devName, closeErr)
+					}
+					// Add full path for container mount
+					devices["/dev/"+devName] = "/dev/" + devName
+				}
 			}
 		}
 
-		if hasNvidia {
-			// Mount all NVIDIA devices
-			for _, dev := range nvidiaDevices {
-				devices[dev] = dev
-			}
-		}
+	case gpudetect.GPUTypeCPU:
+		// No device mounts needed for CPU-only mode
+		log.Println("Running in CPU-only mode, no GPU acceleration")
 	}
 
 	// Set up port mapping using config (publishPorts format: "host:container")

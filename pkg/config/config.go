@@ -5,8 +5,10 @@ package config
 import (
 	_ "embed"
 	"encoding/json"
+	"log"
 	"net/url"
-	"runtime"
+
+	"github.com/krkn-chaos/krknctl/pkg/gpudetect"
 )
 
 type Config struct {
@@ -60,7 +62,9 @@ type Config struct {
 	TableMaxStepScenarioLength       int    `json:"table_max_step_scenario_length"`
 	AssistRegistry                   string `json:"assist_registry"`
 	AssistModelTagApple              string `json:"assist_model_tag_apple"`
-	AssistModelTagIntel              string `json:"assist_model_tag_intel"`
+	AssistModelTagNvidiaConsumer     string `json:"assist_model_tag_nvidia_consumer"`
+	AssistModelTagNvidiaDatacenter   string `json:"assist_model_tag_nvidia_datacenter"`
+	AssistModelTagCPU                string `json:"assist_model_tag_cpu"`
 	AssistContainerPrefix            string `json:"assist_container_prefix"`
 	AssistServicePort                string `json:"assist_service_port"`
 	AssistHealthEndpoint             string `json:"assist_health_endpoint"`
@@ -141,24 +145,60 @@ func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 	return repositoryURI, nil
 }
 
-// GetAssistImageURI returns the assist RAG image URI with faiss-latest tag from public registry
-func (c *Config) GetAssistImageURI() (string, error) {
+// GetAssistImageURI returns the assist container image URI based on detected GPU type
+func (c *Config) GetAssistImageURI() (string, gpudetect.GPUType, error) {
+	gpuType, err := gpudetect.DetectGPU()
+	if err != nil {
+		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
+		gpuType = gpudetect.GPUTypeCPU
+	}
+
+	imageURI, err := c.GetAssistImageURIForGPU(gpuType)
+	return imageURI, gpuType, err
+}
+
+// GetAssistImageURIForGPU returns the assist container image URI for a specific GPU type
+func (c *Config) GetAssistImageURIForGPU(gpuType gpudetect.GPUType) (string, error) {
 	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
 	if err != nil {
 		return "", err
 	}
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		return imageURI + ":" + c.AssistModelTagApple, nil
+
+	var tag string
+	switch gpuType {
+	case gpudetect.GPUTypeAppleSilicon:
+		tag = c.AssistModelTagApple
+	case gpudetect.GPUTypeNvidiaConsumer:
+		tag = c.AssistModelTagNvidiaConsumer
+	case gpudetect.GPUTypeNvidiaDatacenter:
+		tag = c.AssistModelTagNvidiaDatacenter
+	case gpudetect.GPUTypeCPU:
+		tag = c.AssistModelTagCPU
+	default:
+		tag = c.AssistModelTagCPU
 	}
-	return imageURI + ":" + c.AssistModelTagIntel, nil
+
+	return imageURI + ":" + tag, nil
 }
 
-// GetAssistImageURIWithRegistry returns the assist RAG image URI from a custom registry
+// GetAssistImageURIWithRegistry returns the assist container image URI from a custom registry
 // If registryURL is empty, falls back to public registry
-func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo string) (string, error) {
+func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo string) (string, gpudetect.GPUType, error) {
+	gpuType, err := gpudetect.DetectGPU()
+	if err != nil {
+		log.Printf("Warning: GPU detection failed: %v, using CPU-only mode", err)
+		gpuType = gpudetect.GPUTypeCPU
+	}
+
+	imageURI, err := c.GetAssistImageURIWithRegistryForGPU(registryURL, assistRepo, gpuType)
+	return imageURI, gpuType, err
+}
+
+// GetAssistImageURIWithRegistryForGPU returns the assist container image URI from a custom registry for a specific GPU type
+func (c *Config) GetAssistImageURIWithRegistryForGPU(registryURL string, assistRepo string, gpuType gpudetect.GPUType) (string, error) {
 	// If no custom registry, use default public registry
 	if registryURL == "" {
-		return c.GetAssistImageURI()
+		return c.GetAssistImageURIForGPU(gpuType)
 	}
 
 	// Use assist repository from parameter, or fall back to config default
@@ -173,9 +213,19 @@ func (c *Config) GetAssistImageURIWithRegistry(registryURL string, assistRepo st
 		return "", err
 	}
 
-	// Append platform-specific tag
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		return imageURI + ":" + c.AssistModelTagApple, nil
+	var tag string
+	switch gpuType {
+	case gpudetect.GPUTypeAppleSilicon:
+		tag = c.AssistModelTagApple
+	case gpudetect.GPUTypeNvidiaConsumer:
+		tag = c.AssistModelTagNvidiaConsumer
+	case gpudetect.GPUTypeNvidiaDatacenter:
+		tag = c.AssistModelTagNvidiaDatacenter
+	case gpudetect.GPUTypeCPU:
+		tag = c.AssistModelTagCPU
+	default:
+		tag = c.AssistModelTagCPU
 	}
-	return imageURI + ":" + c.AssistModelTagIntel, nil
+
+	return imageURI + ":" + tag, nil
 }
