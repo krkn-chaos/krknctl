@@ -10,7 +10,7 @@ import (
 
 func TestParseResiliencyReport_DirectRoot(t *testing.T) {
 	logContent := []byte(`KRKN_RESILIENCY_REPORT_JSON: {"overall_resiliency_report": {"scenarios": {"test-scenario": 95.5}, "resiliency_score": 95.5, "passed_slos": 10, "total_slos": 12}}`)
-	
+
 	rep, err := ParseResiliencyReport(logContent)
 	assert.Nil(t, err)
 	assert.NotNil(t, rep)
@@ -19,9 +19,33 @@ func TestParseResiliencyReport_DirectRoot(t *testing.T) {
 	assert.Equal(t, 12, rep.OverallReport.TotalSlos)
 }
 
+func TestParseResiliencyReport_DirectRootWithZeroScore(t *testing.T) {
+	// Verify that reports with resiliency_score=0 are accepted (all tests failed)
+	logContent := []byte(`KRKN_RESILIENCY_REPORT_JSON: {"overall_resiliency_report": {"scenarios": {"test-scenario": 0.0}, "resiliency_score": 0.0, "passed_slos": 0, "total_slos": 10}}`)
+
+	rep, err := ParseResiliencyReport(logContent)
+	assert.Nil(t, err, "Score of 0.0 should be valid")
+	assert.NotNil(t, rep)
+	assert.Equal(t, 0.0, rep.OverallReport.ResiliencyScore)
+	assert.Equal(t, 0, rep.OverallReport.PassedSlos)
+	assert.Equal(t, 10, rep.OverallReport.TotalSlos)
+}
+
+func TestParseResiliencyReport_TelemetryNestedWithZeroScore(t *testing.T) {
+	// Verify telemetry-nested reports with score=0 are accepted
+	logContent := []byte(`KRKN_RESILIENCY_REPORT_JSON: {"telemetry": {"overall_resiliency_report": {"scenarios": {"test-scenario": 0.0}, "resiliency_score": 0.0, "passed_slos": 0, "total_slos": 5}}}`)
+
+	rep, err := ParseResiliencyReport(logContent)
+	assert.Nil(t, err, "Telemetry-nested score of 0.0 should be valid")
+	assert.NotNil(t, rep)
+	assert.Equal(t, 0.0, rep.OverallReport.ResiliencyScore)
+	assert.Equal(t, 0, rep.OverallReport.PassedSlos)
+	assert.Equal(t, 5, rep.OverallReport.TotalSlos)
+}
+
 func TestParseResiliencyReport_TelemetryNested(t *testing.T) {
 	logContent := []byte(`KRKN_RESILIENCY_REPORT_JSON: {"telemetry": {"overall_resiliency_report": {"scenarios": {"test-scenario": 88.0}, "resiliency_score": 88.0, "passed_slos": 8, "total_slos": 10}}}`)
-	
+
 	rep, err := ParseResiliencyReport(logContent)
 	assert.Nil(t, err)
 	assert.NotNil(t, rep)

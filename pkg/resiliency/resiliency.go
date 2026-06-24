@@ -100,7 +100,7 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 		Overall OverallResiliencyReport `json:"overall_resiliency_report"`
 	}
 	var direct directRoot
-	if err := json.Unmarshal(raw, &direct); err == nil && direct.Overall.ResiliencyScore != 0 {
+	if err := json.Unmarshal(raw, &direct); err == nil && len(direct.Overall.Scenarios) > 0 {
 		rep.OverallReport = direct.Overall
 		return &rep, nil
 	}
@@ -112,7 +112,7 @@ func ParseResiliencyReport(logContent []byte) (*DetailedScenarioReport, error) {
 		} `json:"telemetry"`
 	}
 	var telemetry telemetryRoot
-	if err := json.Unmarshal(raw, &telemetry); err == nil && telemetry.Telemetry.Overall.ResiliencyScore != 0 {
+	if err := json.Unmarshal(raw, &telemetry); err == nil && len(telemetry.Telemetry.Overall.Scenarios) > 0 {
 		rep.OverallReport = telemetry.Telemetry.Overall
 		return &rep, nil
 	}
