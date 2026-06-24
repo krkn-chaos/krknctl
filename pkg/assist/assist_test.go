@@ -415,8 +415,10 @@ func TestDeployAssistModel_WithPrivateRegistry(t *testing.T) {
 	testConfig.QuayHost = "quay.io"
 	testConfig.QuayOrg = "krkn-chaos"
 	testConfig.AssistRegistry = "krknctl-assist"
-	testConfig.AssistModelTagApple = "faiss-latest"
-	testConfig.AssistModelTagIntel = "faiss-latest"
+	testConfig.AssistModelTagApple = "apple-silicon"
+	testConfig.AssistModelTagNvidiaConsumer = "nvidia-consumer"
+	testConfig.AssistModelTagNvidiaDatacenter = "nvidia-datacenter"
+	testConfig.AssistModelTagCPU = "cpu"
 
 	// Create private registry configuration
 	username := "testuser"
