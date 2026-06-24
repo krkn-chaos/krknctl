@@ -79,10 +79,12 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		devices["/dev/dri"] = "/dev/dri"
 
 	case gpudetect.GPUTypeNvidiaConsumer, gpudetect.GPUTypeNvidiaDatacenter:
-		// Mount NVIDIA devices for CUDA acceleration
+		// Mount NVIDIA devices for CUDA acceleration (verify still accessible)
 		nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
 		for _, dev := range nvidiaDevices {
-			if _, err := os.Stat(dev); err == nil {
+			// Verify device is still accessible before mounting
+			if f, err := os.Open(dev); err == nil {
+				f.Close()
 				devices[dev] = dev
 			}
 		}

@@ -34,13 +34,16 @@ func DetectGPU() (GPUType, error) {
 		return GPUTypeCPU, nil
 	}
 
-	// Linux: Check for NVIDIA device files
+	// Linux: Check for NVIDIA device files (must be readable)
 	nvidiaDevices := []string{"/dev/nvidia0", "/dev/nvidiactl", "/dev/nvidia-uvm"}
 	for _, dev := range nvidiaDevices {
-		if _, err := os.Stat(dev); err != nil {
-			// NVIDIA devices not found, use CPU mode
+		// Use os.Open to verify both existence and read access
+		f, err := os.Open(dev)
+		if err != nil {
+			// NVIDIA device not accessible (missing or permission denied), use CPU mode
 			return GPUTypeCPU, nil
 		}
+		f.Close()
 	}
 
 	// NVIDIA devices exist, try to detect GPU type via NVML
