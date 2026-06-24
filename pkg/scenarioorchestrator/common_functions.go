@@ -2,12 +2,8 @@ package scenarioorchestrator
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/krkn-chaos/krknctl/pkg/config"
-	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
-	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"io"
 	"os"
 	"os/signal"
@@ -15,6 +11,13 @@ import (
 	"sort"
 	"sync"
 	"syscall"
+
+	"github.com/fatih/color"
+	"github.com/krkn-chaos/krknctl/pkg/config"
+	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
+	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 )
 
 func CommonRunGraph(
@@ -29,9 +32,16 @@ func CommonRunGraph(
 	registry *providermodels.RegistryV2,
 	userID *int,
 ) {
+	// collectors initialization
+	var (
+		allReports []resiliency.DetailedScenarioReport
+		reportsMu  sync.Mutex
+	)
+
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scID := range s {
+			scCopy := scenarios[scID]
 
 			socket, err := orchestrator.GetContainerRuntimeSocket(userID)
 			if err != nil {
@@ -64,6 +74,20 @@ func CommonRunGraph(
 				volumes[k] = v
 			}
 
+			// set RESILIENCY_ENABLED_MODE using shared utility
+			promURL := ""
+			if prom, ok := env["PROMETHEUS_URL"]; ok {
+				promURL = prom
+			}
+			env[config.EnvResiliencyEnabledMode] = resiliency.ComputeResiliencyMode(promURL, config)
+
+			// inject resiliency config as base64 encoded env variable if provided (Use Case: To pass the custom resiliency config to the container)
+			if scenario.ResiliencyConfigPath != "" {
+				if content, err := os.ReadFile(scenario.ResiliencyConfigPath); err == nil {
+					env[config.EnvKrknAlertsYamlContent] = base64.StdEncoding.EncodeToString(content)
+				}
+			}
+
 			containerName := utils.GenerateContainerName(config, scenario.Name, &scID)
 			filename := fmt.Sprintf("%s.log", containerName)
 			file, err := os.Create(path.Clean(filename))
@@ -72,21 +96,60 @@ func CommonRunGraph(
 				commChannel <- &models.GraphCommChannel{Layer: nil, ScenarioID: nil, ScenarioLogFile: nil, Err: err}
 				return
 			}
-			commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: nil}
+
+			// Copy loop variables to avoid pointer race in goroutine
+			stepCopy := step
+			scIDCopy := scID
+			filenameCopy := filename
+
+			commChannel <- &models.GraphCommChannel{Layer: &stepCopy, ScenarioID: &scIDCopy, ScenarioLogFile: &filenameCopy, Err: nil}
 			wg.Add(1)
 
-			go func() {
+			go func(scenario models.Scenario, stepVal int, scIDVal string, filenameVal string) {
 				defer wg.Done()
-				_, err = orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, file, file, nil, ctx, registry, nil, nil)
-				if err != nil {
-					commChannel <- &models.GraphCommChannel{Layer: &step, ScenarioID: &scID, ScenarioLogFile: &filename, Err: err}
+				mw := io.MultiWriter(os.Stdout, file)
+				_, runErr := orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry, nil, nil)
+				_ = file.Sync()
+				_ = file.Close()
+
+				if data, readErr := os.ReadFile(path.Clean(filenameVal)); readErr == nil {
+					if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
+						// Attach weight information for this scenario.
+						weight := scenario.ResiliencyWeight
+						if weight <= 0 {
+							weight = 1
+						}
+						if rep.ScenarioWeights == nil {
+							rep.ScenarioWeights = make(map[string]float64)
+						}
+						rep.ScenarioWeights[scenario.Name] = weight
+
+						fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filenameVal)
+						reportsMu.Lock()
+						allReports = append(allReports, *rep)
+						reportsMu.Unlock()
+					} else {
+						fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filenameVal, parseErr)
+					}
+				}
+
+				if runErr != nil {
+					commChannel <- &models.GraphCommChannel{Layer: &stepVal, ScenarioID: &scIDVal, ScenarioLogFile: &filenameVal, Err: runErr}
 					return
 				}
-			}()
+			}(scCopy.Scenario, stepCopy, scIDCopy, filenameCopy)
 
 		}
 		wg.Wait()
+
 	}
+
+	if err := resiliency.GenerateAndWriteReport(allReports, "resiliency-report.json"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating resiliency report: %v\n", err)
+	} else {
+		fmt.Println("Detailed resiliency report written to resiliency-report.json")
+	}
+
 	commChannel <- nil
 }
 
@@ -96,33 +159,25 @@ func CommonRunAttached(image string, containerName string, env map[string]string
 	if err != nil {
 		return nil, err
 	}
-
 	signalChan := make(chan os.Signal, 1)
-
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
 	kill, err := c.Attach(containerID, signalChan, stdout, stderr, ctx)
-
 	if err != nil {
-		return nil, err
+		return containerID, err
 	}
 
 	if kill {
-		err = c.Kill(containerID, ctx)
-		if err != nil {
-			return nil, err
-		}
-		_, err = color.New(color.FgRed, color.Underline).Println(fmt.Sprintf("container %s killed", *containerID))
-		if err != nil {
-			return nil, err
+		if err := c.Kill(containerID, ctx); err != nil {
+			return containerID, fmt.Errorf("failed to kill container: %w", err)
 		}
 	}
 
 	containerStatus, err := c.InspectScenario(models.Container{ID: *containerID}, ctx)
 	if err != nil {
-		return nil, err
+		return containerID, fmt.Errorf("failed to inspect container: %w", err)
 	}
-	// if there is an error exit status it is propagated via error to the cmd
+
 	if containerStatus.Container.ExitStatus > 0 {
 		return containerID, &utils.ExitError{ExitStatus: int(containerStatus.Container.ExitStatus)}
 	}

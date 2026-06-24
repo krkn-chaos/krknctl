@@ -1,23 +1,27 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/forms"
 	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/resiliency"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"log"
-	"os"
-	"strings"
-	"time"
 )
 
 // 🤖 Assisted with Claude Code (claude.ai/code)
@@ -386,6 +390,13 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			if !runDetached {
+				
+				// Here we are using an io.MultiWriter to multiplex the container's stdout and stderr to both
+				// the terminal stdout and a bytes.Buffer. This allows us to capture the logs for parsing later.
+				// The container stdout and stderr will be written to both the terminal stdout and the bytes.Buffer.
+				var logBuf bytes.Buffer
+				mw := io.MultiWriter(os.Stdout, &logBuf)
+
 				commChan := make(chan *string)
 				go func() {
 					for msg := range commChan {
@@ -394,7 +405,24 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, registrySettings, nil, nil)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings, nil, nil)
+				
+				// Parse resiliency report from captured logs and generate report
+				fmt.Fprintf(os.Stderr, "DEBUG: Attempting to parse resiliency report from %d bytes of logs\n", len(logBuf.Bytes()))
+				if rep, perr := resiliency.ParseResiliencyReport(logBuf.Bytes()); perr == nil {
+					fmt.Fprintf(os.Stderr, "DEBUG: Successfully parsed resiliency report\n")
+					if reportErr := resiliency.GenerateAndWriteReport(
+						[]resiliency.DetailedScenarioReport{*rep},
+						"resiliency-report.json",
+					); reportErr != nil {
+						log.Printf("Error generating resiliency report: %v", reportErr)
+					} else {
+						fmt.Println("Detailed resiliency report written to resiliency-report.json")
+					}
+				} else {
+					fmt.Fprintf(os.Stderr, "Failed to parse resiliency report: %v\n", perr)
+				}
+
 				if err != nil {
 					var staterr *utils.ExitError
 					if errors.As(err, &staterr) {
@@ -402,6 +430,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					}
 					return err
 				}
+
 				scenarioDuration := time.Since(startTime)
 				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {

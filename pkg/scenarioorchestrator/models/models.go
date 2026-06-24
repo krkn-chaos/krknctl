@@ -35,11 +35,13 @@ func (s ScenarioNode) GetParent() *string {
 
 type Scenario struct {
 	// the only purpose of this attribute is to put a comment in the json
-	Comment string            `json:"_comment,omitempty"`
-	Image   string            `json:"image,omitempty"`
-	Name    string            `json:"name,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Volumes map[string]string `json:"volumes,omitempty"`
+	Comment              string            `json:"_comment,omitempty"`
+	Image                string            `json:"image,omitempty"`
+	Name                 string            `json:"name,omitempty"`
+	Env                  map[string]string `json:"env,omitempty"`
+	Volumes              map[string]string `json:"volumes,omitempty"`
+	ResiliencyConfigPath string            `json:"resiliencyConfigPath,omitempty"`
+	ResiliencyWeight     float64           `json:"resiliencyWeight,omitempty"`
 }
 
 type ScenarioContainer struct {

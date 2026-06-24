@@ -54,12 +54,16 @@ type Config struct {
 	EnvPrivateRegistryToken          string `json:"env_private_registry_token"`
 	EnvPrivateRegistryScenarios      string `json:"env_private_registry_scenarios"`
 	EnvPrivateRegistryInsecure       string `json:"env_private_registry_insecure"`
+	EnvResiliencyEnabledMode         string `json:"env_resiliency_enabled_mode"`
+	EnvKrknAlertsYamlContent         string `json:"env_krkn_alerts_yaml_content"`
 	GithubLatestRelease              string `json:"github_latest_release"`
 	GithubLatestReleaseAPI           string `json:"github_latest_release_api"`
 	GithubReleaseAPI                 string `json:"github_release_api"`
 	GithubReleaseAPIDeprecated       string `json:"github_release_api_deprecated"`
 	TableFieldMaxLength              int    `json:"table_field_max_length"`
 	TableMaxStepScenarioLength       int    `json:"table_max_step_scenario_length"`
+	ResiliencyEnabledMode            string `json:"resiliency_enabled_mode"`
+	ResiliencyReportRegex            string `json:"resiliency_report_regex"`
 	AssistRegistry                   string `json:"assist_registry"`
 	AssistModelTagApple              string `json:"assist_model_tag_apple"`
 	AssistModelTagNvidiaConsumer     string `json:"assist_model_tag_nvidia_consumer"`
