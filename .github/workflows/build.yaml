@@ -45,7 +45,7 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "arm64"
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: "linux-arm64"
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -58,7 +58,7 @@ jobs:
       env:
         GOOS: "darwin"
         GOARCH: "arm64"
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: "darwin-apple-silicon"
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -71,7 +71,7 @@ jobs:
       env:
         GOOS: "darwin"
         GOARCH: "amd64"
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: "darwin-intel"
         GH_TOKEN: ${{ github.token }}
       run: |
