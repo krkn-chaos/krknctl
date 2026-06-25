@@ -72,6 +72,7 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 
 	// Set up device mounts based on detected GPU type (uses same gpuType from image selection)
 	devices := map[string]string{}
+	gpuRequest := ""
 
 	switch gpuType {
 	case gpudetect.GPUTypeAppleSilicon:
@@ -79,28 +80,10 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		devices["/dev/dri"] = "/dev/dri"
 
 	case gpudetect.GPUTypeNvidiaConsumer, gpudetect.GPUTypeNvidiaDatacenter:
-		// Mount NVIDIA devices for CUDA acceleration (verify still accessible)
-		// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
-		devRoot, err := os.OpenRoot("/dev")
-		if err == nil {
-			defer func() {
-				if closeErr := devRoot.Close(); closeErr != nil {
-					log.Printf("Warning: failed to close /dev root: %v", closeErr)
-				}
-			}()
-
-			nvidiaDeviceNames := []string{"nvidia0", "nvidiactl", "nvidia-uvm"}
-			for _, devName := range nvidiaDeviceNames {
-				// Verify device is still accessible before mounting
-				if f, err := devRoot.Open(devName); err == nil {
-					if closeErr := f.Close(); closeErr != nil {
-						log.Printf("Warning: failed to close /dev/%s: %v", devName, closeErr)
-					}
-					// Add full path for container mount
-					devices["/dev/"+devName] = "/dev/" + devName
-				}
-			}
-		}
+		// Use unified GPU request that works for both Docker and Podman:
+		// - Docker: translates to --gpus all via DeviceRequest
+		// - Podman: translates to --device nvidia.com/gpu=all via CDI
+		gpuRequest = "all"
 
 	case gpudetect.GPUTypeCPU:
 		// No device mounts needed for CPU-only mode
@@ -112,9 +95,10 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 		fmt.Sprintf("%s:%s", config.AssistServicePort, config.AssistServicePort),
 	}
 
-	// Create PodmanCreateOptions with device mounts
+	// Create PodmanCreateOptions with unified GPU support for both Docker and Podman
 	podmanOpts := &scenarioorchestrator.PodmanCreateOptions{
-		Devices: devices,
+		Devices:    devices,
+		GPURequest: gpuRequest,
 	}
 
 	// Use provided spinner for pull progress

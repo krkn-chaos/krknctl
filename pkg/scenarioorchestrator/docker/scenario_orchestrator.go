@@ -68,7 +68,7 @@ func (c *ScenarioOrchestrator) Run(
 	ctx context.Context,
 	registry *providermodels.RegistryV2,
 	publishPorts []string,
-	_ *scenarioorchestrator.PodmanCreateOptions,
+	createOpts *scenarioorchestrator.PodmanCreateOptions,
 ) (*string, error) {
 
 	cli, err := dockerClientFromContext(ctx)
@@ -109,6 +109,27 @@ func (c *ScenarioOrchestrator) Run(
 	hostCfg := &dockercontainer.HostConfig{
 		Mounts: volumes,
 	}
+
+	// Handle GPU requests if specified
+	if createOpts != nil && createOpts.GPURequest != "" {
+		gpuReq := dockercontainer.DeviceRequest{
+			Capabilities: [][]string{{"gpu"}},
+		}
+
+		// Parse GPU request: "all" or "device=0,1"
+		if createOpts.GPURequest == "all" {
+			gpuReq.Count = -1 // -1 means all GPUs
+		} else if strings.HasPrefix(createOpts.GPURequest, "device=") {
+			deviceIDs := strings.TrimPrefix(createOpts.GPURequest, "device=")
+			gpuReq.DeviceIDs = strings.Split(deviceIDs, ",")
+		} else {
+			// Fallback: treat as "all"
+			gpuReq.Count = -1
+		}
+
+		hostCfg.DeviceRequests = []dockercontainer.DeviceRequest{gpuReq}
+	}
+
 	if len(publishPorts) > 0 {
 		exposed := nat.PortSet{}
 		bindings := nat.PortMap{}

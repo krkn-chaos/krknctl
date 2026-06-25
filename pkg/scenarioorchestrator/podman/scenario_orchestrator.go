@@ -74,6 +74,13 @@ func podmanCreateViaCLI(ctx context.Context, containerName, image string, env ma
 		for hostDev, containerDev := range extra.Devices {
 			args = append(args, "--device", fmt.Sprintf("%s:%s", hostDev, containerDev))
 		}
+		for _, cdiDev := range extra.CDIDevices {
+			args = append(args, "--device", cdiDev)
+		}
+		// If no CDI devices but GPURequest is set, convert to CDI format
+		if len(extra.CDIDevices) == 0 && extra.GPURequest != "" {
+			args = append(args, "--device", fmt.Sprintf("nvidia.com/gpu=%s", extra.GPURequest))
+		}
 	}
 	if len(publishPorts) > 0 {
 		for _, p := range publishPorts {
@@ -166,8 +173,13 @@ func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[s
 	}
 
 	// Darwin always uses CLI create (REST/bind quirks). Linux uses CLI when publishing ports
-	// (e.g. krknctl dashboard) so -p, --security-opt, and --group-add match containers/podman-run.sh.
-	if runtime.GOOS == "darwin" || len(publishPorts) > 0 {
+	// (e.g. krknctl dashboard) or when CDI devices are specified (e.g. nvidia.com/gpu=all) since
+	// CDI is not directly supported in the REST API specgen.
+	useCLI := runtime.GOOS == "darwin" || len(publishPorts) > 0
+	if podmanCreate != nil && len(podmanCreate.CDIDevices) > 0 {
+		useCLI = true
+	}
+	if useCLI {
 		containerID, err := podmanCreateViaCLI(ctx, containerName, image, env, volumeMounts, publishPorts, podmanCreate)
 		if err != nil {
 			return nil, err
