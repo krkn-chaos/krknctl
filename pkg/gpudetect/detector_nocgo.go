@@ -10,34 +10,18 @@ import (
 )
 
 // GPUType represents the type of GPU detected on the system
-type GPUType int
+type GPUType string
 
 const (
-	// GPUTypeCPU indicates no GPU acceleration (CPU-only mode)
-	GPUTypeCPU GPUType = iota
 	// GPUTypeAppleSilicon indicates Apple Silicon GPU (Metal via libkrun)
-	GPUTypeAppleSilicon
+	GPUTypeAppleSilicon GPUType = "apple-silicon"
 	// GPUTypeNvidiaConsumer indicates NVIDIA consumer GPU (RTX, GTX series)
-	GPUTypeNvidiaConsumer
+	GPUTypeNvidiaConsumer GPUType = "nvidia-consumer"
 	// GPUTypeNvidiaDatacenter indicates NVIDIA datacenter GPU (V100, A100, H100)
-	GPUTypeNvidiaDatacenter
+	GPUTypeNvidiaDatacenter GPUType = "nvidia-datacenter"
+	// GPUTypeCPU indicates no GPU acceleration (CPU-only mode)
+	GPUTypeCPU GPUType = "cpu"
 )
-
-// String returns a human-readable string representation of the GPU type
-func (g GPUType) String() string {
-	switch g {
-	case GPUTypeCPU:
-		return "CPU"
-	case GPUTypeAppleSilicon:
-		return "Apple Silicon"
-	case GPUTypeNvidiaConsumer:
-		return "NVIDIA Consumer"
-	case GPUTypeNvidiaDatacenter:
-		return "NVIDIA Datacenter"
-	default:
-		return "Unknown"
-	}
-}
 
 // DetectGPU detects the GPU type available on the current system.
 // This is a stub implementation that always returns GPUTypeCPU when CGO is disabled.
