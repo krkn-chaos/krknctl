@@ -6,8 +6,46 @@ on:
   release:
     types: [published]
 jobs:
-  build:
-    name: krknctl build
+  build-linux-amd64:
+    name: Build linux/amd64
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: set up go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.2'
+        cache: false
+
+    - name: install dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install libbtrfs-dev
+
+    - name: advance version
+      run: |
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+
+    - name: build linux amd64
+      env:
+        GOOS: "linux"
+        GOARCH: "amd64"
+        CGO_ENABLED: 1
+        BINARY: "linux-amd64"
+      run: |
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
+
+    - name: upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-amd64
+        path: krknctl-${{github.event.release.tag_name}}-linux-amd64.tar.gz
+
+  build-linux-arm64:
+    name: Build linux/arm64
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,20 +64,7 @@ jobs:
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json 
-
-    - name: build linux amd64
-      env:
-        GOOS: "linux"
-        GOARCH: "amd64"
-        CGO_ENABLED: 1
-        BINARY: "linux-amd64"
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
 
     - name: build linux arm64
       env:
@@ -48,53 +73,98 @@ jobs:
         CGO_ENABLED: 1
         CC: aarch64-linux-gnu-gcc
         BINARY: "linux-arm64"
-        GH_TOKEN: ${{ github.token }}
       run: |
-        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
         go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
-    - name: setup osxcross for darwin cross-compilation
+    - name: upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-arm64
+        path: krknctl-${{github.event.release.tag_name}}-linux-arm64.tar.gz
+
+  build-darwin:
+    name: Build darwin (both architectures)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: advance version
       run: |
-        git clone https://github.com/plentico/osxcross-target.git /tmp/osxcross
-        echo "OSXCROSS_ROOT=/tmp/osxcross/target" >> $GITHUB_ENV
-        echo "/tmp/osxcross/target/bin" >> $GITHUB_PATH
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
 
-    - name: build darwin arm64
+    - name: Build darwin binaries with xgo
+      uses: crazy-max/ghaction-xgo@v3
+      with:
+        xgo_version: latest
+        go_version: '1.26.2'
+        dest: build
+        prefix: krknctl
+        targets: darwin/arm64,darwin/amd64
+        v: true
+        x: false
+        race: false
+        ldflags: -w -s
+        buildmode: default
+        buildvcs: auto
+        trimpath: true
+        pkg: .
+        tags: containers_image_openpgp
+        buildx: -mod=vendor
+
+    - name: Package darwin arm64
+      run: |
+        mkdir -p darwin-apple-silicon
+        mv build/krknctl-darwin-arm64 darwin-apple-silicon/krknctl
+        tar cfvz krknctl-${{github.event.release.tag_name}}-darwin-apple-silicon.tar.gz -C darwin-apple-silicon krknctl
+
+    - name: Package darwin amd64
+      run: |
+        mkdir -p darwin-intel
+        mv build/krknctl-darwin-amd64 darwin-intel/krknctl
+        tar cfvz krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz -C darwin-intel krknctl
+
+    - name: upload darwin arm64
+      uses: actions/upload-artifact@v4
+      with:
+        name: darwin-apple-silicon
+        path: krknctl-${{github.event.release.tag_name}}-darwin-apple-silicon.tar.gz
+
+    - name: upload darwin amd64
+      uses: actions/upload-artifact@v4
+      with:
+        name: darwin-intel
+        path: krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz
+
+  upload-releases:
+    name: Upload release artifacts
+    needs: [build-linux-amd64, build-linux-arm64, build-darwin]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Upload to release
       env:
-        GOOS: "darwin"
-        GOARCH: "arm64"
-        CGO_ENABLED: 1
-        CC: oa64-clang
-        CXX: oa64-clang++
-        BINARY: "darwin-apple-silicon"
         GH_TOKEN: ${{ github.token }}
       run: |
-        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
+        cd artifacts
+        for dir in */; do
+          for file in "$dir"*.tar.gz; do
+            gh release upload ${{github.event.release.tag_name}} "$file" --repo ${{github.repository}}
+          done
+        done
 
-    - name: build darwin amd64
-      env:
-        GOOS: "darwin"
-        GOARCH: "amd64"
-        CGO_ENABLED: 1
-        CC: o64-clang
-        CXX: o64-clang++
-        BINARY: "darwin-intel"
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        export FILENAME=krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz $FILENAME -C $BINARY krknctl
-        gh release upload ${{github.event.release.tag_name}} $FILENAME
-
-    - name: generate and upload checksums
+    - name: Generate and upload checksums
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        sha256sum krknctl-${{github.event.release.tag_name}}-*.tar.gz > checksums.txt
-        gh release upload ${{github.event.release.tag_name}} checksums.txt --clobber
-
+        cd artifacts
+        sha256sum */*.tar.gz > checksums.txt
+        gh release upload ${{github.event.release.tag_name}} checksums.txt --clobber --repo ${{github.repository}}
