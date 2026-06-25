@@ -62,10 +62,6 @@ jobs:
           docker tag quay.io/krkn-chaos/krkn:latest localhost:5001/krkn-chaos/krkn:latest
           docker push -q localhost:5001/krkn-chaos/krkn-hub:dummy-scenario
           docker push -q localhost:5001/krkn-chaos/krkn:latest
-      - name: sync vendor directory
-        run: |
-          go mod vendor
-
       - name: run gosec security scanner
         uses: securego/gosec@master
         with:

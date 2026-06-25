@@ -24,10 +24,6 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install libbtrfs-dev
 
-    - name: sync vendor directory
-      run: |
-        go mod vendor
-
     - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json 
