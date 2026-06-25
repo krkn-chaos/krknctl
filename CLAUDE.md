@@ -139,9 +139,13 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 5. Automatic fallback to CPU mode if NVML unavailable (drivers not installed)
 
 #### 2. Container Runtime Support
-- **Podman Only**: Lightspeed exclusively supports Podman container runtime
-- **Docker Blocking**: Commands fail gracefully with helpful error messages when Docker is detected
-- **Error Handling**: Provides links to Podman GPU documentation (https://podman-desktop.io/docs/podman/gpu)
+- **Cross-Platform Support**: Lightspeed supports both Podman and Docker container runtimes
+  - **macOS arm64**: Requires Podman for Apple Silicon GPU support via libkrun/Vulkan
+  - **Linux**: Works with both Podman (CDI) and Docker (--gpus) for NVIDIA GPUs
+- **GPU Device Mounting**:
+  - **Podman**: Uses CDI (Container Device Interface) `nvidia.com/gpu=all` specification
+  - **Docker**: Uses DeviceRequest API with `--gpus all` semantics
+- **Unified API**: `PodmanCreateOptions.GPURequest` field works across both runtimes
 
 #### 3. Container Architecture
 **Four Specialized Containers**:
@@ -201,9 +205,12 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 
 #### Core Components
 - **`pkg/gpudetect/detector.go`**: NVML-based GPU detection with compute capability mapping
-- **`cmd/assist.go`**: Assist commands with GPU-aware container deployment
+- **`cmd/assist.go`**: Assist commands with GPU-aware container deployment (Podman-only on macOS arm64)
 - **`pkg/config/config.go`**: Enhanced with GPU-specific tag selection methods
-- **`pkg/assist/assist.go`**: Container deployment with GPU device mounting
+- **`pkg/assist/assist.go`**: Container deployment with unified GPU device mounting
+- **`pkg/scenarioorchestrator/scenario_orchestrator.go`**: Unified `PodmanCreateOptions.GPURequest` field
+- **`pkg/scenarioorchestrator/podman/`**: CDI device support for NVIDIA GPUs
+- **`pkg/scenarioorchestrator/docker/`**: DeviceRequest API support for NVIDIA GPUs
 
 #### Container Files
 - **`containers/assist/Containerfile.apple-silicon`**: Single-stage Vulkan build for Apple Silicon
@@ -216,7 +223,9 @@ Lightspeed is krknctl's AI-powered chaos engineering assistance feature that pro
 - **`gpudetect.detectNvidiaGPUType()`**: CUDA compute capability query and mapping
 - **`gpudetect.mapComputeCapability()`**: Maps compute capability to consumer/datacenter
 - **`config.GetAssistImageURI()`**: GPU-aware image URI selection
-- **`assist.DeployAssistModel()`**: GPU-aware container deployment with device mounting
+- **`assist.DeployAssistModel()`**: GPU-aware container deployment with unified GPU mounting
+- **`podmanCreateViaCLI()`**: Handles both CDI devices and legacy device mounts for Podman
+- **`docker.Run()`**: Implements DeviceRequest for Docker --gpus support
 
 #### NVIDIA Detection Requirements
 - **NVIDIA Drivers**: Must be installed on host (same requirement as using NVIDIA GPUs)
