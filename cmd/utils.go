@@ -45,9 +45,13 @@ func NewSpinnerWithSuffix(suffix string) *spinner.Spinner {
 
 func NewRootCommand(krknctlConfig config.Config) *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:     "krknctl",
-		Short:   "krkn CLI",
-		Long:    `krkn Command Line Interface`,
+		Use:   "krknctl",
+		Short: "krkn CLI",
+		Long: `krkn Command Line Interface
+
+WARNING: krkn-dashboard is deprecated. If you are looking for a UI to interact
+with krkn, please use krkn-operator instead:
+  https://github.com/krkn-chaos/krkn-operator`,
 		Version: krknctlConfig.Version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()

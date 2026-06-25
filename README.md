@@ -16,6 +16,11 @@
 
 <br/>
 
+> [!WARNING]
+> **krkn-dashboard is deprecated.** If you are looking for a UI to interact with krkn, please use [krkn-operator](https://github.com/krkn-chaos/krkn-operator) instead.
+
+<br/>
+
 ## Overview:
 `Krknctl` is a tool designed to run and orchestrate [krkn](https://github.com/krkn-chaos/krkn) chaos scenarios utilizing 
 container images from the [krkn-hub](https://github.com/krkn-chaos/krkn-hub). 
