@@ -1,6 +1,9 @@
+//go:build cgo
+
 // Package gpudetect provides GPU detection functionality for selecting optimal container images.
 // It uses NVML (NVIDIA Management Library) to detect NVIDIA GPU compute capabilities and
 // maps them to consumer vs datacenter GPU types for optimized CUDA builds.
+// This file is compiled only when CGO is enabled.
 package gpudetect
 
 import (

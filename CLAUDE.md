@@ -18,7 +18,8 @@ GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -tags containers_image_openpgp -
 ### Testing
 ```bash
 # Run full test suite (requires podman/docker and Kubernetes cluster)
-go test -tags containers_image_openpgp -race -json -v -coverprofile=coverage.out ./...
+# Note: CGO_ENABLED=0 to avoid NVML deprecation warnings breaking test formatters
+CGO_ENABLED=0 go test -tags containers_image_openpgp -json -v -coverprofile=coverage.out ./...
 
 # Generate coverage report
 go tool cover -func coverage.out
