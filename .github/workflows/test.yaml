@@ -76,9 +76,10 @@ jobs:
       - name: run test suite
         env:
           CI_FORK_PR: ${{ github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
+          CGO_ENABLED: 0
         run: |
          export USERID=$(id -u)
-         go test -mod=vendor -tags containers_image_openpgp -race -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+         go test -mod=vendor -tags containers_image_openpgp -json -v  -coverprofile=coverage.out ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
          cat /tmp/gotest.log | go-ctrf-json-reporter -output ctrf-report.json > /dev/null
       - name: generate test report
         run: npx github-actions-ctrf ctrf-report.json

@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/krkn-chaos/krknctl/pkg/assist"
 
@@ -96,9 +97,13 @@ Examples:
 			// Print container runtime info
 			(*scenarioOrchestrator).PrintContainerRuntime()
 
-			// Check if Docker is being used - assist requires Podman
+			// Check if Docker is being used on macOS arm64 - requires Podman for Apple Silicon GPU support
 			if (*scenarioOrchestrator).GetContainerRuntime() == orchestratormodels.Docker {
-				return fmt.Errorf("❌ assist requires Podman container runtime")
+				if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+					return fmt.Errorf("❌ assist requires Podman on macOS arm64 for Apple Silicon GPU support via libkrun\n" +
+						"💡 Install Podman: https://podman-desktop.io/docs/installation")
+				}
+				// Docker is supported on other platforms (Linux with NVIDIA GPUs)
 			}
 
 			// Get container runtime socket

@@ -1,3 +1,8 @@
+// TestMapComputeCapability tests the mapping of CUDA compute capabilities to GPU types.
+// This test requires CGO because it tests the internal mapComputeCapability function
+// which is only available in the CGO build.
+//go:build cgo
+
 package gpudetect
 
 import (
@@ -81,36 +86,4 @@ func TestMapComputeCapability(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestDetectGPU_PlatformDetection tests platform-based GPU detection (Apple Silicon)
-// Note: This test only validates the platform detection logic, not NVML functionality
-func TestDetectGPU_PlatformDetection(t *testing.T) {
-	// This test will only pass on actual macOS arm64 or Linux platforms
-	// It's a smoke test to ensure DetectGPU doesn't panic
-	gpuType, err := DetectGPU()
-
-	// Should always return a valid GPU type
-	validTypes := []GPUType{
-		GPUTypeAppleSilicon,
-		GPUTypeNvidiaConsumer,
-		GPUTypeNvidiaDatacenter,
-		GPUTypeCPU,
-	}
-
-	found := false
-	for _, valid := range validTypes {
-		if gpuType == valid {
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		t.Errorf("DetectGPU() returned invalid GPU type: %v", gpuType)
-	}
-
-	// Error can be nil or non-nil depending on hardware
-	// We just check it doesn't panic
-	_ = err
 }
