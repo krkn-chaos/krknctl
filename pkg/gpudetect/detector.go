@@ -22,7 +22,7 @@ const (
 )
 
 // DetectGPU returns the GPU type for container image selection.
-// Returns GPUTypeCPU with warning if NVML is unavailable (graceful fallback).
+// Returns GPUTypeCPU with warning if GPU detection is unavailable (graceful fallback).
 func DetectGPU() (GPUType, error) {
 	// macOS arm64: Apple Silicon GPU
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
@@ -60,11 +60,11 @@ func DetectGPU() (GPUType, error) {
 		}
 	}
 
-	// NVIDIA devices exist, try to detect GPU type via NVML
+	// NVIDIA devices exist, try to detect GPU type
 	gpuType, err := detectNvidiaGPUType()
 	if err != nil {
-		// NVML detection failed, fallback to CPU
-		log.Printf("Warning: NVIDIA GPU detected but NVML detection failed: %v. Using CPU-only mode.", err)
+		// Detection failed, fallback to CPU
+		log.Printf("Warning: NVIDIA GPU detected but type detection failed: %v. Using CPU-only mode.", err)
 		return GPUTypeCPU, err
 	}
 
@@ -109,7 +109,7 @@ func detectNvidiaGPUType() (GPUType, error) {
 
 	// Map compute capability to GPU type
 	gpuType := mapComputeCapability(major, minor)
-	log.Printf("Detected NVIDIA GPU: Compute Capability %d.%d -> %s", major, minor, gpuType)
+	log.Printf("Detected NVIDIA GPU via NVML: Compute Capability %d.%d -> %s", major, minor, gpuType)
 
 	return gpuType, nil
 }

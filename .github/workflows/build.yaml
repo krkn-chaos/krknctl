@@ -22,7 +22,7 @@ jobs:
 
     - name: install dependencies
       run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev
+        sudo apt-get update && sudo apt-get install libbtrfs-dev gcc-aarch64-linux-gnu
 
     - name: advance version
       run: |
@@ -45,7 +45,8 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "arm64"
-        CGO_ENABLED: 0
+        CGO_ENABLED: 1
+        CC: aarch64-linux-gnu-gcc
         BINARY: "linux-arm64"
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -54,11 +55,19 @@ jobs:
         tar cfvz $FILENAME -C $BINARY krknctl
         gh release upload ${{github.event.release.tag_name}} $FILENAME
 
+    - name: setup osxcross for darwin cross-compilation
+      run: |
+        git clone https://github.com/plentico/osxcross-target.git /tmp/osxcross
+        echo "OSXCROSS_ROOT=/tmp/osxcross/target" >> $GITHUB_ENV
+        echo "/tmp/osxcross/target/bin" >> $GITHUB_PATH
+
     - name: build darwin arm64
       env:
         GOOS: "darwin"
         GOARCH: "arm64"
-        CGO_ENABLED: 0
+        CGO_ENABLED: 1
+        CC: oa64-clang
+        CXX: oa64-clang++
         BINARY: "darwin-apple-silicon"
         GH_TOKEN: ${{ github.token }}
       run: |
@@ -71,7 +80,9 @@ jobs:
       env:
         GOOS: "darwin"
         GOARCH: "amd64"
-        CGO_ENABLED: 0
+        CGO_ENABLED: 1
+        CC: o64-clang
+        CXX: o64-clang++
         BINARY: "darwin-intel"
         GH_TOKEN: ${{ github.token }}
       run: |
