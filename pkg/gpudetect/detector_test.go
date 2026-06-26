@@ -1,7 +1,7 @@
 // TestMapComputeCapability tests the mapping of CUDA compute capabilities to GPU types.
 // This test requires CGO because it tests the internal mapComputeCapability function
 // which is only available in the CGO build.
-//go:build cgo
+//go:build cgo && linux
 
 package gpudetect
 
