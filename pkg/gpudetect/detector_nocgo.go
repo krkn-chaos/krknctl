@@ -1,8 +1,8 @@
-//go:build !cgo
+//go:build !cgo || !linux
 
 // Package gpudetect provides GPU detection functionality for selecting optimal container images.
-// This file provides a stub implementation when CGO is disabled (e.g., during testing).
-// It always returns GPUTypeCPU since NVML requires CGO.
+// This file provides a stub implementation when CGO is disabled or on non-Linux platforms.
+// NVML (NVIDIA Management Library) is Linux-only; Darwin and other platforms use platform detection.
 package gpudetect
 
 import (

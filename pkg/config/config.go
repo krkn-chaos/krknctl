@@ -85,6 +85,12 @@ type Config struct {
 	LabelHasRollbackRegex            string `json:"label_has_rollback_regex"`
 	LabelIsAScenario                 string `json:"label_is_a_scenario"`
 	LabelHasRollback                 string `json:"label_has_rollback"`
+	OperatorChartURL                 string `json:"operator_chart_url"`
+	OperatorImageName                string `json:"operator_image_name"`
+	OperatorDefaultNS                string `json:"operator_default_namespace"`
+	OperatorDefaultVersion           string `json:"operator_default_version"`
+	OperatorConsoleLocalPort         int    `json:"operator_console_local_port"`
+	OperatorConsoleRemotePort        int    `json:"operator_console_remote_port"`
 }
 
 //go:embed config.json
