@@ -35,7 +35,7 @@ jobs:
         CGO_ENABLED: 1
         BINARY: "linux-amd64"
       run: |
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
     - name: upload artifact
@@ -74,7 +74,7 @@ jobs:
         CC: aarch64-linux-gnu-gcc
         BINARY: "linux-arm64"
       run: |
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
     - name: upload artifact
@@ -112,7 +112,7 @@ jobs:
         trimpath: true
         pkg: .
         tags: containers_image_openpgp
-        buildx: -mod=vendor
+        buildx: ""
 
     - name: Package darwin arm64
       run: |
