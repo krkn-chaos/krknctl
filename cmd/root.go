@@ -136,9 +136,11 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	operatorInstallCmd.Flags().String("namespace", "krkn-operator-system", "namespace to install the operator into")
 	operatorInstallCmd.Flags().String("chart-path", "", "local path to the Helm chart (overrides the remote default)")
 	operatorInstallCmd.Flags().String("operator-version", config.OperatorDefaultVersion, "operator chart version (used when installing from the remote OCI chart)")
-	operatorInstallCmd.Flags().Bool("port-forward", true, "after install, port-forward the console to http://localhost:8080 (blocks until Ctrl+C)")
+	operatorInstallCmd.Flags().Bool("port-forward", true, "after install, start a background port-forward of the console to http://localhost:8080")
+	operatorInstallCmd.Flags().Int("local-port", config.OperatorConsoleLocalPort, "local port to use for the console port-forward")
 	operatorInstallCmd.MarkFlagsMutuallyExclusive("kind", "kubeconfig")
 	operatorCmd.AddCommand(operatorInstallCmd)
+	operatorCmd.AddCommand(NewOperatorPortForwardDaemonCommand())
 
 	operatorUninstallCmd := NewOperatorUninstallCommand(config)
 	operatorUninstallCmd.Flags().Bool("kind", false, "delete the entire KinD cluster")

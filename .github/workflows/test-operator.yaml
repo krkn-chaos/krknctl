@@ -1,0 +1,47 @@
+name: krknctl operator test
+on:
+  pull_request:
+jobs:
+  operator-install-uninstall:
+    name: operator install and uninstall
+    runs-on: ubuntu-24.04
+    steps:
+      - name: code checkout
+        uses: actions/checkout@v4
+
+      - name: set up go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2'
+          cache: false
+
+      - name: install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+
+      - name: build krknctl
+        env:
+          CGO_ENABLED: 0
+        run: go build -tags containers_image_openpgp -o bin/krknctl .
+
+      - name: operator install
+        run: ./bin/krknctl operator install --kind
+
+      - name: verify console is reachable
+        run: |
+          sleep 5
+          curl --retry 10 --retry-delay 3 --retry-connrefused -sf http://localhost:8080
+
+      - name: operator uninstall
+        run: ./bin/krknctl operator uninstall --kind
+
+      - name: verify port-forward is stopped
+        run: |
+          sleep 2
+          ! curl -sf http://localhost:8080
+
+      - name: verify cluster is deleted
+        run: |
+          ! docker ps --format '{{.Names}}' | grep -q krkn-operator

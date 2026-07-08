@@ -7,8 +7,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	commonutils "github.com/krkn-chaos/krknctl/pkg/utils"
@@ -52,6 +56,7 @@ Provide exactly one of:
 			chartPath, _ := cmd.Flags().GetString("chart-path")
 			operatorVersion, _ := cmd.Flags().GetString("operator-version")
 			portFwd, _ := cmd.Flags().GetBool("port-forward")
+			localPort, _ := cmd.Flags().GetInt("local-port")
 
 			if !useKind && kubeconfig == "" {
 				return fmt.Errorf("one of --kind or --kubeconfig must be specified")
@@ -65,7 +70,6 @@ Provide exactly one of:
 				if err != nil {
 					return err
 				}
-				defer os.Remove(kubeconfigPath)
 			} else {
 				expanded, err := commonutils.ExpandFolder(kubeconfig, nil)
 				if err != nil {
@@ -99,9 +103,8 @@ Provide exactly one of:
 				return nil
 			}
 
-			localPort := cfg.OperatorConsoleLocalPort
 			remotePort := cfg.OperatorConsoleRemotePort
-			fmt.Printf("Port-forwarding console: http://localhost:%d → %s/krkn-operator-console:%d (Ctrl+C to stop)\n", localPort, namespace, remotePort)
+			fmt.Printf("Starting background port-forward: http://localhost:%d → %s/krkn-operator-console:%d\n", localPort, namespace, remotePort)
 			return portForwardConsole(kubeconfigPath, namespace, "krkn-operator-console", localPort, remotePort)
 		},
 	}
@@ -129,9 +132,15 @@ Provide exactly one of:
 			}
 
 			if useKind {
+				stopBackgroundPortForward()
 				fmt.Printf("Deleting KinD cluster %q...\n", clusterName)
 				if err := kindDeleteCluster(clusterName); err != nil {
 					return fmt.Errorf("failed to delete KinD cluster: %w", err)
+				}
+				if dir, err := krknctlDir(); err == nil {
+					if err := os.Remove(filepath.Join(dir, clusterName+".kubeconfig")); err != nil {
+						fmt.Fprintf(os.Stderr, "warning: could not remove kubeconfig: %v\n", err)
+					}
 				}
 				fmt.Printf("KinD cluster %q deleted\n", clusterName)
 				return nil
@@ -143,6 +152,7 @@ Provide exactly one of:
 			}
 			kubeconfigPath := *expanded
 
+			stopBackgroundPortForward()
 			fmt.Printf("Uninstalling krkn-operator from namespace %q...\n", namespace)
 			if err := helmUninstall(kubeconfigPath, namespace, "krkn-operator"); err != nil {
 				return fmt.Errorf("helm uninstall failed: %w", err)
@@ -161,6 +171,44 @@ Provide exactly one of:
 	}
 }
 
+func stopBackgroundPortForward() {
+	dir, err := krknctlDir()
+	if err != nil {
+		return
+	}
+	pidFile := filepath.Join(dir, "port-forward.pid")
+	data, err := os.ReadFile(pidFile) // #nosec G304 -- path is derived from krknctlDir() under the user's home directory, not user-supplied input
+	if err != nil {
+		return
+	}
+	pid, err := strconv.Atoi(string(data))
+	if err != nil {
+		return
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return
+	}
+	if err := proc.Signal(syscall.SIGTERM); err == nil {
+		fmt.Printf("Stopped background port-forward (PID %d)\n", pid)
+	}
+	if err := os.Remove(pidFile); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not remove PID file %s: %v\n", pidFile, err)
+	}
+}
+
+func krknctlDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine home directory: %w", err)
+	}
+	dir := filepath.Join(home, ".krknctl")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", fmt.Errorf("failed to create %s: %w", dir, err)
+	}
+	return dir, nil
+}
+
 func kindCreateCluster(clusterName string) (string, error) {
 	fmt.Printf("Creating KinD cluster %q...\n", clusterName)
 
@@ -176,17 +224,16 @@ func kindCreateCluster(clusterName string) (string, error) {
 		return "", fmt.Errorf("failed to retrieve KinD kubeconfig: %w", err)
 	}
 
-	f, err := os.CreateTemp("", "krknctl-kind-kubeconfig-*.yaml")
+	dir, err := krknctlDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp kubeconfig file: %w", err)
+		return "", err
 	}
-	defer f.Close()
-
-	if _, err := f.WriteString(kubeconfigYAML); err != nil {
+	kubeconfigPath := filepath.Join(dir, clusterName+".kubeconfig")
+	if err := os.WriteFile(kubeconfigPath, []byte(kubeconfigYAML), 0600); err != nil {
 		return "", fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
 
-	return f.Name(), nil
+	return kubeconfigPath, nil
 }
 
 func kindDeleteCluster(clusterName string) error {
@@ -230,6 +277,7 @@ func helmInstall(kubeconfigPath, namespace, chartRef, releaseName, version strin
 	client.Namespace = namespace
 	client.CreateNamespace = true
 	client.Wait = true
+	client.Timeout = 5 * time.Minute
 	if version != "" {
 		client.Version = version
 	}
@@ -278,6 +326,68 @@ func deleteK8sNamespace(kubeconfigPath, namespace string) error {
 }
 
 func portForwardConsole(kubeconfigPath, namespace, svcName string, localPort, remotePort int) error {
+	dir, err := krknctlDir()
+	if err != nil {
+		return err
+	}
+	pidFile := filepath.Join(dir, "port-forward.pid")
+
+	self, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to locate krknctl executable: %w", err)
+	}
+
+	// re-exec this binary with the hidden daemon subcommand so the port-forward
+	// survives after the parent process exits, without depending on kubectl
+	cmd := exec.Command(self, // #nosec G204 -- self-re-exec of the current binary; subcommand and all arguments are internally constructed
+		"operator", "port-forward-daemon",
+		"--kubeconfig", kubeconfigPath,
+		"--namespace", namespace,
+		"--svc", svcName,
+		"--local-port", strconv.Itoa(localPort),
+		"--remote-port", strconv.Itoa(remotePort),
+	)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start background port-forward: %w", err)
+	}
+
+	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(cmd.Process.Pid)), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not save PID file: %v\n", err)
+	}
+
+	fmt.Printf("Console port-forward running in background (PID %d)\n", cmd.Process.Pid)
+	fmt.Printf("Console is available at http://localhost:%d\n", localPort)
+	fmt.Printf("To stop: kill %d  (or: kill $(cat %s))\n", cmd.Process.Pid, pidFile)
+	return nil
+}
+
+func NewOperatorPortForwardDaemonCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "port-forward-daemon",
+		Hidden: true,
+		Args:   cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
+			namespace, _ := cmd.Flags().GetString("namespace")
+			svcName, _ := cmd.Flags().GetString("svc")
+			localPort, _ := cmd.Flags().GetInt("local-port")
+			remotePort, _ := cmd.Flags().GetInt("remote-port")
+			return runPortForwardDaemon(kubeconfigPath, namespace, svcName, localPort, remotePort)
+		},
+	}
+	cmd.Flags().String("kubeconfig", "", "")
+	cmd.Flags().String("namespace", "", "")
+	cmd.Flags().String("svc", "", "")
+	cmd.Flags().Int("local-port", 0, "")
+	cmd.Flags().Int("remote-port", 0, "")
+	return cmd
+}
+
+func runPortForwardDaemon(kubeconfigPath, namespace, svcName string, localPort, remotePort int) error {
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to build rest config: %w", err)
@@ -291,6 +401,14 @@ func portForwardConsole(kubeconfigPath, namespace, svcName string, localPort, re
 	svc, err := clientset.CoreV1().Services(namespace).Get(context.Background(), svcName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("service %q not found in namespace %q: %w", svcName, namespace, err)
+	}
+
+	podPort := remotePort
+	for _, p := range svc.Spec.Ports {
+		if p.Port == int32(remotePort) {
+			podPort = p.TargetPort.IntValue()
+			break
+		}
 	}
 
 	selector := ""
@@ -326,7 +444,7 @@ func portForwardConsole(kubeconfigPath, namespace, svcName string, localPort, re
 	readyCh := make(chan struct{})
 
 	pf, err := portforward.New(dialer,
-		[]string{fmt.Sprintf("%d:%d", localPort, remotePort)},
+		[]string{fmt.Sprintf("%d:%d", localPort, podPort)},
 		stopCh, readyCh,
 		io.Discard, os.Stderr,
 	)
@@ -339,14 +457,11 @@ func portForwardConsole(kubeconfigPath, namespace, svcName string, localPort, re
 		errCh <- pf.ForwardPorts()
 	}()
 
-	// wait until the port-forward is established or fails immediately
 	select {
 	case <-readyCh:
 	case err := <-errCh:
 		return fmt.Errorf("port-forward failed to start: %w", err)
 	}
-
-	fmt.Printf("Console is available at http://localhost:%d\n", localPort)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
