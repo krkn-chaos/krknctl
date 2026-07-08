@@ -46,8 +46,11 @@ func hostSocketPath(socketURI string) string {
 func NewDashboardCommand(scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, cfg config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "dashboard",
-		Short: "runs the krkn-dashboard web UI in a container",
-		Long: `Runs the krkn-dashboard container with the container runtime socket mounted and a kubeconfig file bind-mounted into the dashboard.
+		Short: "runs the krkn-dashboard web UI in a container (DEPRECATED: use krkn-operator)",
+		Long: `WARNING: krkn-dashboard is deprecated. If you are looking for a UI to interact with krkn, please use krkn-operator instead:
+  https://github.com/krkn-chaos/krkn-operator
+
+Runs the krkn-dashboard container with the container runtime socket mounted and a kubeconfig file bind-mounted into the dashboard.
 
 --kubeconfig is required: pass the host path to the kubeconfig file to use inside the dashboard.
 
@@ -56,6 +59,8 @@ The kubeconfig bind mount targets {chaos-assets-dir}/kubeconfig only (not the wh
 Optional --chaos-assets-dir and --database-dir default to the stock image paths. Operators configure host paths; in-container paths match the image unless overridden.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			_, _ = color.New(color.FgYellow).Fprintln(cmd.ErrOrStderr(), "WARNING: krkn-dashboard is deprecated. If you are looking for a UI to interact with krkn, please use krkn-operator instead: https://github.com/krkn-chaos/krkn-operator")
+
 			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
 			podmanPlatform, _ := cmd.Flags().GetString("podman-platform")
 			chaosAssetsDir, _ := cmd.Flags().GetString("chaos-assets-dir")
