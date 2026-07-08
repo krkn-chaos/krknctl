@@ -20,38 +20,15 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	isatty "github.com/mattn/go-isatty"
 	"sigs.k8s.io/kind/pkg/log"
-)
 
-// isSmartTerminal returns true if w is a terminal with VT escape code support.
-// Inlined from sigs.k8s.io/kind/pkg/internal/env to avoid internal package import.
-func isSmartTerminal(w io.Writer) bool {
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-	if !isatty.IsTerminal(f.Fd()) {
-		return false
-	}
-	if _, set := os.LookupEnv("NO_COLOR"); set {
-		return false
-	}
-	term := os.Getenv("TERM")
-	if term == "dumb" || term == "st-256color" {
-		return false
-	}
-	if runtime.GOOS == "windows" && os.Getenv("WT_SESSION") == "" {
-		return false
-	}
-	return true
-}
+	"sigs.k8s.io/kind/pkg/internal/env"
+)
 
 // Logger is the kind cli's log.Logger implementation
 type Logger struct {
@@ -81,7 +58,7 @@ func (l *Logger) SetWriter(w io.Writer) {
 	defer l.writerMu.Unlock()
 	l.writer = w
 	_, isSpinner := w.(*Spinner)
-	l.isSmartWriter = isSpinner || isSmartTerminal(w)
+	l.isSmartWriter = isSpinner || env.IsSmartTerminal(w)
 }
 
 // ColorEnabled returns true if the caller is OK to write colored output

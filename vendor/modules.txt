@@ -71,7 +71,7 @@ github.com/chai2010/gettext-go/po
 # github.com/chzyer/readline v1.5.1
 ## explicit; go 1.15
 github.com/chzyer/readline
-# github.com/containerd/containerd v1.7.32
+# github.com/containerd/containerd v1.7.33
 ## explicit; go 1.24.0
 github.com/containerd/containerd/archive/compression
 github.com/containerd/containerd/content
