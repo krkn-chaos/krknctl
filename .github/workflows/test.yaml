@@ -68,10 +68,11 @@ jobs:
           args: --exclude G402 -tags=containers_image_openpgp ./...
 
       - name: run staticcheck static code analyzer
+        env:
+          GOTOOLCHAIN: local
         run: |
-          wget https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_linux_amd64.tar.gz
-          tar xfvz staticcheck_linux_amd64.tar.gz
-          ./staticcheck/staticcheck -checks all ./...
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck -tags containers_image_openpgp -checks all ./...
           
       - name: run test suite
         env:
