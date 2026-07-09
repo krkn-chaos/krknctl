@@ -32,6 +32,7 @@ type InputField struct {
 	Requires          *string `json:"requires,omitempty"`
 	MutuallyExcludes  *string `json:"mutually_excludes,omitempty"`
 	Secret            bool    `json:"secret,omitempty"`
+	Group             *string `json:"group,omitempty"`
 }
 
 type alias InputField
@@ -112,6 +113,10 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		f.Secret = secret
 	} else {
 		f.Secret = false
+	}
+
+	if fieldProperty, ok := temp["group"]; ok {
+		f.Group = &fieldProperty
 	}
 
 	return nil
@@ -238,4 +243,18 @@ func (f *InputField) Validate(value *string) (*string, error) {
 		}
 	}
 	return selectedValue, deferErr
+}
+
+// GroupFieldsByGroup organizes a slice of InputFields into a map keyed by group name.
+// Fields without a group are placed under the empty string key.
+func GroupFieldsByGroup(fields []InputField) map[string][]InputField {
+	groups := make(map[string][]InputField)
+	for _, field := range fields {
+		group := ""
+		if field.Group != nil {
+			group = *field.Group
+		}
+		groups[group] = append(groups[group], field)
+	}
+	return groups
 }

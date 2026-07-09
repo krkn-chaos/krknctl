@@ -167,3 +167,7 @@ func (s *ScenarioDetail) GetFileFieldByMountPath(mountPath string) *typing.Input
 	}
 	return nil
 }
+
+func (s *ScenarioDetail) GetFieldsByGroup() map[string][]typing.InputField {
+	return typing.GroupFieldsByGroup(s.Fields)
+}

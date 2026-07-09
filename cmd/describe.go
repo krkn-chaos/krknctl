@@ -85,8 +85,7 @@ func PrintScenarioDetail(scenarioDetail *models.ScenarioDetail) {
 		fmt.Println(line)
 	}
 	fmt.Print("\n")
-	argumentTable := NewArgumentTable(scenarioDetail.Fields)
-	argumentTable.Print()
+	PrintGroupedArgumentTables(scenarioDetail.Fields)
 	fmt.Print("\n")
 
 }

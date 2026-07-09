@@ -606,6 +606,141 @@ func TestFieldFile(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestGroupField(t *testing.T) {
+	var field InputField
+	var err error
+
+	fieldWithGroup := `
+{
+	"name": "prometheus-url",
+	"short_description": "Prometheus url",
+	"description": "Prometheus url for when running on kubernetes",
+	"variable": "PROMETHEUS_URL",
+	"type": "string",
+	"default": "",
+	"required": "false",
+	"group": "prometheus"
+}
+`
+	err = json.Unmarshal([]byte(fieldWithGroup), &field)
+	assert.Nil(t, err)
+	assert.NotNil(t, field.Group)
+	assert.Equal(t, "prometheus", *field.Group)
+
+	// marshal preserves group
+	data, err := json.Marshal(&field)
+	assert.Nil(t, err)
+	var result map[string]interface{}
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "prometheus", result["group"])
+
+	// round-trip preserves group
+	var field2 InputField
+	err = json.Unmarshal(data, &field2)
+	assert.Nil(t, err)
+	assert.NotNil(t, field2.Group)
+	assert.Equal(t, *field.Group, *field2.Group)
+
+	// group is optional — field without group parses fine and group is nil
+	field = InputField{}
+	fieldWithoutGroup := `
+{
+	"name": "wait-duration",
+	"short_description": "Post chaos wait duration",
+	"description": "waits for a certain amount of time after the scenario",
+	"variable": "WAIT_DURATION",
+	"type": "number",
+	"default": "1"
+}
+`
+	err = json.Unmarshal([]byte(fieldWithoutGroup), &field)
+	assert.Nil(t, err)
+	assert.Nil(t, field.Group)
+
+	// group is omitted from marshaled output when nil
+	data, err = json.Marshal(&field)
+	assert.Nil(t, err)
+	result = map[string]interface{}{}
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	_, groupPresent := result["group"]
+	assert.False(t, groupPresent)
+
+	// all known group values round-trip correctly
+	knownGroups := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+	baseJSON := `{"name":"field","variable":"VAR","type":"string","group":"%s"}`
+	for _, group := range knownGroups {
+		field = InputField{}
+		err = json.Unmarshal([]byte(fmt.Sprintf(baseJSON, group)), &field)
+		assert.Nil(t, err, "group %q failed to unmarshal", group)
+		assert.NotNil(t, field.Group)
+		assert.Equal(t, group, *field.Group)
+
+		data, err = json.Marshal(&field)
+		assert.Nil(t, err)
+		result = map[string]interface{}{}
+		err = json.Unmarshal(data, &result)
+		assert.Nil(t, err)
+		assert.Equal(t, group, result["group"])
+	}
+}
+
+func TestGroupFieldsByGroup(t *testing.T) {
+	makeField := func(name, variable, group string) InputField {
+		n, v := name, variable
+		f := InputField{Name: &n, Variable: &v, Type: String}
+		if group != "" {
+			g := group
+			f.Group = &g
+		}
+		return f
+	}
+
+	// empty input returns empty map
+	result := GroupFieldsByGroup([]InputField{})
+	assert.Empty(t, result)
+
+	// fields without a group land under the empty string key
+	noGroupField := makeField("wait-duration", "WAIT_DURATION", "")
+	result = GroupFieldsByGroup([]InputField{noGroupField})
+	assert.Len(t, result, 1)
+	assert.Len(t, result[""], 1)
+	assert.Equal(t, "wait-duration", *result[""][0].Name)
+
+	// fields with a group are keyed by that group
+	prometheusField := makeField("prometheus-url", "PROMETHEUS_URL", "prometheus")
+	result = GroupFieldsByGroup([]InputField{prometheusField})
+	assert.Len(t, result, 1)
+	assert.Len(t, result["prometheus"], 1)
+	assert.Equal(t, "prometheus-url", *result["prometheus"][0].Name)
+
+	// multiple fields in the same group stay together
+	prometheusToken := makeField("prometheus-token", "PROMETHEUS_TOKEN", "prometheus")
+	result = GroupFieldsByGroup([]InputField{prometheusField, prometheusToken})
+	assert.Len(t, result, 1)
+	assert.Len(t, result["prometheus"], 2)
+
+	// fields across multiple groups are organized independently
+	esField := makeField("es-server", "ES_SERVER", "elasticsearch")
+	telField := makeField("telemetry-enabled", "TELEMETRY_ENABLED", "telemetry")
+	generalField := makeField("uuid", "UUID", "general")
+	ungroupedField := makeField("wait-duration", "WAIT_DURATION", "")
+
+	allFields := []InputField{prometheusField, prometheusToken, esField, telField, generalField, ungroupedField}
+	result = GroupFieldsByGroup(allFields)
+	assert.Len(t, result, 5)
+	assert.Len(t, result["prometheus"], 2)
+	assert.Len(t, result["elasticsearch"], 1)
+	assert.Len(t, result["telemetry"], 1)
+	assert.Len(t, result["general"], 1)
+	assert.Len(t, result[""], 1)
+
+	// order within each group matches insertion order
+	assert.Equal(t, "prometheus-url", *result["prometheus"][0].Name)
+	assert.Equal(t, "prometheus-token", *result["prometheus"][1].Name)
+}
+
 func TestMarshalJSON(t *testing.T) {
 	name := "test-field"
 	variable := "TEST_VAR"

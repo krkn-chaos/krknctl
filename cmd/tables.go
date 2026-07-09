@@ -2,14 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
-	"strings"
-	"time"
 )
 import "github.com/rodaine/table"
 
@@ -47,6 +49,47 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 		tbl.AddRow(fmt.Sprintf("--%s", *inputField.Name), inputField.Type.String(), *inputField.ShortDescription, inputField.Required, defaultValue)
 	}
 	return tbl
+}
+
+func PrintGroupedArgumentTables(inputFields []typing.InputField) {
+	groupOrder := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+	sectionFmt := color.New(color.FgCyan, color.Bold).SprintfFunc()
+
+	grouped := typing.GroupFieldsByGroup(inputFields)
+
+	// if nothing has a group, fall back to a single flat table
+	if len(grouped) == 1 {
+		if fields, ok := grouped[""]; ok {
+			NewArgumentTable(fields).Print()
+			return
+		}
+	}
+
+	// ungrouped fields first
+	if ungrouped, ok := grouped[""]; ok {
+		NewArgumentTable(ungrouped).Print()
+	}
+
+	printed := make(map[string]bool)
+	for _, g := range groupOrder {
+		if fields, ok := grouped[g]; ok {
+			fmt.Printf("\n%s\n", sectionFmt(strings.ToUpper(strings.ReplaceAll(g, "_", " "))))
+			NewArgumentTable(fields).Print()
+			printed[g] = true
+		}
+	}
+
+	remaining := make([]string, 0)
+	for g := range grouped {
+		if g != "" && !printed[g] {
+			remaining = append(remaining, g)
+		}
+	}
+	sort.Strings(remaining)
+	for _, g := range remaining {
+		fmt.Printf("\n%s\n", sectionFmt(strings.ToUpper(strings.ReplaceAll(g, "_", " "))))
+		NewArgumentTable(grouped[g]).Print()
+	}
 }
 
 func NewEnvironmentTable(env map[string]ParsedField, config config.Config) table.Table {
