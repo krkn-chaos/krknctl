@@ -152,7 +152,10 @@ jobs:
       contents: write
     steps:
     - name: install build dependencies
-      run: dnf install -y git curl tar btrfs-progs-devel gcc jq
+      run: |
+        dnf install -y 'dnf-command(config-manager)'
+        dnf config-manager --set-enabled crb
+        dnf install -y git curl tar btrfs-progs-devel gcc jq
 
     - uses: actions/checkout@v4
 
