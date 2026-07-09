@@ -138,9 +138,52 @@ jobs:
         name: darwin-intel
         path: krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz
 
+  # Builds a separate linux/amd64 binary inside a CentOS Stream 9 container so
+  # the CGO dynamic link is stamped against GLIBC 2.34 (the RHEL 9 / CentOS 9
+  # system version) rather than the GLIBC 2.38+ that ubuntu-latest (24.04)
+  # would embed.  Consumers on CentOS/RHEL 9 Jenkins agents must use this
+  # artifact instead of the standard linux-amd64 build.
+  build-linux-amd64-centos9:
+    name: Build linux/amd64 (CentOS Stream 9)
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/centos/centos:stream9
+    permissions:
+      contents: write
+    steps:
+    - name: install build dependencies
+      run: dnf install -y git curl tar btrfs-progs-devel gcc jq
+
+    - uses: actions/checkout@v4
+
+    - name: install go
+      run: |
+        curl -fsSL https://go.dev/dl/go1.26.2.linux-amd64.tar.gz | tar -C /usr/local -xz
+        echo "/usr/local/go/bin" >> "$GITHUB_PATH"
+
+    - name: advance version
+      run: |
+        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+
+    - name: build linux amd64 centos9
+      env:
+        GOOS: linux
+        GOARCH: amd64
+        CGO_ENABLED: 1
+        BINARY: linux-amd64-centos9
+      run: |
+        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
+
+    - name: upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-amd64-centos9
+        path: krknctl-${{github.event.release.tag_name}}-linux-amd64-centos9.tar.gz
+
   upload-releases:
     name: Upload release artifacts
-    needs: [build-linux-amd64, build-linux-arm64, build-darwin]
+    needs: [build-linux-amd64, build-linux-arm64, build-darwin, build-linux-amd64-centos9]
     runs-on: ubuntu-latest
     permissions:
       contents: write
