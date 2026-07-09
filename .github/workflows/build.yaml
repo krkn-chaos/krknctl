@@ -172,7 +172,7 @@ jobs:
         CGO_ENABLED: 1
         BINARY: linux-amd64-centos9
       run: |
-        go build -buildvcs=false -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -buildvcs=false -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
     - name: upload artifact
