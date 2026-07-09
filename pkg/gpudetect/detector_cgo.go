@@ -25,8 +25,9 @@ const (
 
 // DetectGPU returns the GPU type for container image selection.
 // Returns GPUTypeCPU with warning if GPU detection is unavailable (graceful fallback).
+// This implementation is only compiled on Linux with CGO enabled.
 func DetectGPU() (GPUType, error) {
-	// Linux: Check for NVIDIA device files (must be readable)
+	// Check for NVIDIA device files (must be readable)
 	// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
 	devRoot, err := os.OpenRoot("/dev")
 	if err != nil {
