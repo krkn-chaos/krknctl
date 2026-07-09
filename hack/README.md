@@ -40,30 +40,28 @@ undefined: Return
 undefined: EccCounterType
 ```
 
-You need to use the stub. Add this to your project's `go.mod`:
+You need to use the stub. The recommended approach is to copy it locally:
+
+### Local Copy (Recommended)
+
+1. Copy `krknctl/hack/stub-nvml/` to your project's `hack/stub-nvml/`
+2. Add replace directive pointing to local path in your `go.mod`:
 
 ```go
 // Replace NVIDIA go-nvml with krknctl's stub to avoid CGO dependency
-replace github.com/NVIDIA/go-nvml => github.com/krkn-chaos/krknctl/hack/stub-nvml
+replace github.com/NVIDIA/go-nvml => ./hack/stub-nvml
 ```
 
-Then run:
+3. Run:
 
 ```bash
 go mod tidy
 go mod vendor  # if using vendor
 ```
 
-### Alternative: Local Copy
+### Alternative: Direct Vendoring
 
-If you prefer a local copy of the stub (recommended for pinned versions):
-
-1. Copy `krknctl/hack/stub-nvml/` to your project's `hack/stub-nvml/`
-2. Add replace directive pointing to local path:
-
-```go
-replace github.com/NVIDIA/go-nvml => ./hack/stub-nvml
-```
+If you're already vendoring dependencies, you can copy the stub directly into your `vendor/` directory at the appropriate path.
 
 ## What the Stub Provides
 
@@ -119,10 +117,10 @@ To verify the stub works in your consumer project:
 
 ```bash
 # With stub
-CGO_ENABLED=0 go build ./...  # Should succeed
+CGO_ENABLED=0 go build -tags containers_image_openpgp ./...  # Should succeed
 
 # Test that GPU detection returns CPU-only
-go test -v ./... -run TestGPUDetection
+CGO_ENABLED=0 go test -tags containers_image_openpgp -v ./... -run TestGPUDetection
 ```
 
 ## Maintenance
