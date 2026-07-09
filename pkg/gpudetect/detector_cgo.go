@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
 
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 )
@@ -26,18 +25,9 @@ const (
 
 // DetectGPU returns the GPU type for container image selection.
 // Returns GPUTypeCPU with warning if GPU detection is unavailable (graceful fallback).
+// This implementation is only compiled on Linux with CGO enabled.
 func DetectGPU() (GPUType, error) {
-	// macOS arm64: Apple Silicon GPU
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		return GPUTypeAppleSilicon, nil
-	}
-
-	// Non-Linux platforms: CPU-only
-	if runtime.GOOS != "linux" {
-		return GPUTypeCPU, nil
-	}
-
-	// Linux: Check for NVIDIA device files (must be readable)
+	// Check for NVIDIA device files (must be readable)
 	// Use os.OpenRoot to scope file access under /dev (prevents directory traversal)
 	devRoot, err := os.OpenRoot("/dev")
 	if err != nil {
