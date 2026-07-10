@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -113,17 +114,6 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 			cmd.LocalFlags().AddFlagSet(globalFlags)
 			cmd.LocalFlags().AddFlagSet(scenarioFlags)
-
-			cmd.SetHelpFunc(func(command *cobra.Command, args []string) {
-				yellow := color.New(color.FgYellow).SprintFunc()
-				green := color.New(color.FgGreen).SprintFunc()
-				boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
-				fmt.Printf("%s", yellow("Krkn Global flags\n"))
-				printHelp(*globalEnvDetail)
-				fmt.Printf("\n%s %s\n", boldGreen(scenarioDetail.Name), green("Flags"))
-				printHelp(*scenarioDetail)
-				fmt.Print("\n\n")
-			})
 
 			return nil
 		},
@@ -449,24 +439,126 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 		},
 	}
 
+	command.SetHelpFunc(func(cmd *cobra.Command, _ []string) {
+		yellow := color.New(color.FgYellow).SprintFunc()
+		green := color.New(color.FgGreen).SprintFunc()
+		boldGreen := color.New(color.FgHiGreen, color.Bold).SprintFunc()
+
+		// cobra always passes an empty slice to help functions, so read os.Args directly
+		// to find the first positional arg after "run" — that's the scenario name
+		var scenarioName string
+		for i, arg := range os.Args {
+			if arg == "run" && i+1 < len(os.Args) {
+				for _, next := range os.Args[i+1:] {
+					if !strings.HasPrefix(next, "-") {
+						scenarioName = next
+						break
+					}
+				}
+				break
+			}
+		}
+
+		if scenarioName == "" {
+			_ = cmd.Usage()
+			return
+		}
+
+		registrySettings, _ := models.NewRegistryV2FromEnv(config)
+		provider := GetProvider(registrySettings != nil, factory)
+
+		globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
+		if err != nil || globalEnvDetail == nil {
+			_ = cmd.Usage()
+			return
+		}
+		scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
+		if err != nil || scenarioDetail == nil {
+			_ = cmd.Usage()
+			return
+		}
+
+		fmt.Printf("%s", yellow("Krkn Global flags\n"))
+		printHelp(*globalEnvDetail)
+		fmt.Printf("\n%s %s\n", boldGreen(scenarioDetail.Name), green("Flags"))
+		printHelp(*scenarioDetail)
+		fmt.Print("\n\n")
+	})
+
 	return command
 }
 
+var groupDisplayOrder = []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()
-	for _, f := range scenario.Fields {
+	boldCyan := color.New(color.FgCyan, color.Bold).SprintFunc()
 
-		enum := ""
-		if f.Type == typing.Enum {
-			enum = strings.Replace(*f.AllowedValues, *f.Separator, "|", -1)
-		}
-		def := ""
-		if f.Default != nil && *f.Default != "" {
-			def = fmt.Sprintf("(Default: %s)", *f.Default)
-		}
+	grouped := typing.GroupFieldsByGroup(scenario.Fields)
 
-		fmt.Printf("\t--%s %s: %s [%s]%s\n", *f.Name, boldWhite(enum), *f.Description, boldWhite(f.Type.String()), def)
+	// if no field has a group, print flat (scenario flags case)
+	if len(grouped) == 1 {
+		if fields, ok := grouped[""]; ok {
+			for _, f := range fields {
+				printHelpField(f, boldWhite)
+			}
+			return
+		}
 	}
+
+	// print ungrouped fields first (no section header)
+	if ungrouped, ok := grouped[""]; ok {
+		for _, f := range ungrouped {
+			printHelpField(f, boldWhite)
+		}
+	}
+
+	// print known groups in canonical order
+	printed := make(map[string]bool)
+	for _, g := range groupDisplayOrder {
+		if fields, ok := grouped[g]; ok {
+			fmt.Printf("\n\t%s\n", boldCyan(groupLabel(g)))
+			for _, f := range fields {
+				printHelpField(f, boldWhite)
+			}
+			printed[g] = true
+		}
+	}
+
+	// print any remaining unknown groups alphabetically
+	remaining := make([]string, 0)
+	for g := range grouped {
+		if g != "" && !printed[g] {
+			remaining = append(remaining, g)
+		}
+	}
+	sort.Strings(remaining)
+	for _, g := range remaining {
+		fmt.Printf("\n\t%s\n", boldCyan(groupLabel(g)))
+		for _, f := range grouped[g] {
+			printHelpField(f, boldWhite)
+		}
+	}
+}
+
+func groupLabel(g string) string {
+	return strings.ToUpper(strings.ReplaceAll(g, "_", " "))
+}
+
+func printHelpField(f typing.InputField, boldWhite func(a ...interface{}) string) {
+	enum := ""
+	if f.Type == typing.Enum && f.AllowedValues != nil {
+		separator := ","
+		if f.Separator != nil {
+			separator = *f.Separator
+		}
+		enum = strings.Replace(*f.AllowedValues, separator, "|", -1)
+	}
+	def := ""
+	if f.Default != nil && *f.Default != "" {
+		def = fmt.Sprintf("(Default: %s)", *f.Default)
+	}
+	fmt.Printf("\t--%s %s: %s [%s]%s\n", *f.Name, boldWhite(enum), *f.Description, boldWhite(f.Type.String()), def)
 }
 
 func parseScenarioName(args []string) (string, error) {
