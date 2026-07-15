@@ -66,6 +66,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	runCmd.LocalFlags().String("metrics-profile", "", "custom metrics profile file path")
 	runCmd.LocalFlags().Bool("detached", false, "if set this flag will run in detached mode")
 	runCmd.LocalFlags().Bool("form", false, "Use interactive form to collect scenario parameters instead of CLI flags")
+	runCmd.LocalFlags().Bool("dry-run", false, "validate the scenario configuration locally (schema, required fields, value constraints) without cluster access, kubeconfig, image pulls, or execution")
 	runCmd.DisableFlagParsing = true
 	rootCmd.AddCommand(runCmd)
 
