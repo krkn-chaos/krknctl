@@ -19,6 +19,7 @@ const (
 	Unknown
 	File
 	FileBase64
+	Group
 )
 
 func (t Type) String() string {
@@ -35,6 +36,8 @@ func (t Type) String() string {
 		return "file"
 	case FileBase64:
 		return "file_base64"
+	case Group:
+		return "group"
 	default:
 		return "unknown"
 	}
@@ -54,6 +57,8 @@ func ToType(s string) Type {
 		return File
 	case "file_base64":
 		return FileBase64
+	case "group":
+		return Group
 	default:
 		return Unknown
 	}
