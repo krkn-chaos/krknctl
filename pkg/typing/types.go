@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// Type represents the data type of an InputField.
+// Each type determines how values are validated and processed.
 type Type int64
 
 const (
@@ -19,6 +21,11 @@ const (
 	Unknown
 	File
 	FileBase64
+	// Group is a special metadata type used to define field grouping information.
+	// Unlike other types that validate user input, Group fields contain metadata
+	// about a group of fields (e.g., title, short description, long description).
+	// This type is primarily used by frontend applications to organize and present
+	// related fields together with rich descriptive information.
 	Group
 )
 

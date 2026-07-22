@@ -16,6 +16,9 @@ import (
 
 const MaxFileSize int64 = 10_485_760
 
+// InputField represents a single field in a scenario input schema.
+// Fields can represent user input (string, number, boolean, enum, file)
+// or metadata for organizing fields into logical groups (group type).
 type InputField struct {
 	Name              *string `json:"name"`
 	ShortDescription  *string `json:"short_description,omitempty"`
@@ -32,7 +35,11 @@ type InputField struct {
 	Requires          *string `json:"requires,omitempty"`
 	MutuallyExcludes  *string `json:"mutually_excludes,omitempty"`
 	Secret            bool    `json:"secret,omitempty"`
-	Group             *string `json:"group,omitempty"`
+	// Group specifies the logical grouping for this field.
+	// Fields with the same Group value are related and should be presented together.
+	// When Type is "group", this field IS a group definition containing metadata;
+	// otherwise, this field references which group it belongs to.
+	Group *string `json:"group,omitempty"`
 }
 
 type alias InputField
@@ -239,9 +246,14 @@ func (f *InputField) Validate(value *string) (*string, error) {
 				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 			}
 		case Group:
-			// Group is a special metadata type used to define field groupings.
-			// It does not require user input validation and is always valid.
-			// The value can be any string describing the group metadata.
+			// Group is a special metadata type used to define field grouping information.
+			// Unlike other types that validate user input, Group fields store metadata
+			// describing a collection of related fields (e.g., title, short description,
+			// long description, icons, etc.). This metadata is consumed by frontend
+			// applications to organize and present fields with rich UI grouping.
+			//
+			// Since Group fields contain metadata rather than user input, any string
+			// value is considered valid. No format validation or constraints are applied.
 			return selectedValue, nil
 		default:
 			return nil, errors.New("impossible to validate object")
