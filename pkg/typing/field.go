@@ -238,6 +238,11 @@ func (f *InputField) Validate(value *string) (*string, error) {
 			} else {
 				return nil, errors.New("file `" + *selectedValue + "` is not a file or is not accessible")
 			}
+		case Group:
+			// Group is a special metadata type used to define field groupings.
+			// It does not require user input validation and is always valid.
+			// The value can be any string describing the group metadata.
+			return selectedValue, nil
 		default:
 			return nil, errors.New("impossible to validate object")
 		}
