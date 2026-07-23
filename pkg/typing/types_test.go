@@ -64,6 +64,10 @@ func TestToType(t *testing.T) {
 	assert.Equal(t, krknctlType.String(), "file_base64")
 	assert.Equal(t, ToType("file_base64"), krknctlType)
 
+	krknctlType = Group
+	assert.Equal(t, krknctlType.String(), "group")
+	assert.Equal(t, ToType("group"), krknctlType)
+
 	assert.Equal(t, ToType("anything"), Unknown)
 
 }

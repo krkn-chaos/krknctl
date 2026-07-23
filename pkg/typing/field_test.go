@@ -741,6 +741,76 @@ func TestGroupFieldsByGroup(t *testing.T) {
 	assert.Equal(t, "prometheus-token", *result["prometheus"][1].Name)
 }
 
+func TestGroupTypeValidation(t *testing.T) {
+	var field InputField
+	var value *string
+	var err error
+
+	// Group type field definition
+	groupField := `
+{
+	"name": "prometheus-config",
+	"short_description": "Prometheus Configuration Group",
+	"description": "Configuration group for Prometheus monitoring settings including URL, token, and retention",
+	"variable": "PROMETHEUS_GROUP",
+	"type": "group",
+	"default": "{\"title\":\"Prometheus\",\"description\":\"Monitoring configuration\"}"
+}
+`
+	err = json.Unmarshal([]byte(groupField), &field)
+	assert.Nil(t, err)
+	assert.Equal(t, Group, field.Type)
+
+	// Group type accepts any string value (it's metadata)
+	testValue := "{\"title\":\"Test Group\",\"short_desc\":\"Test\"}"
+	value, err = field.Validate(&testValue)
+	assert.Nil(t, err)
+	assert.NotNil(t, value)
+	assert.Equal(t, testValue, *value)
+
+	// Group type works with default value
+	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, value)
+	assert.Equal(t, "{\"title\":\"Prometheus\",\"description\":\"Monitoring configuration\"}", *value)
+
+	// Group type with empty string falls back to default (standard behavior)
+	emptyValue := ""
+	value, err = field.Validate(&emptyValue)
+	assert.Nil(t, err)
+	assert.NotNil(t, value)
+	// Empty value triggers default for non-string types
+	assert.Equal(t, "{\"title\":\"Prometheus\",\"description\":\"Monitoring configuration\"}", *value)
+
+	// Group type field without default and not required accepts nil
+	field = InputField{}
+	groupFieldNoDefault := `
+{
+	"name": "optional-group",
+	"variable": "OPTIONAL_GROUP",
+	"type": "group",
+	"required": "false"
+}
+`
+	err = json.Unmarshal([]byte(groupFieldNoDefault), &field)
+	assert.Nil(t, err)
+	value, err = field.Validate(nil)
+	assert.Nil(t, err)
+	assert.Nil(t, value)
+
+	// Group type marshals correctly
+	field = InputField{}
+	err = json.Unmarshal([]byte(groupField), &field)
+	assert.Nil(t, err)
+	data, err := json.Marshal(&field)
+	assert.Nil(t, err)
+
+	var result map[string]interface{}
+	err = json.Unmarshal(data, &result)
+	assert.Nil(t, err)
+	assert.Equal(t, "group", result["type"])
+}
+
 func TestMarshalJSON(t *testing.T) {
 	name := "test-field"
 	variable := "TEST_VAR"
