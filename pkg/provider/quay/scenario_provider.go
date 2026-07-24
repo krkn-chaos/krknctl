@@ -130,7 +130,11 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		return nil, err
 	}
 
+	scenarioDetail := models.ScenarioDetail{
+		ScenarioTag: *foundScenario,
+	}
 	var manifest Manifest
+
 	err = json.Unmarshal(bodyBytes, &manifest)
 	if err != nil {
 		return nil, err
@@ -164,11 +168,9 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if err != nil {
 			return nil, err
 		}
+		foundScenario.Size = &manifest.LayerCompressedSize
 	}
 
-	scenarioDetail := models.ScenarioDetail{
-		ScenarioTag: *foundScenario,
-	}
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""
@@ -217,6 +219,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail.Title = *parsedTitle
 	scenarioDetail.Description = *parsedDescription
 	scenarioDetail.Fields = parsedInputFields
+	scenarioDetail.Size = foundScenario.Size
 	return &scenarioDetail, nil
 }
 
