@@ -141,7 +141,16 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				return err
 			}
 
-			(*scenarioOrchestrator).PrintContainerRuntime()
+			dryRun := false
+			for _, a := range args {
+				if a == "--dry-run" {
+					dryRun = true
+					break
+				}
+			}
+			if !dryRun {
+				(*scenarioOrchestrator).PrintContainerRuntime()
+			}
 			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
 			spinner.Start()
 
@@ -157,6 +166,17 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				spinner.Stop()
 				return err
+			}
+			if dryRun {
+				spinner.Stop()
+				valid, validationErrors := ValidateScenarioConfig(scenarioDetail, globalDetail, args)
+				if err := PrintDryRunResult(valid, validationErrors); err != nil {
+					return err
+				}
+				if !valid {
+					os.Exit(1)
+				}
+				return nil
 			}
 
 			environment := make(map[string]string)
