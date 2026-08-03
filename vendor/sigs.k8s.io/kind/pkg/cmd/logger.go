@@ -19,42 +19,18 @@ package cmd
 import (
 	"io"
 	"os"
-	"runtime"
 
-	isatty "github.com/mattn/go-isatty"
 	"sigs.k8s.io/kind/pkg/log"
 
 	"sigs.k8s.io/kind/pkg/internal/cli"
+	"sigs.k8s.io/kind/pkg/internal/env"
 )
-
-// isSmartTerminal returns true if w is a terminal with VT escape code support.
-// Inlined from sigs.k8s.io/kind/pkg/internal/env to avoid internal package import.
-func isSmartTerminal(w io.Writer) bool {
-	f, ok := w.(*os.File)
-	if !ok {
-		return false
-	}
-	if !isatty.IsTerminal(f.Fd()) {
-		return false
-	}
-	if _, set := os.LookupEnv("NO_COLOR"); set {
-		return false
-	}
-	term := os.Getenv("TERM")
-	if term == "dumb" || term == "st-256color" {
-		return false
-	}
-	if runtime.GOOS == "windows" && os.Getenv("WT_SESSION") == "" {
-		return false
-	}
-	return true
-}
 
 // NewLogger returns the standard logger used by the kind CLI
 // This logger writes to os.Stderr
 func NewLogger() log.Logger {
 	var writer io.Writer = os.Stderr
-	if isSmartTerminal(writer) {
+	if env.IsSmartTerminal(writer) {
 		writer = cli.NewSpinner(writer)
 	}
 	return cli.NewLogger(writer, 0)

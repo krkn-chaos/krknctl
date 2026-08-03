@@ -3,12 +3,12 @@ module github.com/krkn-chaos/krknctl
 go 1.26.2
 
 require (
-	github.com/NVIDIA/go-nvml v0.13.2-0
 	github.com/briandowns/spinner v1.23.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containers/podman/v5 v5.8.2
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
+	github.com/ebitengine/purego v0.10.2
 	github.com/fatih/color v1.18.0
 	github.com/kendru/darwin/go/depgraph v0.0.0-20230809052043-4d1c7e9d1767
 	github.com/letsencrypt/boulder v0.20251110.0
