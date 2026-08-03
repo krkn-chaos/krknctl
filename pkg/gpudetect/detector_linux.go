@@ -35,10 +35,10 @@ func goString(ptr uintptr) string {
 		return ""
 	}
 	var n int
-	for *(*byte)(unsafe.Add(unsafe.Pointer(ptr), n)) != 0 {
+	for *(*byte)(unsafe.Add(unsafe.Pointer(ptr), n)) != 0 { // #nosec G103 -- reading null-terminated C string from NVML
 		n++
 	}
-	return unsafe.String((*byte)(unsafe.Pointer(ptr)), n)
+	return unsafe.String((*byte)(unsafe.Pointer(ptr)), n) // #nosec G103
 }
 
 func DetectGPU() (GPUType, error) {
@@ -127,7 +127,7 @@ func detectNvidiaGPUType() (GPUType, error) {
 	}()
 
 	var count uint32
-	ret, _, _ = purego.SyscallN(fnGetCount, uintptr(unsafe.Pointer(&count)))
+	ret, _, _ = purego.SyscallN(fnGetCount, uintptr(unsafe.Pointer(&count))) // #nosec G103 -- passing Go pointer to NVML via purego FFI
 	if ret != nvmlSuccess {
 		return GPUTypeCPU, fmt.Errorf("failed to get device count: %s", nvmlErrorString(ret))
 	}
@@ -137,13 +137,13 @@ func detectNvidiaGPUType() (GPUType, error) {
 	}
 
 	var device uintptr
-	ret, _, _ = purego.SyscallN(fnGetHandle, 0, uintptr(unsafe.Pointer(&device)))
+	ret, _, _ = purego.SyscallN(fnGetHandle, 0, uintptr(unsafe.Pointer(&device))) // #nosec G103
 	if ret != nvmlSuccess {
 		return GPUTypeCPU, fmt.Errorf("failed to get device handle: %s", nvmlErrorString(ret))
 	}
 
 	var major, minor int32
-	ret, _, _ = purego.SyscallN(fnGetCC, device, uintptr(unsafe.Pointer(&major)), uintptr(unsafe.Pointer(&minor)))
+	ret, _, _ = purego.SyscallN(fnGetCC, device, uintptr(unsafe.Pointer(&major)), uintptr(unsafe.Pointer(&minor))) // #nosec G103
 	if ret != nvmlSuccess {
 		return GPUTypeCPU, fmt.Errorf("failed to get compute capability: %s", nvmlErrorString(ret))
 	}
