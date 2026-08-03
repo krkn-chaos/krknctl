@@ -3,7 +3,6 @@ module github.com/krkn-chaos/krknctl
 go 1.26.2
 
 require (
-	github.com/NVIDIA/go-nvml v0.13.2-0
 	github.com/briandowns/spinner v1.23.1
 	github.com/containerd/errdefs v1.0.0
 	github.com/containers/podman/v5 v5.8.2

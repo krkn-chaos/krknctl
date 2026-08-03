@@ -88,12 +88,15 @@ func (f *InputField) UnmarshalJSON(data []byte) error {
 		return errors.New("`type` key not found")
 	}
 
-	// variable must be always present since represents
-	// the envvar to be exported in the scenario_orchestrator
-	if fieldProperty, ok := temp["variable"]; ok {
-		f.Variable = &fieldProperty
-	} else {
-		return errors.New("`variable` key not found")
+	// variable must be always present for non-Group types since it represents
+	// the envvar to be exported in the scenario_orchestrator.
+	// Group fields are metadata-only (UI section headers) and have no variable.
+	if f.Type != Group {
+		if fieldProperty, ok := temp["variable"]; ok {
+			f.Variable = &fieldProperty
+		} else {
+			return errors.New("`variable` key not found")
+		}
 	}
 
 	if fieldProperty, ok := temp["name"]; ok {

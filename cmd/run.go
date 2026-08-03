@@ -90,6 +90,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			for _, field := range scenarioDetail.Fields {
+				if field.Type == typing.Group {
+					continue
+				}
 				var defaultValue = ""
 				if field.Default != nil {
 					defaultValue = *field.Default
@@ -102,6 +105,9 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			for _, field := range globalEnvDetail.Fields {
+				if field.Type == typing.Group {
+					continue
+				}
 				var defaultValue = ""
 				if field.Default != nil {
 					defaultValue = *field.Default

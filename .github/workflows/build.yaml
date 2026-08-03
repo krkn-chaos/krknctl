@@ -20,10 +20,6 @@ jobs:
         go-version: '1.26.2'
         cache: false
 
-    - name: install dependencies
-      run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev
-
     - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
@@ -32,7 +28,7 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "amd64"
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: "linux-amd64"
       run: |
         go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
@@ -58,10 +54,6 @@ jobs:
         go-version: '1.26.2'
         cache: false
 
-    - name: install dependencies
-      run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev gcc-aarch64-linux-gnu
-
     - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
@@ -70,8 +62,7 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "arm64"
-        CGO_ENABLED: 1
-        CC: aarch64-linux-gnu-gcc
+        CGO_ENABLED: 0
         BINARY: "linux-arm64"
       run: |
         go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
@@ -152,7 +143,7 @@ jobs:
       contents: write
     steps:
     - name: install build dependencies
-      run: dnf install -y git tar gcc jq
+      run: dnf install -y git tar jq
 
     - uses: actions/checkout@v4
 
@@ -169,7 +160,7 @@ jobs:
       env:
         GOOS: linux
         GOARCH: amd64
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: linux-amd64-centos9
       run: |
         go build -buildvcs=false -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
