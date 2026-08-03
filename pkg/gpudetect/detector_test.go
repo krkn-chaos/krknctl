@@ -87,10 +87,12 @@ func TestMapComputeCapability(t *testing.T) {
 
 func TestDetectNvidiaGPUType_GracefulFallback(t *testing.T) {
 	gpuType, err := detectNvidiaGPUType()
-	if gpuType != GPUTypeCPU {
-		t.Skipf("NVIDIA GPU available, skipping fallback test (detected: %s)", gpuType)
+	if err != nil {
+		if gpuType != GPUTypeCPU {
+			t.Errorf("expected GPUTypeCPU on error, got %s", gpuType)
+		}
+		t.Logf("NVML not available (expected in CI): %v", err)
+		return
 	}
-	if err == nil {
-		t.Error("expected error when NVML is unavailable, got nil")
-	}
+	t.Skipf("NVML available, skipping fallback test (detected: %s)", gpuType)
 }

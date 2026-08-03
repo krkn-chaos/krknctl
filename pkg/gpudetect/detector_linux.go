@@ -77,6 +77,7 @@ func detectNvidiaGPUType() (GPUType, error) {
 	if err != nil {
 		return GPUTypeCPU, fmt.Errorf("failed to load libnvidia-ml.so.1: %w", err)
 	}
+	defer purego.Dlclose(handle)
 
 	fnInit, err := dlsymVersioned(handle, "nvmlInit")
 	if err != nil {
