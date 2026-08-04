@@ -20,10 +20,6 @@ jobs:
         go-version: '1.26.2'
         cache: false
 
-    - name: install dependencies
-      run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev
-
     - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
@@ -32,10 +28,10 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "amd64"
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: "linux-amd64"
       run: |
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
     - name: upload artifact
@@ -58,10 +54,6 @@ jobs:
         go-version: '1.26.2'
         cache: false
 
-    - name: install dependencies
-      run: |
-        sudo apt-get update && sudo apt-get install libbtrfs-dev gcc-aarch64-linux-gnu
-
     - name: advance version
       run: |
         cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
@@ -70,11 +62,10 @@ jobs:
       env:
         GOOS: "linux"
         GOARCH: "arm64"
-        CGO_ENABLED: 1
-        CC: aarch64-linux-gnu-gcc
+        CGO_ENABLED: 0
         BINARY: "linux-arm64"
       run: |
-        go build -mod=vendor -tags containers_image_openpgp -ldflags="-w -s" -o $BINARY/ ./...
+        go build -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
         tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
 
     - name: upload artifact
@@ -138,11 +129,9 @@ jobs:
         name: darwin-intel
         path: krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz
 
-  # Builds a separate linux/amd64 binary inside a CentOS Stream 9 container so
-  # the CGO dynamic link is stamped against GLIBC 2.34 (the RHEL 9 / CentOS 9
-  # system version) rather than the GLIBC 2.38+ that ubuntu-latest (24.04)
-  # would embed.  Consumers on CentOS/RHEL 9 Jenkins agents must use this
-  # artifact instead of the standard linux-amd64 build.
+  # Builds a separate linux/amd64 binary inside a CentOS Stream 9 container.
+  # With CGO_ENABLED=0 the binary is statically linked (no GLIBC dependency),
+  # but this target is kept for consumers who expect a CentOS-specific artifact.
   build-linux-amd64-centos9:
     name: Build linux/amd64 (CentOS Stream 9)
     runs-on: ubuntu-latest
@@ -152,7 +141,7 @@ jobs:
       contents: write
     steps:
     - name: install build dependencies
-      run: dnf install -y git tar gcc jq
+      run: dnf install -y git tar jq
 
     - uses: actions/checkout@v4
 
@@ -169,7 +158,7 @@ jobs:
       env:
         GOOS: linux
         GOARCH: amd64
-        CGO_ENABLED: 1
+        CGO_ENABLED: 0
         BINARY: linux-amd64-centos9
       run: |
         go build -buildvcs=false -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...

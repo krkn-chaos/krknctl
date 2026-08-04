@@ -1,7 +1,4 @@
-// TestMapComputeCapability tests the mapping of CUDA compute capabilities to GPU types.
-// This test requires CGO and Linux because it tests the internal mapComputeCapability function
-// which is only available in the CGO Linux build.
-//go:build cgo && linux
+//go:build linux
 
 package gpudetect
 
@@ -86,4 +83,16 @@ func TestMapComputeCapability(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDetectNvidiaGPUType_GracefulFallback(t *testing.T) {
+	gpuType, err := detectNvidiaGPUType()
+	if err != nil {
+		if gpuType != GPUTypeCPU {
+			t.Errorf("expected GPUTypeCPU on error, got %s", gpuType)
+		}
+		t.Logf("NVML not available (expected in CI): %v", err)
+		return
+	}
+	t.Skipf("NVML available, skipping fallback test (detected: %s)", gpuType)
 }
