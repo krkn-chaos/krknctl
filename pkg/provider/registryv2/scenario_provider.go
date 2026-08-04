@@ -481,13 +481,13 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	}
 
 	if foundTitle == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
 	}
 	if foundDescription == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
 	}
 	if foundInputFields == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
 	}
 
 	parsedTitle, err := s.BaseScenarioProvider.ParseTitle(*foundTitle, isGlobalEnvironment)
