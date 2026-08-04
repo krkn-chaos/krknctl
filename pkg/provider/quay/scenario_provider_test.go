@@ -2,6 +2,7 @@ package quay
 
 import (
 	jsonparser "encoding/json"
+	"errors"
 	"fmt"
 	"github.com/krkn-chaos/krknctl/pkg/cache"
 	krknctlconfig "github.com/krkn-chaos/krknctl/pkg/config"
@@ -80,16 +81,19 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", nil)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.title LABEL not found in tag: cpu-memory-notitle"))
+	assert.True(t, errors.Is(err, providerinterface.ErrLabelNotFound))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-nodescription", nil)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.description LABEL not found in tag: cpu-memory-nodescription"))
+	assert.True(t, errors.Is(err, providerinterface.ErrLabelNotFound))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-noinput", nil)
 	assert.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "krknctl.input_fields LABEL not found in tag: cpu-memory-noinput"))
+	assert.True(t, errors.Is(err, providerinterface.ErrLabelNotFound))
 	assert.Nil(t, scenario)
 
 	scenario, err = provider.GetScenarioDetail("not-found", nil)
