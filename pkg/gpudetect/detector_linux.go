@@ -1,5 +1,6 @@
 //go:build linux
 
+// Package gpudetect detects GPU type and compute capability for container image selection.
 package gpudetect
 
 import (
