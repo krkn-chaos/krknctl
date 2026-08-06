@@ -142,3 +142,56 @@ func TestPopulateBooleanLabels_EmptyLayers(t *testing.T) {
 	assert.False(t, detail.IsAScenario)
 	assert.False(t, detail.HasRollback)
 }
+
+func TestPopulateBooleanLabels_NilDetail(t *testing.T) {
+	p := getTestProvider(t)
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`LABEL krknctl.is_a_scenario="true"`}},
+	}
+
+	err := p.PopulateBooleanLabels(nil, layers, false)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "scenario detail cannot be nil")
+}
+
+func TestPopulateBooleanLabels_WhitespaceAroundEquals(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.is_a_scenario = "true"`,
+			`LABEL krknctl.has_rollback = "false"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.Nil(t, err)
+	assert.True(t, detail.IsAScenario)
+	assert.False(t, detail.HasRollback)
+}
+
+func TestGetKrknctlLabel_WhitespaceAroundEquals(t *testing.T) {
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`LABEL krknctl.is_a_scenario = "true"`}},
+	}
+	result := GetKrknctlLabel("krknctl.is_a_scenario=", layers)
+	assert.NotNil(t, result)
+	assert.Contains(t, *result, "krknctl.is_a_scenario")
+}
+
+func TestGetKrknctlLabel_NoTrailingEquals(t *testing.T) {
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`LABEL krknctl.title="My Title"`}},
+	}
+	result := GetKrknctlLabel("krknctl.title=", layers)
+	assert.NotNil(t, result)
+	assert.Contains(t, *result, "My Title")
+}
+
+func TestGetKrknctlLabel_NotFound(t *testing.T) {
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`LABEL krknctl.title="My Title"`}},
+	}
+	result := GetKrknctlLabel("krknctl.is_a_scenario=", layers)
+	assert.Nil(t, result)
+}
