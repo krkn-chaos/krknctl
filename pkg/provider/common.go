@@ -17,10 +17,16 @@ import (
 )
 
 func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
+	trimmedLabel := strings.TrimSuffix(label, "=")
+	exactMatch := fmt.Sprintf("LABEL %s", label)
+	spaceMatch := fmt.Sprintf("LABEL %s ", trimmedLabel)
+	tabMatch := fmt.Sprintf("LABEL %s\t", trimmedLabel)
 	for _, v := range layers {
 		commands := v.GetCommands()
 		for _, c := range commands {
-			if strings.Contains(c, fmt.Sprintf("LABEL %s", label)) {
+			if strings.Contains(c, exactMatch) ||
+				strings.Contains(c, spaceMatch) ||
+				strings.Contains(c, tabMatch) {
 				return &c
 			}
 		}

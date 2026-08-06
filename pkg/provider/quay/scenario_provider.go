@@ -186,6 +186,11 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	for _, l := range manifest.Layers {
 		layers = append(layers, l)
 	}
+
+	if err := p.BaseScenarioProvider.PopulateBooleanLabels(&scenarioDetail, layers, isGlobalEnvironment); err != nil {
+		return nil, err
+	}
+
 	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
 	foundDescription := provider.GetKrknctlLabel(descriptionLabel, layers)
 	foundInputFields := provider.GetKrknctlLabel(inputFieldsLabel, layers)

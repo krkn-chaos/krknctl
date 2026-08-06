@@ -91,6 +91,41 @@ func parseBoolLabel(s string, regex string, labelName string) (*bool, error) {
 	return &boolValue, nil
 }
 
+// PopulateBooleanLabels parses is_a_scenario and has_rollback labels from container layers
+// and sets them on the ScenarioDetail. Only applies to non-global environments.
+func (p *BaseScenarioProvider) PopulateBooleanLabels(detail *models.ScenarioDetail, layers []ContainerLayer, isGlobalEnvironment bool) error {
+	if detail == nil {
+		return errors.New("scenario detail cannot be nil")
+	}
+	if isGlobalEnvironment {
+		return nil
+	}
+
+	foundIsAScenario := GetKrknctlLabel(p.Config.LabelIsAScenario, layers)
+	if foundIsAScenario != nil {
+		parsed, err := p.ParseIsAScenario(*foundIsAScenario)
+		if err != nil {
+			return err
+		}
+		detail.IsAScenario = *parsed
+	} else {
+		detail.IsAScenario = false
+	}
+
+	foundHasRollback := GetKrknctlLabel(p.Config.LabelHasRollback, layers)
+	if foundHasRollback != nil {
+		parsed, err := p.ParseHasRollback(*foundHasRollback)
+		if err != nil {
+			return err
+		}
+		detail.HasRollback = *parsed
+	} else {
+		detail.HasRollback = false
+	}
+
+	return nil
+}
+
 func (p *BaseScenarioProvider) ParseInputFields(s string, isGlobalEnvironment bool) ([]typing.InputField, error) {
 	var regex = ""
 	if isGlobalEnvironment {
