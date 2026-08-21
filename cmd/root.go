@@ -80,6 +80,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	graphRunCmd.Flags().String("alerts-profile", "", "custom alerts profile file path")
 	graphRunCmd.Flags().String("metrics-profile", "", "custom metrics profile file path")
 	graphRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
+	graphRunCmd.Flags().StringArray("weight", []string{}, "override scenario resiliency weight (format: scenario-name=weight, can be repeated)")
 	graphScaffoldCmd := NewGraphScaffoldCommand(providerFactory, config)
 	graphScaffoldCmd.Flags().Bool("global-env", false, "if set this flag will add global environment variables to each scenario in the graph")
 	graphCmd.AddCommand(graphRunCmd)
@@ -96,6 +97,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	randomRunCmd.Flags().Int("number-of-scenarios", 0, "allows you to specify the number of elements to select from the execution plan")
 	randomRunCmd.Flags().Bool("exit-on-error", false, "if set this flag will the workflow will be interrupted and the tool will exit with a status greater than 0")
 	randomRunCmd.Flags().String("graph-dump", "", "specifies the name of the file where the randomly generated dependency graph will be persisted")
+	randomRunCmd.Flags().StringArray("weight", []string{}, "override scenario resiliency weight (format: scenario-name=weight, can be repeated)")
 	err := randomRunCmd.MarkFlagRequired("max-parallel")
 	if err != nil {
 		fmt.Println("Error marking flag as required:", err)
