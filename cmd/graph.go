@@ -131,6 +131,17 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
+
+			// Apply CLI weight overrides
+			weightFlags, err := cmd.Flags().GetStringArray("weight")
+			if err != nil {
+				return fmt.Errorf("failed to parse --weight flags: %w", err)
+			}
+
+			if err := ParseAndApplyWeightOverrides(nodes, weightFlags); err != nil {
+				return err
+			}
+
 			privateRegistry := false
 			if registrySettings != nil {
 				privateRegistry = true
