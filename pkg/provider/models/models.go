@@ -143,7 +143,7 @@ type ScenarioDetail struct {
 
 func (s *ScenarioDetail) GetFieldByName(name string) *typing.InputField {
 	for _, v := range s.Fields {
-		if *v.Name == name {
+		if v.Name != nil && *v.Name == name {
 			return &v
 		}
 	}
@@ -152,7 +152,7 @@ func (s *ScenarioDetail) GetFieldByName(name string) *typing.InputField {
 
 func (s *ScenarioDetail) GetFieldByEnvVar(envVar string) *typing.InputField {
 	for _, v := range s.Fields {
-		if *v.Variable == envVar {
+		if v.Variable != nil && *v.Variable == envVar {
 			return &v
 		}
 	}

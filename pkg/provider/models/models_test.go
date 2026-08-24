@@ -102,6 +102,42 @@ func TestScenarioDetail_GetFieldByName(t *testing.T) {
 
 }
 
+func TestScenarioDetail_GetFieldByEnvVar_NilVariable(t *testing.T) {
+	// Test that GetFieldByEnvVar doesn't crash when Variable is nil
+	scenarioDetail := ScenarioDetail{
+		Fields: []typing.InputField{
+			{
+				Name:        strPtr("test_field"),
+				Type:        typing.String,
+				Description: strPtr("test field"),
+				Variable:    nil, // nil Variable should not cause crash
+			},
+		},
+	}
+	field := scenarioDetail.GetFieldByEnvVar("TESTFIELD")
+	assert.Nil(t, field)
+}
+
+func TestScenarioDetail_GetFieldByName_NilName(t *testing.T) {
+	// Test that GetFieldByName doesn't crash when Name is nil
+	scenarioDetail := ScenarioDetail{
+		Fields: []typing.InputField{
+			{
+				Name:        nil, // nil Name should not cause crash
+				Type:        typing.String,
+				Description: strPtr("test field"),
+				Variable:    strPtr("TESTFIELD"),
+			},
+		},
+	}
+	field := scenarioDetail.GetFieldByName("test_field")
+	assert.Nil(t, field)
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
 func TestScenarioDetail_GetFileFieldByMountPath(t *testing.T) {
 	scenarioDetail := getScenarioDetail(t)
 	field4 := scenarioDetail.GetFileFieldByMountPath("/mnt/test")
