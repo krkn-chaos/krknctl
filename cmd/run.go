@@ -508,7 +508,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 	return command
 }
 
-var groupDisplayOrder = []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+var groupDisplayOrder = []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency", "triggers"}
 
 func printHelp(scenario models.ScenarioDetail) {
 	boldWhite := color.New(color.FgHiWhite, color.Bold).SprintFunc()

@@ -52,7 +52,7 @@ func NewArgumentTable(inputFields []typing.InputField) table.Table {
 }
 
 func PrintGroupedArgumentTables(inputFields []typing.InputField) {
-	groupOrder := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+	groupOrder := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency", "triggers"}
 	sectionFmt := color.New(color.FgCyan, color.Bold).SprintfFunc()
 
 	grouped := typing.GroupFieldsByGroup(inputFields)
