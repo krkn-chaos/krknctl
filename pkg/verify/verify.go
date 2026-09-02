@@ -23,10 +23,11 @@ import (
 // krkn-hub scenario images (`cosign sign --key env://COSIGN_PRIVATE_KEY
 // --tlog-upload=false <repo>@sha256:...`), signing the digest, not the tag.
 //
-// WARNING: the currently committed cosign.pub is a PLACEHOLDER generated
-// locally so the package builds and tests pass. It MUST be replaced with the
-// real ecosystem public key produced by `cosign generate-key-pair` when the CI
-// signing key pair is created (krkn "sign images in CI" issue).
+// cosign.pub is the real ecosystem public key produced by
+// `cosign generate-key-pair`; its private half is the COSIGN_PRIVATE_KEY CI
+// secret used to sign the krkn base image (krkn-chaos/krkn) and the krkn-hub
+// scenario images (krkn-chaos/krkn-hub and the release-time rebuild in
+// redhat-chaos/actions).
 //
 // Rotation (picked up by both consumers on their next release):
 //  1. Generate a new key pair.
