@@ -9,15 +9,18 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
@@ -225,6 +228,60 @@ func TestVerifyImage_MultiKeyRotation(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, digest.Name(), res.Digest)
+}
+
+// TestVerifyImage_ContextCancellationWins proves the run's context is always
+// honoured even when a caller supplies its own remote.WithContext. A cancelled
+// context must abort verification: if a caller-provided WithContext could
+// override ours, the image (which is present and correctly signed) would verify
+// successfully. The mandatory context is appended last so it wins.
+func TestVerifyImage_ContextCancellationWins(t *testing.T) {
+	host := newTestRegistry(t)
+	ref, err := name.ParseReference(host + "/krkn/scenario:ctx")
+	require.NoError(t, err)
+	digest := pushRandomImage(t, ref)
+
+	sv, pubPEM := ephemeralKey(t)
+	signImage(t, digest, sv)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel before the call so every request must fail
+
+	_, err = VerifyImage(ctx, ref.Name(), Options{
+		AdditionalPublicKeys: [][]byte{pubPEM},
+		// A malicious/careless caller trying to substitute a live context.
+		RemoteOptions: []remote.Option{remote.WithContext(context.Background())},
+	})
+	require.Error(t, err, "cancelled context must abort verification, not succeed")
+	assert.True(t, errors.Is(err, ErrRegistryUnreachable), "expected ErrRegistryUnreachable, got %v", err)
+}
+
+// TestIsRegistryError covers the classification that keeps transport/network
+// failures (operational) distinct from cryptographic trust failures. A 404 is
+// deliberately NOT a registry error: a missing signature tag means unsigned.
+func TestIsRegistryError(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"nil", nil, false},
+		{"plain error", errors.New("boom"), false},
+		{"context canceled", context.Canceled, true},
+		{"context deadline", context.DeadlineExceeded, true},
+		{"http 401 unauthorized", &transport.Error{StatusCode: http.StatusUnauthorized}, true},
+		{"http 500 server error", &transport.Error{StatusCode: http.StatusInternalServerError}, true},
+		{"http 404 not found", &transport.Error{StatusCode: http.StatusNotFound}, false},
+		{"net dns error", &net.DNSError{Err: "no such host"}, true},
+		{"url error", &url.Error{Op: "Get", Err: errors.New("connection refused")}, true},
+		{"wrapped 500", &url.Error{Op: "Get", Err: &transport.Error{StatusCode: http.StatusBadGateway}}, true},
+		{"wrapped 404", &url.Error{Op: "Get", Err: &transport.Error{StatusCode: http.StatusNotFound}}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isRegistryError(tc.err))
+		})
+	}
 }
 
 // Guard: the embedded public key must be a valid PEM public key at all times.

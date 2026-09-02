@@ -6,10 +6,14 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	cosignsig "github.com/sigstore/cosign/v2/pkg/signature"
@@ -67,11 +71,6 @@ type Options struct {
 	// verification, which callers configure via a custom transport in
 	// RemoteOptions.
 	Insecure bool
-
-	// RequireTlog, when true, enforces Rekor transparency-log verification.
-	// Default (false) performs offline key-based verification only, which is
-	// the ecosystem policy (no Fulcio/Rekor dependency, air-gap friendly).
-	RequireTlog bool
 }
 
 // VerifiedImage is the result of a successful verification. Callers MUST run the
@@ -89,11 +88,10 @@ type VerifiedImage struct {
 // Verifier holds the trusted keys and registry options for repeated
 // verifications. It is safe to construct once and reuse for many images.
 type Verifier struct {
-	verifiers   []signature.Verifier
-	keychain    authn.Keychain
-	remoteOpts  []remote.Option
-	insecure    bool
-	requireTlog bool
+	verifiers  []signature.Verifier
+	keychain   authn.Keychain
+	remoteOpts []remote.Option
+	insecure   bool
 }
 
 // New builds a Verifier from the embedded ecosystem public key plus any
@@ -128,11 +126,10 @@ func New(opts Options) (*Verifier, error) {
 	}
 
 	return &Verifier{
-		verifiers:   verifiers,
-		keychain:    keychain,
-		remoteOpts:  opts.RemoteOptions,
-		insecure:    opts.Insecure,
-		requireTlog: opts.RequireTlog,
+		verifiers:  verifiers,
+		keychain:   keychain,
+		remoteOpts: opts.RemoteOptions,
+		insecure:   opts.Insecure,
 	}, nil
 }
 
@@ -172,10 +169,16 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 	}
 
 	co := &cosign.CheckOpts{
-		SigVerifier:        nil, // set per-key below
-		IgnoreTlog:         !v.requireTlog,
-		IgnoreSCT:          true,
-		Offline:            !v.requireTlog,
+		SigVerifier: nil, // set per-key below
+		// The ecosystem signs with `--tlog-upload=false`, so no transparency-log
+		// entry ever exists: verification is strictly offline and key-based
+		// (no Fulcio/Rekor dependency, air-gap friendly).
+		IgnoreTlog: true,
+		IgnoreSCT:  true,
+		Offline:    true,
+		// Discover signatures stored either as a legacy digest signature tag or
+		// as an OCI 1.1 referrer; cosign tries referrers first, then falls back.
+		ExperimentalOCI11:  true,
 		RegistryClientOpts: ociOpts,
 	}
 
@@ -184,6 +187,7 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 	// we resolved above.
 	var sawSignatures bool
 	var lastErr error
+	var registryErr error
 	for _, sv := range v.verifiers {
 		co.SigVerifier = sv
 		_, _, verr := cosign.VerifyImageSignatures(ctx, digest, co)
@@ -193,6 +197,14 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 				Digest:       digest.Name(),
 				DigestString: digest.DigestStr(),
 			}, nil
+		}
+		// A transport/network failure fetching the signature artifact is an
+		// operational error, not a trust decision. Record it and stop: retrying
+		// other keys re-hits the same unreachable registry, and we must not let a
+		// later key's verification result mask a registry outage.
+		if isRegistryError(verr) {
+			registryErr = verr
+			break
 		}
 		// A "no matching signatures" error means signatures exist but this key
 		// did not validate them — remember that so we report invalid-signature
@@ -204,19 +216,53 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 		lastErr = verr
 	}
 
+	if registryErr != nil {
+		return VerifiedImage{}, fmt.Errorf("%w: fetching signatures for %q: %v", ErrRegistryUnreachable, ref, registryErr)
+	}
+
 	return VerifiedImage{}, classifyVerifyError(ref, sawSignatures, lastErr)
 }
 
-// ociRemoteOptions builds the cosign ociremote options, always injecting the
-// request context and the configured keychain, then any caller-supplied remote
-// options.
+// ociRemoteOptions builds the cosign ociremote options. It applies the
+// configured keychain and any caller-supplied remote options first, then injects
+// the request context LAST so it always wins: go-containerregistry applies
+// functional options in order and remote.WithContext assigns the context
+// directly, so a caller-provided WithContext must not be able to replace the
+// run's cancellation/deadline.
 func (v *Verifier) ociRemoteOptions(ctx context.Context) []ociremote.Option {
 	remoteOpts := []remote.Option{
-		remote.WithContext(ctx),
 		remote.WithAuthFromKeychain(v.keychain),
 	}
 	remoteOpts = append(remoteOpts, v.remoteOpts...)
+	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
 	return []ociremote.Option{ociremote.WithRemoteOptions(remoteOpts...)}
+}
+
+// isRegistryError reports whether err is an operational registry/transport
+// failure (network error, context cancellation/deadline, or a non-404 HTTP
+// status such as 401/403/5xx) rather than a cryptographic trust failure. A 404
+// is deliberately excluded: a missing signature tag means the image is unsigned,
+// which cosign already surfaces through its own sentinels.
+func isRegistryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return true
+	}
+	var terr *transport.Error
+	if errors.As(err, &terr) {
+		return terr.StatusCode != http.StatusNotFound
+	}
+	var uerr *url.Error
+	if errors.As(err, &uerr) {
+		return true
+	}
+	var nerr net.Error
+	if errors.As(err, &nerr) {
+		return true
+	}
+	return false
 }
 
 // classifyVerifyError maps a cosign verification error onto one of the package
