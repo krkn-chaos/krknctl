@@ -170,6 +170,92 @@ func TestPopulateBooleanLabels_WhitespaceAroundEquals(t *testing.T) {
 	assert.False(t, detail.HasRollback)
 }
 
+func TestPopulateBooleanLabels_PrivilegedTrue(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.is_a_scenario="true"`,
+			`LABEL krknctl.privileged="true"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.Nil(t, err)
+	assert.True(t, detail.Privileged)
+}
+
+func TestPopulateBooleanLabels_PrivilegedFalse(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.is_a_scenario="true"`,
+			`LABEL krknctl.privileged="false"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.Nil(t, err)
+	assert.False(t, detail.Privileged)
+}
+
+func TestPopulateBooleanLabels_PrivilegedMissing_DefaultsFalse(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.is_a_scenario="true"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.Nil(t, err)
+	assert.False(t, detail.Privileged)
+}
+
+func TestPopulateBooleanLabels_PrivilegedInvalidBool(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.privileged="notabool"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "invalid boolean value")
+}
+
+func TestPopulateBooleanLabels_PrivilegedGlobalEnvironment_Skipped(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.privileged="true"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, true)
+	assert.Nil(t, err)
+	assert.False(t, detail.Privileged)
+}
+
+func TestPopulateBooleanLabels_PrivilegedWhitespaceAroundEquals(t *testing.T) {
+	p := getTestProvider(t)
+	detail := &models.ScenarioDetail{}
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			`LABEL krknctl.privileged = "true"`,
+		}},
+	}
+
+	err := p.PopulateBooleanLabels(detail, layers, false)
+	assert.Nil(t, err)
+	assert.True(t, detail.Privileged)
+}
+
 func TestGetKrknctlLabel_WhitespaceAroundEquals(t *testing.T) {
 	layers := []ContainerLayer{
 		mockLayer{commands: []string{`LABEL krknctl.is_a_scenario = "true"`}},

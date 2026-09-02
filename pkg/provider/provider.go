@@ -72,6 +72,10 @@ func (p *BaseScenarioProvider) ParseHasRollback(s string) (*bool, error) {
 	return parseBoolLabel(s, p.Config.LabelHasRollbackRegex, "has_rollback")
 }
 
+func (p *BaseScenarioProvider) ParsePrivileged(s string) (*bool, error) {
+	return parseBoolLabel(s, p.Config.LabelPrivilegedRegex, "privileged")
+}
+
 func parseBoolLabel(s string, regex string, labelName string) (*bool, error) {
 	re, err := regexp.Compile(regex)
 	if err != nil {
@@ -91,7 +95,7 @@ func parseBoolLabel(s string, regex string, labelName string) (*bool, error) {
 	return &boolValue, nil
 }
 
-// PopulateBooleanLabels parses is_a_scenario and has_rollback labels from container layers
+// PopulateBooleanLabels parses is_a_scenario, has_rollback and privileged labels from container layers
 // and sets them on the ScenarioDetail. Only applies to non-global environments.
 func (p *BaseScenarioProvider) PopulateBooleanLabels(detail *models.ScenarioDetail, layers []ContainerLayer, isGlobalEnvironment bool) error {
 	if detail == nil {
@@ -121,6 +125,17 @@ func (p *BaseScenarioProvider) PopulateBooleanLabels(detail *models.ScenarioDeta
 		detail.HasRollback = *parsed
 	} else {
 		detail.HasRollback = false
+	}
+
+	foundPrivileged := GetKrknctlLabel(p.Config.LabelPrivileged, layers)
+	if foundPrivileged != nil {
+		parsed, err := p.ParsePrivileged(*foundPrivileged)
+		if err != nil {
+			return err
+		}
+		detail.Privileged = *parsed
+	} else {
+		detail.Privileged = false
 	}
 
 	return nil

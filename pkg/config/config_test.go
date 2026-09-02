@@ -374,16 +374,20 @@ func TestConfigBooleanLabelRegex(t *testing.T) {
 	// Test that boolean label NAME fields are loaded
 	assert.NotEmpty(t, config.LabelIsAScenario, "LabelIsAScenario should not be empty")
 	assert.NotEmpty(t, config.LabelHasRollback, "LabelHasRollback should not be empty")
+	assert.NotEmpty(t, config.LabelPrivileged, "LabelPrivileged should not be empty")
 	assert.Equal(t, "krknctl.is_a_scenario=", config.LabelIsAScenario)
 	assert.Equal(t, "krknctl.has_rollback=", config.LabelHasRollback)
+	assert.Equal(t, "krknctl.privileged=", config.LabelPrivileged)
 
 	// Test that boolean label REGEX fields are loaded
 	assert.NotEmpty(t, config.LabelIsAScenarioRegex, "LabelIsAScenarioRegex should not be empty")
 	assert.NotEmpty(t, config.LabelHasRollbackRegex, "LabelHasRollbackRegex should not be empty")
+	assert.NotEmpty(t, config.LabelPrivilegedRegex, "LabelPrivilegedRegex should not be empty")
 
 	// Test that regex contains the expected pattern with spaces support
 	assert.Contains(t, config.LabelIsAScenarioRegex, "\\s*=\\s*", "Regex should support spaces around =")
 	assert.Contains(t, config.LabelHasRollbackRegex, "\\s*=\\s*", "Regex should support spaces around =")
+	assert.Contains(t, config.LabelPrivilegedRegex, "\\s*=\\s*", "Regex should support spaces around =")
 
 	// Test that regex can be compiled
 	_, err = regexp.Compile(config.LabelIsAScenarioRegex)
@@ -392,9 +396,14 @@ func TestConfigBooleanLabelRegex(t *testing.T) {
 	_, err = regexp.Compile(config.LabelHasRollbackRegex)
 	assert.NoError(t, err, "LabelHasRollbackRegex should be valid regex")
 
+	_, err = regexp.Compile(config.LabelPrivilegedRegex)
+	assert.NoError(t, err, "LabelPrivilegedRegex should be valid regex")
+
 	// Debug output
 	t.Logf("LabelIsAScenario: %q", config.LabelIsAScenario)
 	t.Logf("LabelHasRollback: %q", config.LabelHasRollback)
+	t.Logf("LabelPrivileged: %q", config.LabelPrivileged)
 	t.Logf("LabelIsAScenarioRegex: %q", config.LabelIsAScenarioRegex)
 	t.Logf("LabelHasRollbackRegex: %q", config.LabelHasRollbackRegex)
+	t.Logf("LabelPrivilegedRegex: %q", config.LabelPrivilegedRegex)
 }
