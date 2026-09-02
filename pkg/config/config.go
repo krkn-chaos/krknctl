@@ -83,8 +83,10 @@ type Config struct {
 	DashboardImageTag                string `json:"dashboard_image_tag"`
 	LabelIsAScenarioRegex            string `json:"label_is_a_scenario_regex"`
 	LabelHasRollbackRegex            string `json:"label_has_rollback_regex"`
+	LabelPrivilegedRegex             string `json:"label_privileged_regex"`
 	LabelIsAScenario                 string `json:"label_is_a_scenario"`
 	LabelHasRollback                 string `json:"label_has_rollback"`
+	LabelPrivileged                  string `json:"label_privileged"`
 	OperatorChartURL                 string `json:"operator_chart_url"`
 	OperatorImageName                string `json:"operator_image_name"`
 	OperatorDefaultNS                string `json:"operator_default_namespace"`
