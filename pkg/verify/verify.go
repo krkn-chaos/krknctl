@@ -60,6 +60,13 @@ type Options struct {
 	// tests). The request context is always injected regardless of this slice.
 	RemoteOptions []remote.Option
 
+	// Insecure allows contacting the registry over plain HTTP instead of HTTPS.
+	// Use only for private/air-gapped registries served without TLS. Default
+	// false (HTTPS). This is orthogonal to skipping TLS certificate
+	// verification, which callers configure via a custom transport in
+	// RemoteOptions.
+	Insecure bool
+
 	// RequireTlog, when true, enforces Rekor transparency-log verification.
 	// Default (false) performs offline key-based verification only, which is
 	// the ecosystem policy (no Fulcio/Rekor dependency, air-gap friendly).
@@ -84,6 +91,7 @@ type Verifier struct {
 	verifiers   []signature.Verifier
 	keychain    authn.Keychain
 	remoteOpts  []remote.Option
+	insecure    bool
 	requireTlog bool
 }
 
@@ -122,6 +130,7 @@ func New(opts Options) (*Verifier, error) {
 		verifiers:   verifiers,
 		keychain:    keychain,
 		remoteOpts:  opts.RemoteOptions,
+		insecure:    opts.Insecure,
 		requireTlog: opts.RequireTlog,
 	}, nil
 }
@@ -143,7 +152,11 @@ func VerifyImage(ctx context.Context, ref string, opts Options) (VerifiedImage, 
 // errors (ErrUnsigned, ErrInvalidSignature, ErrRegistryUnreachable,
 // ErrInvalidReference) wrapped with the underlying cause; test with errors.Is.
 func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, error) {
-	parsed, err := name.ParseReference(ref)
+	var nameOpts []name.Option
+	if v.insecure {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+	parsed, err := name.ParseReference(ref, nameOpts...)
 	if err != nil {
 		return VerifiedImage{}, fmt.Errorf("%w: %q: %v", ErrInvalidReference, ref, err)
 	}

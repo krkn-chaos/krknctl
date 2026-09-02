@@ -116,6 +116,14 @@ func podmanCreateViaCLI(ctx context.Context, containerName, image string, env ma
 }
 
 func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
+	// Verify the image signature before pulling/running and pin the resolved
+	// digest (anti-TOCTOU). Fails closed: an unsigned or untrusted image is
+	// never run.
+	image, err := scenarioorchestrator.VerifyAndPinImage(ctx, image, registry)
+	if err != nil {
+		return nil, err
+	}
+
 	imageExists, err := images.Exists(ctx, image, nil)
 	if !cache || !imageExists {
 

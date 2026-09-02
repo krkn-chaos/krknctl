@@ -71,6 +71,14 @@ func (c *ScenarioOrchestrator) Run(
 	createOpts *scenarioorchestrator.PodmanCreateOptions,
 ) (*string, error) {
 
+	// Verify the image signature before pulling/running and pin the resolved
+	// digest (anti-TOCTOU). Fails closed: an unsigned or untrusted image is
+	// never run.
+	image, err := scenarioorchestrator.VerifyAndPinImage(ctx, image, registry)
+	if err != nil {
+		return nil, err
+	}
+
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
 		return nil, err
