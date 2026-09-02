@@ -122,7 +122,7 @@ func DeployAssistModel(ctx context.Context, orchestrator scenarioorchestrator.Sc
 
 	// Run the RAG container in detached mode
 	containerID, err := orchestrator.Run(ragImageURI, containerName, env, true, nil,
-		&commChan, ctx, registry, publishPorts, podmanOpts)
+		&commChan, ctx, registry, publishPorts, podmanOpts, false)
 	if pullSpinner != nil {
 		pullSpinner.Stop()
 	}
@@ -617,7 +617,7 @@ func executeScenario(scenarioName string, scenarioDetail *models.ScenarioDetail,
 	}()
 
 	startTime := time.Now()
-	_, err = orchestrator.RunAttached(scenarioImageURI, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, nil, nil)
+	_, err = orchestrator.RunAttached(scenarioImageURI, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, nil, nil, false)
 	if err != nil {
 		var staterr *utils.ExitError
 		if errors.As(err, &staterr) {

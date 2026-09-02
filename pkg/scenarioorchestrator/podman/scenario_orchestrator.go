@@ -115,11 +115,12 @@ func podmanCreateViaCLI(ctx context.Context, containerName, image string, env ma
 	return id, nil
 }
 
-func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
+func (c *ScenarioOrchestrator) Run(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions, allowUnsigned bool) (*string, error) {
 	// Verify the image signature before pulling/running and pin the resolved
 	// digest (anti-TOCTOU). Fails closed: an unsigned or untrusted image is
-	// never run.
-	image, err := scenarioorchestrator.VerifyAndPinImage(ctx, image, registry)
+	// never run. When --run-unsigned-images is set, verification is bypassed and
+	// the original tag runs unverified (a loud warning is printed to stderr).
+	image, err := scenarioorchestrator.VerifyAndPinImageOrBypass(ctx, image, registry, allowUnsigned)
 	if err != nil {
 		return nil, err
 	}
@@ -471,9 +472,10 @@ func (c *ScenarioOrchestrator) RunAttached(
 	registry *providermodels.RegistryV2,
 	publishPorts []string,
 	podmanCreate *scenarioorchestrator.PodmanCreateOptions,
+	allowUnsigned bool,
 ) (*string, error) {
 
-	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate)
+	return scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate, allowUnsigned)
 }
 
 func (c *ScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
@@ -494,9 +496,10 @@ func (c *ScenarioOrchestrator) RunGraph(
 	commChannel chan *orchestratormodels.GraphCommChannel,
 	registry *providermodels.RegistryV2,
 	userID *int,
+	allowUnsigned bool,
 ) {
 	//TODO: add a getconfig method in scenarioOrchestrator
-	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID, allowUnsigned)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {

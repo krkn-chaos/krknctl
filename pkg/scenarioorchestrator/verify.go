@@ -3,8 +3,11 @@ package scenarioorchestrator
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/fatih/color"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -28,6 +31,32 @@ func VerifyAndPinImage(ctx context.Context, image string, registry *providermode
 		return "", err
 	}
 	return verified.Digest, nil
+}
+
+// VerifyAndPinImageOrBypass behaves like VerifyAndPinImage, but when
+// allowUnsigned is true it SKIPS signature verification entirely and returns the
+// original image reference unchanged (no digest pinning, no anti-TOCTOU
+// guarantee). This is the implementation of the opt-in --run-unsigned-images
+// escape hatch: it is inherently unsafe, so it prints a prominent warning to
+// stderr that an unverified image is about to run.
+//
+// The warning is written to stderr on purpose so it can never contaminate a
+// command's stdout (e.g. piped or redirected report output).
+func VerifyAndPinImageOrBypass(ctx context.Context, image string, registry *providermodels.RegistryV2, allowUnsigned bool) (string, error) {
+	if allowUnsigned {
+		warnUnsignedImage(image)
+		return image, nil
+	}
+	return VerifyAndPinImage(ctx, image, registry)
+}
+
+// warnUnsignedImage prints a loud, hard-to-miss security warning to stderr when
+// signature verification is bypassed.
+func warnUnsignedImage(image string) {
+	warn := color.New(color.FgHiRed, color.Bold)
+	_, _ = warn.Fprintln(os.Stderr, "⚠️  SECURITY WARNING: --run-unsigned-images is set — image signature verification is DISABLED.")
+	_, _ = fmt.Fprintf(os.Stderr, "    Running %q WITHOUT verifying its cosign signature or pinning its digest.\n", image)
+	_, _ = fmt.Fprintln(os.Stderr, "    Only do this with images you fully trust: you are exposed to image tampering and supply-chain attacks.")
 }
 
 // verifyOptionsForRegistry translates a RegistryV2 into verify.Options,
