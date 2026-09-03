@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	_ "embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -14,9 +15,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	cosignsig "github.com/sigstore/cosign/v2/pkg/signature"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	cosignsig "github.com/sigstore/cosign/v3/pkg/signature"
+	sgverify "github.com/sigstore/sigstore-go/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -182,6 +184,19 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 		RegistryClientOpts: ociOpts,
 	}
 
+	// Prefer the new sigstore bundle format (an OCI 1.1 referrer carrying a DSSE
+	// envelope), which cosign 2.6+/3.x emit by default and which the krkn-hub
+	// images now use. If such a bundle is attached it is authoritative: a
+	// definitive verified/untrusted result is returned and we never fall back to
+	// the legacy path. Only when no new-format bundle exists do we drop through
+	// to the legacy .sig/referrer verification below (for older images and the
+	// base image, which may still carry the legacy format).
+	if vi, verified, nberr := v.verifyNewBundleFormat(ctx, ref, digest, co, nameOpts); nberr != nil {
+		return VerifiedImage{}, nberr
+	} else if verified {
+		return vi, nil
+	}
+
 	// An image is trusted if ANY configured key verifies it. We verify the
 	// pinned digest, not the tag, so the signature is bound to the exact bytes
 	// we resolved above.
@@ -223,6 +238,73 @@ func (v *Verifier) VerifyImage(ctx context.Context, ref string) (VerifiedImage, 
 	return VerifiedImage{}, classifyVerifyError(ref, sawSignatures, lastErr)
 }
 
+// verifyNewBundleFormat attempts verification using the new sigstore bundle
+// format (OCI 1.1 referrers carrying a DSSE envelope), which cosign 2.6+/3.x
+// produce by default. The vendored cosign library refuses to verify these via
+// the classic VerifyImageSignatures path ("bundle support for image signatures
+// is not yet implemented"), so we mirror what the cosign v3 CLI does: enumerate
+// the attached bundles with GetBundles and verify each with VerifyNewBundle,
+// binding the DSSE payload to the pinned image digest.
+//
+// It returns:
+//
+//   - (vi, true, nil)  when a trusted key verifies an attached bundle;
+//   - (_, false, err)  when the image carries new-format bundles but none is
+//     trusted, or the registry could not be reached — a definitive result the
+//     caller must return verbatim;
+//   - (_, false, nil)  when no new-format bundle is attached, signalling the
+//     caller to fall back to the legacy verification path.
+//
+// The bundle verification uses key-based offline trust: with co.SigVerifier set
+// and IgnoreTlog true, cosign builds the trusted material from the public key
+// alone, so no Fulcio/Rekor/TUF material is required (air-gap friendly).
+func (v *Verifier) verifyNewBundleFormat(ctx context.Context, ref string, digest name.Digest, co *cosign.CheckOpts, nameOpts []name.Option) (VerifiedImage, bool, error) {
+	bundles, hash, err := cosign.GetBundles(ctx, digest, co.RegistryClientOpts, nameOpts...)
+	if err != nil {
+		// An operational registry/transport failure is not a trust decision;
+		// surface it so a later key can't mask an outage.
+		if isRegistryError(err) {
+			return VerifiedImage{}, false, fmt.Errorf("%w: fetching signature bundles for %q: %v", ErrRegistryUnreachable, ref, err)
+		}
+		// No new-format bundles present (ErrNoMatchingAttestations), a registry
+		// without referrers support (404), or any other non-operational
+		// condition: let the caller try the legacy path.
+		return VerifiedImage{}, false, nil
+	}
+	if len(bundles) == 0 {
+		return VerifiedImage{}, false, nil
+	}
+
+	digestBytes, err := hex.DecodeString(hash.Hex)
+	if err != nil {
+		return VerifiedImage{}, false, fmt.Errorf("%w: %q: decoding digest: %v", ErrInvalidReference, ref, err)
+	}
+	artifactPolicy := sgverify.WithArtifactDigest(hash.Algorithm, digestBytes)
+
+	// An image is trusted if ANY configured key verifies ANY attached bundle.
+	// Work on a copy so the SigVerifier we set here never leaks into the legacy
+	// loop's CheckOpts.
+	coCopy := *co
+	coCopy.NewBundleFormat = true
+	for _, sv := range v.verifiers {
+		coCopy.SigVerifier = sv
+		for _, b := range bundles {
+			if _, verr := cosign.VerifyNewBundle(ctx, &coCopy, artifactPolicy, b); verr == nil {
+				return VerifiedImage{
+					Reference:    ref,
+					Digest:       digest.Name(),
+					DigestString: digest.DigestStr(),
+				}, true, nil
+			}
+		}
+	}
+
+	// New-format bundles are attached but none is signed by a trusted key: the
+	// image is signed, just not by us. This is definitive — fail closed rather
+	// than falling through to the legacy path and reporting "unsigned".
+	return VerifiedImage{}, false, fmt.Errorf("%w: %q: no trusted key verified the attached signature bundle", ErrInvalidSignature, ref)
+}
+
 // ociRemoteOptions builds the cosign ociremote options. It applies the
 // configured keychain and any caller-supplied remote options first, then injects
 // the request context LAST so it always wins: go-containerregistry applies
@@ -259,10 +341,7 @@ func isRegistryError(err error) bool {
 		return true
 	}
 	var nerr net.Error
-	if errors.As(err, &nerr) {
-		return true
-	}
-	return false
+	return errors.As(err, &nerr)
 }
 
 // classifyVerifyError maps a cosign verification error onto one of the package
