@@ -2,6 +2,7 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 	"regexp"
 	"strconv"
 )
@@ -153,7 +155,45 @@ type ScenarioDataProvider interface {
 	GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error)
 	GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error)
 	GetScenarioDetail(scenario string, registry *models.RegistryV2) (*models.ScenarioDetail, error)
+	// GetImageSignatureStatus reports the cosign signature state of a single
+	// scenario image. It is the opt-in counterpart to GetRegistryImages: callers
+	// that want the SignatureStatus invoke it per tag (controlling their own
+	// concurrency), while the plain listing path stays free of verification
+	// round-trips. It fails safe — verification outcomes are folded into the
+	// returned status (never signed unless a trusted signature verifies), and a
+	// non-nil error is returned only for setup failures (e.g. the image
+	// reference could not be constructed), in which case the status is unknown.
+	GetImageSignatureStatus(ctx context.Context, registry *models.RegistryV2, tag models.ScenarioTag) (verify.SignatureStatus, error)
 	ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool, seed *ScaffoldSeed) (*string, error)
+}
+
+// ImageReference builds a fully-qualified image reference for a scenario tag.
+// It pins to the immutable digest when the tag carries one (anti-TOCTOU and one
+// fewer registry round-trip, since the verifier does not need to re-resolve the
+// tag), and falls back to the mutable tag name otherwise.
+func ImageReference(base string, tag models.ScenarioTag) string {
+	if tag.Digest != nil && *tag.Digest != "" {
+		return fmt.Sprintf("%s@%s", base, *tag.Digest)
+	}
+	return fmt.Sprintf("%s:%s", base, tag.Name)
+}
+
+// ImageSignatureStatus verifies ref with opts and returns its SignatureStatus,
+// caching definitive results by reference so repeated lookups (and tags that
+// share a digest, e.g. latest == vX.Y) do not re-hit the registry. Transient
+// "unknown" results are never cached: they reflect an outage/timeout that must
+// be re-evaluated on the next request. This is shared by every provider so the
+// caching and verification behaviour is identical regardless of data source.
+func (p *BaseScenarioProvider) ImageSignatureStatus(ctx context.Context, ref string, opts verify.Options) verify.SignatureStatus {
+	cacheKey := "sigstatus:" + ref
+	if cached := p.Cache.GetString(cacheKey); cached != nil {
+		return verify.SignatureStatus(*cached)
+	}
+	status := verify.StatusFor(ctx, ref, opts)
+	if status != verify.SignatureUnknown {
+		p.Cache.SetString(cacheKey, string(status))
+	}
+	return status
 }
 
 type ContainerLayer interface {

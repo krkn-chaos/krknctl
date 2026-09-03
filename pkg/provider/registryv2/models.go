@@ -15,17 +15,28 @@ type ManifestV2 struct {
 }
 
 type LayerV1Compat struct {
-	ID              string              `json:"id"`
-	Parent          string              `json:"parent"`
-	Created         string              `json:"created"`
-	Throwaway       bool                `json:"throwaway"`
-	ContainerConfig map[string][]string `json:"container_config"`
-	Size            int64               `json:"size"`
+	ID              string          `json:"id"`
+	Parent          string          `json:"parent"`
+	Created         string          `json:"created"`
+	Throwaway       bool            `json:"throwaway"`
+	ContainerConfig containerConfig `json:"container_config"`
+	Size            int64           `json:"size"`
+}
+
+// containerConfig captures only the field krknctl needs (the build Cmd, which
+// carries the LABEL instructions) from a Docker schema1 v1Compatibility
+// container_config. It deliberately ignores every other key.
+//
+// The previous typing, map[string][]string, could never decode a real manifest:
+// a container_config also contains string- and bool-valued keys (Hostname,
+// AttachStdin, ...), and json.Unmarshal aborts the whole object on the first
+// value whose type is not []string. That error made getScenarioDetail skip
+// every layer, so no LABEL was ever found and scenario detail lookups failed for
+// real registry images.
+type containerConfig struct {
+	Cmd []string `json:"Cmd"`
 }
 
 func (l LayerV1Compat) GetCommands() []string {
-	if val, ok := l.ContainerConfig["Cmd"]; ok {
-		return val
-	}
-	return []string{}
+	return l.ContainerConfig.Cmd
 }

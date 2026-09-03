@@ -2,6 +2,7 @@
 package registryv2
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 
 // authChallenge represents a parsed WWW-Authenticate Bearer challenge from a Docker registry
@@ -411,6 +413,20 @@ func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 
 func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool, seed *provider.ScaffoldSeed) (*string, error) {
 	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s, random, seed)
+}
+
+// GetImageSignatureStatus reports the cosign signature state of an image hosted
+// in a generic Docker Registry v2. Credentials and TLS behaviour are mirrored
+// from the registry configuration (via verify.OptionsForRegistry) so a signed
+// image in a private/insecure registry is verified with the same access the
+// pull path uses. It returns the unknown status with an error only when the
+// registry is nil (this provider always requires one).
+func (s *ScenarioProvider) GetImageSignatureStatus(ctx context.Context, registry *models.RegistryV2, tag models.ScenarioTag) (verify.SignatureStatus, error) {
+	if registry == nil {
+		return verify.SignatureUnknown, errors.New("registry cannot be nil in V2 scenario provider")
+	}
+	ref := provider.ImageReference(registry.GetPrivateRegistryURI(), tag)
+	return s.BaseScenarioProvider.ImageSignatureStatus(ctx, ref, verify.OptionsForRegistry(registry)), nil
 }
 
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
