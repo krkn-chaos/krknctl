@@ -2,6 +2,7 @@
 package quay
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 
 type ScenarioProvider struct {
@@ -86,6 +88,20 @@ func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.Scen
 
 func (p *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool, seed *provider.ScaffoldSeed) (*string, error) {
 	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, p.Config, p, random, seed)
+}
+
+// GetImageSignatureStatus reports the cosign signature state of a quay.io
+// scenario image. The public quay registry needs no credentials, so the
+// verification uses the default (zero) options; the registry argument is
+// accepted only to satisfy the interface. It returns the unknown status with an
+// error only if the image URI cannot be built from config.
+func (p *ScenarioProvider) GetImageSignatureStatus(ctx context.Context, _ *models.RegistryV2, tag models.ScenarioTag) (verify.SignatureStatus, error) {
+	imageURI, err := p.Config.GetQuayImageURI()
+	if err != nil {
+		return verify.SignatureUnknown, err
+	}
+	ref := provider.ImageReference(imageURI, tag)
+	return p.BaseScenarioProvider.ImageSignatureStatus(ctx, ref, verify.Options{}), nil
 }
 
 func (p *ScenarioProvider) getScenarioBytes(dataSource string, scenarioDigest string) ([]byte,

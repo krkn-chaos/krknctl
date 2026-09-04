@@ -130,6 +130,12 @@ type ScenarioTag struct {
 	Digest       *string    `json:"digest"`
 	Size         *int64     `json:"size"`
 	LastModified *time.Time `json:"last_modified"`
+	// SignatureStatus is the cosign signature state of the image
+	// ("signed"|"unsigned"|"untrusted"|"unknown"). It is populated on demand by
+	// ScenarioDataProvider.GetImageSignatureStatus and left empty by the plain
+	// listing calls (GetRegistryImages), which do not verify signatures, so the
+	// extra registry round-trips are only paid when a caller opts in.
+	SignatureStatus string `json:"signature_status,omitempty"`
 }
 
 type ScenarioDetail struct {

@@ -26,6 +26,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// allowUnsignedInTests bypasses cosign signature verification in the
+// orchestration integration tests below. These exercise container
+// run/attach/graph behaviour, not signature policy — the latter is covered
+// directly by pkg/verify's unit tests. The quay.io/krkn-chaos/krknctl-test
+// fixture images are intentionally unsigned, so enforcing verification here
+// would fail before any container is ever run. Keep this true so the
+// orchestration tests stay decoupled from whether the fixtures are signed.
+const allowUnsignedInTests = true
+
 // findRepoRootKubeconfigFixture walks upward from the test working directory to locate tests/data/kubeconfig.
 func findRepoRootKubeconfigFixture(t *testing.T) (string, bool) {
 	t.Helper()
@@ -118,7 +127,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerID)
 	pr := providermodels.RegistryV2{}
@@ -135,7 +144,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 
 		timestamp = time.Now().Unix()
 		containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-		containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil)
+		containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil, allowUnsignedInTests)
 		if so.GetContainerRuntime() == models.Docker {
 			if err != nil {
 				fmt.Println(err.Error())
@@ -166,7 +175,7 @@ func CommonTestScenarioOrchestratorRun(t *testing.T, so scenarioorchestrator.Sce
 	timestamp = time.Now().Unix()
 
 	containerName = fmt.Sprintf("%s-%s-%d%d", conf.ContainerPrefix, scenario.Name, timestamp, krknctlutils.RandomInt64(nil))
-	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil)
+	containerID, err = so.Run(pr.GetPrivateRegistryURI()+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, &pr, nil, nil, allowUnsignedInTests)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -216,7 +225,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenarioorchestr
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName1 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
+	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -228,7 +237,7 @@ func CommonTestScenarioOrchestratorRunAttached(t *testing.T, so scenarioorchestr
 	env["END"] = fmt.Sprintf("%d", duration)
 	env["EXIT_STATUS"] = fmt.Sprintf("%d", exitStatus)
 	containerName2 := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err = so.RunAttached(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
+	containerID, err = so.RunAttached(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	if err != nil {
 		fmt.Println("ERROR -> " + err.Error())
 	}
@@ -370,7 +379,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 
 	commChannel := make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid, allowUnsignedInTests)
 	}()
 
 	for {
@@ -446,7 +455,7 @@ func CommonTestScenarioOrchestratorRunGraph(t *testing.T, so scenarioorchestrato
 
 	commChannel = make(chan *models.GraphCommChannel)
 	go func() {
-		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid)
+		so.RunGraph(nodes, executionPlan, map[string]string{}, map[string]string{}, false, commChannel, nil, uid, allowUnsignedInTests)
 	}()
 
 	for {
@@ -590,7 +599,7 @@ func CommonTestScenarioOrchestratorResolveContainerName(t *testing.T, so scenari
 
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil)
+	containerID, err := so.RunAttached(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, os.Stdout, os.Stderr, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
 	assert.NotNil(t, containerID)
 
@@ -645,7 +654,7 @@ func CommonTestScenarioOrchestratorKillContainers(t *testing.T, so scenarioorche
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 	timestamp := time.Now().Unix()
 	containerName := fmt.Sprintf("%s-%s-kill-%d", conf.ContainerPrefix, scenario.Name, timestamp)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
 	time.Sleep(2 * time.Second)
 	containers, err := so.ListRunningContainers(ctx)
@@ -719,9 +728,9 @@ func CommonTestScenarioOrchestratorListRunningScenarios(t *testing.T, so scenari
 
 	//starting containers in inverted order to check if lisRunningScenarios returns them sorted
 	sortedContainers := make(map[int]string)
-	_, err = so.Run(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
+	_, err = so.Run(registryURI+":"+scenario.Name, containerName2, env, false, map[string]string{}, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
-	_, err = so.Run(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
+	_, err = so.Run(registryURI+":"+scenario.Name, containerName1, env, false, map[string]string{}, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
 	time.Sleep(1 * time.Second)
 
@@ -784,7 +793,7 @@ func CommonTestScenarioOrchestratorInspectRunningScenario(t *testing.T, so scena
 	fmt.Println("CONTAINER SOCKET -> " + *socket)
 
 	containerName := utils.GenerateContainerName(conf, scenario.Name, nil)
-	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil)
+	containerID, err := so.Run(registryURI+":"+scenario.Name, containerName, env, false, map[string]string{}, nil, ctx, nil, nil, nil, allowUnsignedInTests)
 	assert.Nil(t, err)
 	time.Sleep(1 * time.Second)
 

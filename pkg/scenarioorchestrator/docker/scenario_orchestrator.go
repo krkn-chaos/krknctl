@@ -69,7 +69,17 @@ func (c *ScenarioOrchestrator) Run(
 	registry *providermodels.RegistryV2,
 	publishPorts []string,
 	createOpts *scenarioorchestrator.PodmanCreateOptions,
+	allowUnsigned bool,
 ) (*string, error) {
+
+	// Verify the image signature before pulling/running and pin the resolved
+	// digest (anti-TOCTOU). Fails closed: an unsigned or untrusted image is
+	// never run. When --run-unsigned-images is set, verification is bypassed and
+	// the original tag runs unverified (a loud warning is printed to stderr).
+	image, err := scenarioorchestrator.VerifyAndPinImageOrBypass(ctx, image, registry, allowUnsigned)
+	if err != nil {
+		return nil, err
+	}
 
 	cli, err := dockerClientFromContext(ctx)
 	if err != nil {
@@ -536,8 +546,9 @@ func (c *ScenarioOrchestrator) RunAttached(
 	registry *providermodels.RegistryV2,
 	publishPorts []string,
 	podmanCreate *scenarioorchestrator.PodmanCreateOptions,
+	allowUnsigned bool,
 ) (*string, error) {
-	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate)
+	containerID, err := scenarioorchestrator.CommonRunAttached(image, containerName, env, cache, volumeMounts, stdout, stderr, c, commChan, ctx, registry, publishPorts, podmanCreate, allowUnsigned)
 	return containerID, err
 }
 
@@ -550,8 +561,9 @@ func (c *ScenarioOrchestrator) RunGraph(
 	commChannel chan *orchestratormodels.GraphCommChannel,
 	registry *providermodels.RegistryV2,
 	userID *int,
+	allowUnsigned bool,
 ) {
-	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID)
+	scenarioorchestrator.CommonRunGraph(scenarios, resolvedGraph, extraEnv, extraVolumeMounts, cache, commChannel, c, c.Config, registry, userID, allowUnsigned)
 }
 
 func (c *ScenarioOrchestrator) PrintContainerRuntime() {
