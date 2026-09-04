@@ -1,9 +1,45 @@
 package scenarioorchestrator
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
 	"testing"
+
+	"github.com/fatih/color"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
+
+// captureStderr redirects os.Stderr for the duration of fn and returns whatever
+// was written to it. Coloring is disabled so assertions can match on the plain
+// message text regardless of the ambient terminal.
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	prevNoColor := color.NoColor
+	color.NoColor = true
+	defer func() { color.NoColor = prevNoColor }()
+
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe failed: %v", err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = old }()
+
+	fn()
+
+	_ = w.Close()
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		t.Fatalf("reading captured stderr failed: %v", err)
+	}
+	return buf.String()
+}
 
 // TestVerifyAndPinImageOrBypass_BypassReturnsImageUnchanged verifies that the
 // --run-unsigned-images escape hatch skips verification entirely: it returns the
@@ -49,5 +85,71 @@ func TestVerifyAndPinImageOrBypass_NoBypassStillVerifies(t *testing.T) {
 	}
 	if got != "" {
 		t.Fatalf("a verification failure must not return an image, got %q", got)
+	}
+}
+
+// TestLogVerifiedImage confirms the success path emits a confirmation to stderr
+// that names the image and the pinned digest that will actually run.
+func TestLogVerifiedImage(t *testing.T) {
+	const (
+		image  = "quay.io/krkn-chaos/krkn-hub:pod-scenarios"
+		digest = "quay.io/krkn-chaos/krkn-hub@sha256:0123456789abcdef"
+	)
+
+	out := captureStderr(t, func() { logVerifiedImage(image, digest) })
+
+	for _, want := range []string{"signature verified", image, digest} {
+		if !strings.Contains(out, want) {
+			t.Errorf("confirmation log missing %q\ngot: %s", want, out)
+		}
+	}
+}
+
+// TestLogRejectedImage maps each trust-failure sentinel onto a tailored,
+// human-readable rejection message on stderr.
+func TestLogRejectedImage(t *testing.T) {
+	const image = "quay.io/krkn-chaos/krkn-hub:pod-scenarios"
+
+	tests := []struct {
+		name       string
+		err        error
+		wantSubstr []string
+	}{
+		{
+			name:       "unsigned",
+			err:        fmt.Errorf("%w: %q", verify.ErrUnsigned, image),
+			wantSubstr: []string{"REJECTED", "not signed", image},
+		},
+		{
+			name:       "invalid signature",
+			err:        fmt.Errorf("%w: %q", verify.ErrInvalidSignature, image),
+			wantSubstr: []string{"REJECTED", "not by a trusted", image},
+		},
+		{
+			name:       "registry unreachable",
+			err:        fmt.Errorf("%w: %q", verify.ErrRegistryUnreachable, image),
+			wantSubstr: []string{"REJECTED", "registry unreachable", image},
+		},
+		{
+			name:       "invalid reference",
+			err:        fmt.Errorf("%w: %q", verify.ErrInvalidReference, image),
+			wantSubstr: []string{"REJECTED", "not a valid image reference", image},
+		},
+		{
+			name:       "unknown error falls back to generic message",
+			err:        errors.New("boom"),
+			wantSubstr: []string{"REJECTED", "boom", image},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out := captureStderr(t, func() { logRejectedImage(image, tc.err) })
+			for _, want := range tc.wantSubstr {
+				if !strings.Contains(out, want) {
+					t.Errorf("rejection log missing %q\ngot: %s", want, out)
+				}
+			}
+		})
 	}
 }

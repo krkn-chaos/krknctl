@@ -2,6 +2,7 @@ package scenarioorchestrator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -24,8 +25,13 @@ import (
 func VerifyAndPinImage(ctx context.Context, image string, registry *providermodels.RegistryV2) (string, error) {
 	verified, err := verify.VerifyImage(ctx, image, verify.OptionsForRegistry(registry))
 	if err != nil {
+		// Make the trust decision visible: an image is being refused, and why.
+		logRejectedImage(image, err)
 		return "", err
 	}
+	// Confirm on the run path that the signature checked out and show the exact
+	// pinned digest that will run in place of the tag.
+	logVerifiedImage(image, verified.Digest)
 	return verified.Digest, nil
 }
 
@@ -53,4 +59,49 @@ func warnUnsignedImage(image string) {
 	_, _ = warn.Fprintln(os.Stderr, "⚠️  SECURITY WARNING: --run-unsigned-images is set — image signature verification is DISABLED.")
 	_, _ = fmt.Fprintf(os.Stderr, "    Running %q WITHOUT verifying its cosign signature or pinning its digest.\n", image)
 	_, _ = fmt.Fprintln(os.Stderr, "    Only do this with images you fully trust: you are exposed to image tampering and supply-chain attacks.")
+}
+
+// logVerifiedImage prints a concise confirmation to stderr that an image's
+// cosign signature was successfully verified against the ecosystem trust policy,
+// together with the pinned digest that will actually be run in place of the tag.
+//
+// It is written to stderr (not stdout) on purpose: verification is a run-path
+// side effect and must never contaminate a command's stdout (e.g. piped or
+// redirected report output).
+func logVerifiedImage(image, digest string) {
+	ok := color.New(color.FgHiGreen, color.Bold)
+	_, _ = ok.Fprint(os.Stderr, "✅  signature verified: ")
+	_, _ = fmt.Fprintf(os.Stderr, "%q is signed by a trusted ecosystem key.\n", image)
+	_, _ = fmt.Fprintf(os.Stderr, "    running pinned digest %s\n", digest)
+}
+
+// logRejectedImage prints a prominent, human-readable explanation to stderr when
+// an image is refused before it is ever run. The message is tailored to the
+// specific trust failure (unsigned, untrusted signature, registry unreachable,
+// invalid reference) so the operator immediately understands why the run was
+// aborted. The concrete error is still returned to the caller for programmatic
+// handling; this log exists purely to surface the decision at execution time.
+//
+// Written to stderr for the same reason as logVerifiedImage/warnUnsignedImage:
+// it must never leak into stdout.
+func logRejectedImage(image string, err error) {
+	reject := color.New(color.FgHiRed, color.Bold)
+	switch {
+	case errors.Is(err, verify.ErrUnsigned):
+		_, _ = reject.Fprintln(os.Stderr, "⛔  image REJECTED: not signed")
+		_, _ = fmt.Fprintf(os.Stderr, "    %q carries no cosign signature and will not be run.\n", image)
+		_, _ = fmt.Fprintln(os.Stderr, "    Re-run with --run-unsigned-images only if you fully trust this image.")
+	case errors.Is(err, verify.ErrInvalidSignature):
+		_, _ = reject.Fprintln(os.Stderr, "⛔  image REJECTED: signature verification failed")
+		_, _ = fmt.Fprintf(os.Stderr, "    %q is signed, but not by a trusted ecosystem key, and will not be run.\n", image)
+	case errors.Is(err, verify.ErrRegistryUnreachable):
+		_, _ = reject.Fprintln(os.Stderr, "⛔  image REJECTED: signature could not be verified")
+		_, _ = fmt.Fprintf(os.Stderr, "    the signature of %q could not be evaluated (registry unreachable) and it will not be run.\n", image)
+	case errors.Is(err, verify.ErrInvalidReference):
+		_, _ = reject.Fprintln(os.Stderr, "⛔  image REJECTED: invalid image reference")
+		_, _ = fmt.Fprintf(os.Stderr, "    %q is not a valid image reference and will not be run.\n", image)
+	default:
+		_, _ = reject.Fprintln(os.Stderr, "⛔  image REJECTED: signature verification error")
+		_, _ = fmt.Fprintf(os.Stderr, "    %q will not be run: %v\n", image, err)
+	}
 }
