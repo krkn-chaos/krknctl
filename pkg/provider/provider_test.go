@@ -292,7 +292,7 @@ func TestGetKrknctlLabel_LabelInsideValue_DoesNotMatch(t *testing.T) {
 }
 
 func TestGetKrknctlLabel_LabelInsideValue_WithLeadingSpace_DoesNotMatch(t *testing.T) {
-	// Same scenario with a leading space on the command line.
+	// Same scenario with leading whitespace before the outer LABEL command.
 	layers := []ContainerLayer{
 		mockLayer{commands: []string{`  LABEL note="LABEL krknctl.is_a_scenario=true"`}},
 	}
@@ -306,5 +306,28 @@ func TestGetKrknctlLabel_ActualLabel_WithLeadingSpace_Matches(t *testing.T) {
 		mockLayer{commands: []string{`  LABEL krknctl.privileged="true"`}},
 	}
 	result := GetKrknctlLabel("krknctl.privileged=", layers)
+	assert.NotNil(t, result)
+}
+
+func TestGetKrknctlLabel_DockerHistoryFormat_Matches(t *testing.T) {
+	// Docker layer history stores commands as /bin/sh -c #(nop) LABEL ...
+	// GetKrknctlLabel must match the LABEL token even when it is not at position 0.
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{
+			"/bin/sh",
+			"-c",
+			`#(nop)  LABEL krknctl.privileged="true"`,
+		}},
+	}
+	result := GetKrknctlLabel("krknctl.privileged=", layers)
+	assert.NotNil(t, result)
+}
+
+func TestGetKrknctlLabel_ShellCNopFormat_Matches(t *testing.T) {
+	// Single-string Quay / registry format: the whole command is one string.
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`/bin/sh -c #(nop)  LABEL krknctl.title="My Scenario"`}},
+	}
+	result := GetKrknctlLabel("krknctl.title=", layers)
 	assert.NotNil(t, result)
 }
