@@ -18,15 +18,24 @@ import (
 
 func GetKrknctlLabel(label string, layers []ContainerLayer) *string {
 	trimmedLabel := strings.TrimSuffix(label, "=")
-	exactMatch := fmt.Sprintf("LABEL %s", label)
-	spaceMatch := fmt.Sprintf("LABEL %s ", trimmedLabel)
-	tabMatch := fmt.Sprintf("LABEL %s\t", trimmedLabel)
+	patterns := []string{
+		fmt.Sprintf("LABEL %s", label),         // LABEL krknctl.x=
+		fmt.Sprintf("LABEL %s ", trimmedLabel), // LABEL krknctl.x <space>
+		fmt.Sprintf("LABEL %s\t", trimmedLabel), // LABEL krknctl.x <tab>
+	}
 	for _, v := range layers {
-		commands := v.GetCommands()
-		for _, c := range commands {
-			if strings.Contains(c, exactMatch) ||
-				strings.Contains(c, spaceMatch) ||
-				strings.Contains(c, tabMatch) {
+		for _, c := range v.GetCommands() {
+			for _, p := range patterns {
+				idx := strings.Index(c, p)
+				if idx < 0 {
+					continue
+				}
+				// Reject when the pattern is embedded inside another label's
+				// quoted value: the byte immediately before "LABEL" must be
+				// absent (match at position 0) or whitespace.
+				if idx > 0 && c[idx-1] != ' ' && c[idx-1] != '\t' && c[idx-1] != '\n' && c[idx-1] != '\r' {
+					continue
+				}
 				return &c
 			}
 		}

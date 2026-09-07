@@ -144,6 +144,7 @@ type ScenarioDetail struct {
 	Description string              `json:"description"`
 	IsAScenario bool                `json:"is_a_scenario"`
 	HasRollback bool                `json:"has_rollback"`
+	Privileged  bool                `json:"privileged"`
 	Fields      []typing.InputField `json:"fields"`
 }
 
