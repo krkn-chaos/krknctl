@@ -154,6 +154,21 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
 			spinner.Start()
 
+			// Let the signature-verification step (which runs inside the
+			// orchestrator's Run/RunAttached) pause this spinner so its
+			// verified/rejected message prints on a clean line instead of being
+			// appended to the spinner frame. Only pause when the spinner is
+			// actually running, and resume it afterwards so the pull progress
+			// keeps animating.
+			scenarioorchestrator.ProgressPauser = func() func() {
+				if !spinner.Active() {
+					return func() {}
+				}
+				spinner.Stop()
+				return func() { spinner.Start() }
+			}
+			defer func() { scenarioorchestrator.ProgressPauser = nil }()
+
 			runDetached := false
 
 			provider := GetProvider(registrySettings != nil, factory)
