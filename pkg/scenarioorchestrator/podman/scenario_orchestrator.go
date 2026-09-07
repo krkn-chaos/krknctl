@@ -398,19 +398,30 @@ func (c *ScenarioOrchestrator) InspectScenario(container orchestratormodels.Cont
 		scenarioDetail.Name = imageAndTag[0]
 	}
 	for k, v := range inspectData.Config.Labels {
-		if k == c.Config.LabelTitle {
+		switch k {
+		case strings.TrimSuffix(c.Config.LabelTitle, "="):
 			scenarioDetail.Title = v
-		}
-		if k == c.Config.LabelDescription {
+		case strings.TrimSuffix(c.Config.LabelDescription, "="):
 			scenarioDetail.Description = v
-		}
-		if k == c.Config.LabelInputFields {
+		case strings.TrimSuffix(c.Config.LabelInputFields, "="):
 			var inputFields []typing.InputField
 			err := json.Unmarshal([]byte(v), &inputFields)
 			if err != nil {
 				return nil, err
 			}
 			scenarioDetail.Fields = inputFields
+		case strings.TrimSuffix(c.Config.LabelIsAScenario, "="):
+			if b, err := strconv.ParseBool(v); err == nil {
+				scenarioDetail.IsAScenario = b
+			}
+		case strings.TrimSuffix(c.Config.LabelHasRollback, "="):
+			if b, err := strconv.ParseBool(v); err == nil {
+				scenarioDetail.HasRollback = b
+			}
+		case strings.TrimSuffix(c.Config.LabelPrivileged, "="):
+			if b, err := strconv.ParseBool(v); err == nil {
+				scenarioDetail.Privileged = b
+			}
 		}
 	}
 	runningScenario.ScenarioDetail = &scenarioDetail

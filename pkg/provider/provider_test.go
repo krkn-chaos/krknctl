@@ -281,3 +281,30 @@ func TestGetKrknctlLabel_NotFound(t *testing.T) {
 	result := GetKrknctlLabel("krknctl.is_a_scenario=", layers)
 	assert.Nil(t, result)
 }
+
+func TestGetKrknctlLabel_LabelInsideValue_DoesNotMatch(t *testing.T) {
+	// The target label appears only inside another label's quoted value; must not match.
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`LABEL note="LABEL krknctl.privileged=true"`}},
+	}
+	result := GetKrknctlLabel("krknctl.privileged=", layers)
+	assert.Nil(t, result)
+}
+
+func TestGetKrknctlLabel_LabelInsideValue_WithLeadingSpace_DoesNotMatch(t *testing.T) {
+	// Same scenario with a leading space on the command line.
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`  LABEL note="LABEL krknctl.is_a_scenario=true"`}},
+	}
+	result := GetKrknctlLabel("krknctl.is_a_scenario=", layers)
+	assert.Nil(t, result)
+}
+
+func TestGetKrknctlLabel_ActualLabel_WithLeadingSpace_Matches(t *testing.T) {
+	// Leading whitespace on the command itself is fine; the label is real.
+	layers := []ContainerLayer{
+		mockLayer{commands: []string{`  LABEL krknctl.privileged="true"`}},
+	}
+	result := GetKrknctlLabel("krknctl.privileged=", layers)
+	assert.NotNil(t, result)
+}
