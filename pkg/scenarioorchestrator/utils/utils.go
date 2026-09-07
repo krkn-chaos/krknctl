@@ -102,7 +102,14 @@ func PrepareKubeconfig(kubeconfigPath *string, config config.Config) (*string, e
 	}
 	filename := fmt.Sprintf("%s-%s-%d", config.KubeconfigPrefix, text.RandString(5), time.Now().Unix())
 	path := filepath.Join(os.TempDir(), filename)
-	err = os.WriteFile(path, flattenedConfig, 0600)
+	// The file is bind-mounted into the scenario container and read by the
+	// non-root "krkn" user, whose uid differs from the host uid that owns this
+	// file. 0600 (owner-only) makes it unreadable inside the container, so the
+	// krkn client sees an empty kubeconfig ("No configuration found") and falls
+	// back to localhost. It must be world-readable; the file is ephemeral, lives
+	// in a temp dir with a randomized name, and is cleaned up after the run.
+	err = os.WriteFile(path, flattenedConfig, 0644) // #nosec G306 -- must be readable by the non-root container user; ephemeral temp file with randomized name
+
 	if err != nil {
 		return nil, err
 	}
