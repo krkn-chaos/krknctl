@@ -11,10 +11,11 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 
-// ProgressPauser, when set by the CLI layer, is invoked immediately before any
-// verification result (verified, rejected, or the --run-unsigned-images bypass
-// warning) is written to stderr, and must return a resume callback that is
-// invoked once the message has been printed. It lets the run path stop an active
+// ProgressPauser is an optional hook that, when set by the CLI layer, is
+// invoked immediately before any verification result (verified, rejected, or
+// the --run-unsigned-images bypass warning) is written to stderr, and must
+// return a resume callback that is invoked once the message has been printed.
+// It lets the run path stop an active
 // progress spinner so the full-width verification messages are not overwritten
 // or interleaved with the spinner frame, without coupling this package to a
 // concrete spinner implementation.
