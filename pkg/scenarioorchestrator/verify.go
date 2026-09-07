@@ -11,6 +11,30 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 
+// ProgressPauser is an optional hook that, when set by the CLI layer, is
+// invoked immediately before any verification result (verified, rejected, or
+// the --run-unsigned-images bypass warning) is written to stderr, and must
+// return a resume callback that is invoked once the message has been printed.
+// It lets the run path stop an active
+// progress spinner so the full-width verification messages are not overwritten
+// or interleaved with the spinner frame, without coupling this package to a
+// concrete spinner implementation.
+//
+// It is left nil on paths that have no spinner to manage (e.g. graph runs and
+// tests); in that case pauseProgress is a no-op and verification prints
+// directly.
+var ProgressPauser func() (resume func())
+
+// pauseProgress invokes ProgressPauser if set and always returns a resume
+// callback safe to call (a no-op when no pauser is registered), so callers can
+// unconditionally `defer resume()`.
+func pauseProgress() (resume func()) {
+	if ProgressPauser == nil {
+		return func() {}
+	}
+	return ProgressPauser()
+}
+
 // VerifyAndPinImage verifies the cosign signature of image using the shared
 // ecosystem policy (pkg/verify) and returns the pinned digest reference that
 // MUST be run in place of the original tag. It fails closed: any verification
@@ -24,6 +48,10 @@ import (
 // uses.
 func VerifyAndPinImage(ctx context.Context, image string, registry *providermodels.RegistryV2) (string, error) {
 	verified, err := verify.VerifyImage(ctx, image, verify.OptionsForRegistry(registry))
+	// Stop any active progress spinner so the verification result prints on its
+	// own clean line rather than being appended to the spinner frame.
+	resume := pauseProgress()
+	defer resume()
 	if err != nil {
 		// Make the trust decision visible: an image is being refused, and why.
 		logRejectedImage(image, err)
@@ -46,7 +74,9 @@ func VerifyAndPinImage(ctx context.Context, image string, registry *providermode
 // command's stdout (e.g. piped or redirected report output).
 func VerifyAndPinImageOrBypass(ctx context.Context, image string, registry *providermodels.RegistryV2, allowUnsigned bool) (string, error) {
 	if allowUnsigned {
+		resume := pauseProgress()
 		warnUnsignedImage(image)
+		resume()
 		return image, nil
 	}
 	return VerifyAndPinImage(ctx, image, registry)
