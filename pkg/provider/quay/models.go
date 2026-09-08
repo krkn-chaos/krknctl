@@ -3,6 +3,7 @@ package quay
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -79,6 +80,25 @@ func (q ManifestList) GetFirstAvailableManifest() *ManifestEntry {
 		}
 	}
 	return nil
+}
+
+// GetKrknctlManifest selects the manifest matching krknctl's architecture and
+// falls back to the first usable descriptor when no exact match exists.
+func (q ManifestList) GetKrknctlManifest() *ManifestEntry {
+	var first *ManifestEntry
+	for i := range q.Manifests {
+		manifest := &q.Manifests[i]
+		if manifest.Digest == "" {
+			continue
+		}
+		if first == nil {
+			first = manifest
+		}
+		if manifest.Platform.Architecture == runtime.GOARCH {
+			return manifest
+		}
+	}
+	return first
 }
 
 // ManifestEntry represents a single platform-specific manifest

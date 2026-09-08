@@ -92,31 +92,62 @@ func (p *ScenarioProvider) getTagSize(dataSource string, tag *models.ScenarioTag
 	if tag.Digest == nil || *tag.Digest == "" {
 		return nil
 	}
-	body, err := p.getScenarioBytes(dataSource, *tag.Digest)
+	manifest, err := p.getResolvedManifest(dataSource, *tag.Digest)
 	if err != nil {
 		return nil
 	}
+	return manifestImageSize(manifest)
+}
+
+func (p *ScenarioProvider) getResolvedManifest(dataSource string, digest string) (Manifest, error) {
+	body, err := p.getScenarioBytes(dataSource, digest)
+	if err != nil {
+		return Manifest{}, err
+	}
 	var manifest Manifest
 	if err := json.Unmarshal(body, &manifest); err != nil {
-		return nil
+		return Manifest{}, err
 	}
-	if manifest.IsManifestList {
-		var manifestList ManifestList
-		if err := json.Unmarshal([]byte(manifest.ManifestData), &manifestList); err != nil {
-			return nil
-		}
-		selected := manifestList.GetFirstAvailableManifest()
-		if selected == nil || selected.Size <= 0 {
-			return nil
-		}
-		size := int64(selected.Size)
-		return &size
+	if !manifest.IsManifestList {
+		return manifest, nil
 	}
+	if manifest.ManifestData == "" {
+		return Manifest{}, errors.New("manifest list contains no manifest data")
+	}
+	var manifestList ManifestList
+	if err := json.Unmarshal([]byte(manifest.ManifestData), &manifestList); err != nil {
+		return Manifest{}, err
+	}
+	selected := manifestList.GetKrknctlManifest()
+	if selected == nil {
+		return Manifest{}, errors.New("manifest list contains no usable image manifest")
+	}
+	selectedBody, err := p.getScenarioBytes(dataSource, selected.Digest)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := json.Unmarshal(selectedBody, &manifest); err != nil {
+		return Manifest{}, err
+	}
+	return manifest, nil
+}
+
+func manifestImageSize(manifest Manifest) *int64 {
 	if manifest.LayerCompressedSize != "" {
 		size, err := strconv.ParseInt(manifest.LayerCompressedSize, 10, 64)
 		if err == nil && size > 0 {
 			return &size
 		}
+	}
+	var size int64
+	for _, layer := range manifest.Layers {
+		if layer.CompressedSize <= 0 {
+			return nil
+		}
+		size += layer.CompressedSize
+	}
+	if size > 0 {
+		return &size
 	}
 	return nil
 }
@@ -186,57 +217,14 @@ func (p *ScenarioProvider) getScenarioBytes(dataSource string, scenarioDigest st
 func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool) (*models.ScenarioDetail, error) {
 
 	scenarioDigest := ""
-	if ((*foundScenario).Digest) != nil {
-		scenarioDigest = *((*foundScenario).Digest)
+	if foundScenario.Digest != nil {
+		scenarioDigest = *foundScenario.Digest
 	}
-	bodyBytes, err := p.getScenarioBytes(dataSource, scenarioDigest)
+	manifest, err := p.getResolvedManifest(dataSource, scenarioDigest)
 	if err != nil {
 		return nil, err
 	}
-
-	var manifest Manifest
-	err = json.Unmarshal(bodyBytes, &manifest)
-	if err != nil {
-		return nil, err
-	}
-
-	// if the manifest is a manifestList (multiarch image) image metadata
-	// will be fetched from the first available image in the registry
-	// keeps retrocompatibility with registries with no manifests
-
-	if manifest.IsManifestList {
-		if manifest.ManifestData == "" {
-			return nil, errors.New("scenario image is a manifest without data, " +
-				"impossible to fetch details")
-		}
-		var ml ManifestList
-		err = json.Unmarshal([]byte(manifest.ManifestData), &ml)
-		if err != nil {
-			return nil, err
-		}
-		imageManifest := ml.GetFirstAvailableManifest()
-		if imageManifest == nil {
-			return nil, errors.New("scenario image not found for target architecture")
-		}
-
-		// The manifest-list tag size is not the selected image size. Always use
-		// the platform-specific manifest descriptor, when available.
-		foundScenario.Size = nil
-		if imageManifest.Size > 0 {
-			imageSize := int64(imageManifest.Size)
-			foundScenario.Size = &imageSize
-		}
-
-		bodyBytes, err = p.getScenarioBytes(dataSource, imageManifest.Digest)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(bodyBytes, &manifest)
-		if err != nil {
-			return nil, err
-		}
-	}
+	foundScenario.Size = manifestImageSize(manifest)
 
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,

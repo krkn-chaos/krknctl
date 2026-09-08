@@ -74,14 +74,16 @@ func TestScenarioProvider_GetRegistryImages_ResolvesMissingManifestListSize(t *t
 	dataSource := "https://quay.example/api/v1/repository/krkn-hub-multiarch"
 	tagURL := dataSource + "/tag"
 	manifestURL := dataSource + "/manifest/sha256:index"
+	selectedManifestURL := dataSource + "/manifest/sha256:linux"
 	provider.Cache.Set(tagURL, []byte(`{"tags":[{"name":"multiarch","manifest_digest":"sha256:index","last_modified":"Mon, 02 Jan 2023 12:00:00 +0000"}]}`))
 	provider.Cache.Set(manifestURL, []byte(`{"is_manifest_list":true,"manifest_data":"{\"manifests\":[{\"digest\":\"sha256:linux\",\"size\":12345}]}"}`))
+	provider.Cache.Set(selectedManifestURL, []byte(`{"layers":[{"compressed_size":5242880,"created_datetime":"Mon, 02 Jan 2023 12:00:00 +0000"}]}`))
 
 	tags, err := provider.getRegistryImages(dataSource)
 	assert.NoError(t, err)
 	if assert.Len(t, *tags, 1) {
 		require.NotNil(t, (*tags)[0].Size)
-		assert.Equal(t, int64(12345), *(*tags)[0].Size)
+		assert.Equal(t, int64(5242880), *(*tags)[0].Size)
 	}
 }
 

@@ -19,6 +19,21 @@ import "github.com/rodaine/table"
 var headerFmt = color.New(color.FgGreen, color.Underline).SprintfFunc()
 var columnFmt = color.New(color.FgYellow).SprintfFunc()
 
+func humanReadableBytes(size int64) string {
+	if size < 1024 {
+		return fmt.Sprintf("%d B", size)
+	}
+	units := []string{"KiB", "MiB", "GiB", "TiB"}
+	value := float64(size)
+	for _, unit := range units {
+		value /= 1024
+		if value < 1024 || unit == units[len(units)-1] {
+			return fmt.Sprintf("%.2f %s", value, unit)
+		}
+	}
+	return fmt.Sprintf("%d B", size)
+}
+
 func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table {
 	var tbl table.Table
 	if private {
@@ -38,7 +53,7 @@ func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table
 		} else {
 			size := "unknown"
 			if scenario.Size != nil {
-				size = fmt.Sprintf("%d", *scenario.Size)
+				size = humanReadableBytes(*scenario.Size)
 			}
 			digest := "unknown"
 			if scenario.Digest != nil {
