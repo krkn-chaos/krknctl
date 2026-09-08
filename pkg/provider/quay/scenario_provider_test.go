@@ -77,6 +77,7 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	assert.Equal(t, len(scenario.Fields), 5)
+	assert.NotNil(t, scenario.Size, "scenario detail must preserve the authoritative Quay image size")
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", nil)
 	assert.NotNil(t, err)

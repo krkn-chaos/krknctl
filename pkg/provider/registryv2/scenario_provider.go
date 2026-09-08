@@ -445,6 +445,23 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err = json.Unmarshal(*body, &manifestV2); err != nil {
 		return nil, err
 	}
+	// Resolve an OCI image index or Docker manifest list before extracting
+	// labels and sizes. The selected platform manifest is authoritative.
+	if len(manifestV2.Manifests) > 0 {
+		selected := manifestV2.Manifests[0]
+		if selected.Digest == "" {
+			return nil, fmt.Errorf("image index contains no usable manifest descriptor")
+		}
+		manifestURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/manifests/" + selected.Digest
+		body, err = s.queryRegistry(manifestURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve selected image manifest %s: %w", selected.Digest, err)
+		}
+		manifestV2 = ManifestV2{}
+		if err = json.Unmarshal(*body, &manifestV2); err != nil {
+			return nil, err
+		}
+	}
 	for _, l := range manifestV2.RawLayers {
 		layer := LayerV1Compat{}
 		if err = json.Unmarshal([]byte(l["v1Compatibility"]), &layer); err != nil {
@@ -469,6 +486,9 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,
 	}
+	// Generic registry tag listings contain names only; use the resolved
+	// manifest as the authoritative source for image size.
+	scenarioDetail.Size = manifestV2.imageSize()
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""

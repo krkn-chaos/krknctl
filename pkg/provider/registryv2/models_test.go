@@ -69,3 +69,19 @@ func TestLayerV1Compat_EmptyCmd(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, layer.GetCommands())
 }
+
+func TestManifestV2_ImageSize(t *testing.T) {
+	manifest := ManifestV2{
+		Config:      ManifestDescriptor{Size: 17},
+		Descriptors: []ManifestDescriptor{{Size: 83}},
+	}
+
+	size := manifest.imageSize()
+	require.NotNil(t, size)
+	assert.Equal(t, int64(100), *size)
+}
+
+func TestManifestV2_ImageSizeWithoutMetadata(t *testing.T) {
+	assert.Nil(t, (ManifestV2{}).imageSize())
+	assert.Nil(t, (ManifestV2{Config: ManifestDescriptor{Size: 0}}).imageSize())
+}

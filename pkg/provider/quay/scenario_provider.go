@@ -174,9 +174,10 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 			return nil, errors.New("scenario image not found for target architecture")
 		}
 
-		// The manifest-list tag has no aggregate size. Use the size associated
-		// with the selected platform-specific manifest descriptor instead.
-		if foundScenario.Size == nil || *foundScenario.Size == 0 {
+		// The manifest-list tag size is not the selected image size. Always use
+		// the platform-specific manifest descriptor, when available.
+		foundScenario.Size = nil
+		if imageManifest.Size > 0 {
 			imageSize := int64(imageManifest.Size)
 			foundScenario.Size = &imageSize
 		}

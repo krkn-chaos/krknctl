@@ -217,8 +217,8 @@ func TestScenarioProvider_GetScenarioDetail_Schema2ConfigLabels(t *testing.T) {
 			_, _ = w.Write([]byte(`{
 				"schemaVersion": 2,
 				"mediaType": "application/vnd.oci.image.manifest.v1+json",
-				"config": {"digest": "sha256:config"},
-				"layers": []
+				"config": {"digest": "sha256:config", "size": 17},
+				"layers": [{"digest": "sha256:layer", "size": 83}]
 			}`))
 		case "/v2/repo/blobs/sha256:config":
 			configRequested = true
@@ -247,8 +247,52 @@ func TestScenarioProvider_GetScenarioDetail_Schema2ConfigLabels(t *testing.T) {
 	assert.Equal(t, "Modern Scenario", result.Title)
 	assert.Equal(t, "Schema 2 image", result.Description)
 	assert.Empty(t, result.Fields)
+	require.NotNil(t, result.Size)
+	assert.Equal(t, int64(100), *result.Size)
 	assert.True(t, result.IsAScenario)
 	assert.True(t, result.HasRollback)
+}
+
+func TestScenarioProvider_GetScenarioDetail_ManifestIndex(t *testing.T) {
+	config := getConfig(t)
+	p := ScenarioProvider{provider.BaseScenarioProvider{
+		Config: config,
+		Cache:  cache.NewCache(),
+	}}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v2/repo/manifests/dummy-scenario":
+			_, _ = w.Write([]byte(`{
+				"schemaVersion": 2,
+				"manifests": [{"digest": "sha256:selected", "size": 999}]
+			}`))
+		case "/v2/repo/manifests/sha256:selected":
+			_, _ = w.Write([]byte(`{
+				"schemaVersion": 2,
+				"config": {"digest": "sha256:config", "size": 2},
+				"layers": [{"digest": "sha256:layer", "size": 40}]
+			}`))
+		case "/v2/repo/blobs/sha256:config":
+			_, _ = w.Write([]byte(`{"config":{"Labels":{
+				"krknctl.title":"Indexed Scenario",
+				"krknctl.description":"Indexed image",
+				"krknctl.input_fields":"[]"
+			}}}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo"}
+	result, err := p.getScenarioDetail(server.URL+"/v2/repo/manifests/dummy-scenario", &models.ScenarioTag{Name: "dummy-scenario"}, false, &registry)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.Size)
+	assert.Equal(t, int64(42), *result.Size)
 }
 
 func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {

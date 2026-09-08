@@ -16,14 +16,45 @@ type ManifestV2 struct {
 	Architecture  string              `json:"architecture"`
 	SchemaVersion int                 `json:"schemaVersion"`
 	RawLayers     []map[string]string `json:"history"`
-	Layers        []LayerV1Compat
-	Config        ManifestDescriptor `json:"config"`
+	// Descriptors contains the compressed sizes from a Schema 2/OCI manifest.
+	Descriptors []ManifestDescriptor `json:"layers"`
+	Layers      []LayerV1Compat
+	Config      ManifestDescriptor   `json:"config"`
+	Manifests   []ManifestDescriptor `json:"manifests"`
 }
 
 // ManifestDescriptor is used by Docker Schema 2 and OCI manifests to point
 // at the image configuration blob.
 type ManifestDescriptor struct {
 	Digest string `json:"digest"`
+	Size   int64  `json:"size"`
+}
+
+// imageSize returns the size represented by the manifest descriptors. A nil
+// result means that the registry did not provide usable size metadata.
+func (m ManifestV2) imageSize() *int64 {
+	var size int64
+	known := false
+	if m.Config.Size > 0 {
+		size += m.Config.Size
+		known = true
+	}
+	for _, descriptor := range m.Descriptors {
+		if descriptor.Size > 0 {
+			size += descriptor.Size
+			known = true
+		}
+	}
+	for _, layer := range m.Layers {
+		if layer.Size > 0 {
+			size += layer.Size
+			known = true
+		}
+	}
+	if !known {
+		return nil
+	}
+	return &size
 }
 
 type ImageConfig struct {
