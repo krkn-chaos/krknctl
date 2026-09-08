@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
@@ -65,15 +66,59 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 
 	var scenarioTags []models.ScenarioTag
 	for _, tag := range quayPage.Tags {
-		scenarioTags = append(scenarioTags, models.ScenarioTag{
+		scenarioTag := models.ScenarioTag{
 			Name:         tag.Name,
 			LastModified: &tag.LastModified,
 			Size:         tag.Size,
 			Digest:       &tag.ManifestDigest,
-		})
+		}
+		if scenarioTag.Size == nil || *scenarioTag.Size == 0 {
+			if size := p.getTagSize(dataSource, &scenarioTag); size != nil {
+				scenarioTag.Size = size
+			}
+		}
+		scenarioTags = append(scenarioTags, scenarioTag)
 	}
 
 	return &scenarioTags, deferErr
+}
+
+// getTagSize resolves a missing listing size from the image manifest. Quay's
+// tag endpoint does not provide an aggregate size for manifest lists, so the
+// selected platform descriptor is the authoritative value for multi-arch
+// images. Metadata lookup failures leave the size unknown without hiding the
+// tag from the listing.
+func (p *ScenarioProvider) getTagSize(dataSource string, tag *models.ScenarioTag) *int64 {
+	if tag.Digest == nil || *tag.Digest == "" {
+		return nil
+	}
+	body, err := p.getScenarioBytes(dataSource, *tag.Digest)
+	if err != nil {
+		return nil
+	}
+	var manifest Manifest
+	if err := json.Unmarshal(body, &manifest); err != nil {
+		return nil
+	}
+	if manifest.IsManifestList {
+		var manifestList ManifestList
+		if err := json.Unmarshal([]byte(manifest.ManifestData), &manifestList); err != nil {
+			return nil
+		}
+		selected := manifestList.GetFirstAvailableManifest()
+		if selected == nil || selected.Size <= 0 {
+			return nil
+		}
+		size := int64(selected.Size)
+		return &size
+	}
+	if manifest.LayerCompressedSize != "" {
+		size, err := strconv.ParseInt(manifest.LayerCompressedSize, 10, 64)
+		if err == nil && size > 0 {
+			return &size
+		}
+	}
+	return nil
 }
 
 func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
