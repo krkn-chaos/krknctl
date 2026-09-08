@@ -13,27 +13,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: test release note generation
+        run: bash .github/scripts/generate-release-notes_test.sh
       - name: generate release notes from commits
         run: |
-          VERSION="$GITHUB_REF_NAME"
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${VERSION}^" 2>/dev/null || true)
-
-          if [ -n "$PREVIOUS_TAG" ]; then
-            echo "Generating changes from $PREVIOUS_TAG to $VERSION"
-            CHANGES=$(git log --no-merges --pretty=format:'- %s (%h)' "${PREVIOUS_TAG}..${VERSION}")
-          else
-            echo "No previous tag found; generating changes from $VERSION"
-            CHANGES=$(git log --no-merges --pretty=format:'- %s (%h)' "$VERSION")
-          fi
-
-          if [ -z "$CHANGES" ]; then
-            CHANGES="- No changes recorded."
-          fi
-
-          VERSION="$VERSION" CHANGES="$CHANGES" perl -0pe \
-            's/\{VERSION\}/$ENV{VERSION}/g; s/\{CHANGES\}/$ENV{CHANGES}/g' \
-            .github/release-template.md > release-notes.md
-
+          VERSION="$GITHUB_REF_NAME" \
+            OUTPUT=release-notes.md \
+            TEMPLATE=.github/release-template.md \
+            bash .github/scripts/generate-release-notes.sh
           cat release-notes.md
       - name: create release
         env:
