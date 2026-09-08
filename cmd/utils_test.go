@@ -62,7 +62,8 @@ func TestGetProvider(t *testing.T) {
 	scenario, err = privateProvider.GetScenarioDetail("dummy-scenario", &pr)
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
-	assert.Nil(t, scenario.Size)
+	assert.NotNil(t, scenario.Size)
+	assert.Greater(t, *scenario.Size, int64(0))
 
 }
 

@@ -33,10 +33,19 @@ Its primary objective is to streamline the usage of `krkn` by providing features
 and much more, effectively abstracting the complexities of the container environment. 
 This allows users to focus solely on implementing chaos engineering practices without worrying about runtime complexities.
 
+### Listing available scenarios
+
+`krknctl list available` displays the image size and signature status for each
+scenario. The `Signature` column reports one of:
+
+- `signed`: a trusted signature was verified;
+- `unsigned`: no signature was found;
+- `untrusted`: signatures were found but none matched a trusted key;
+- `unknown`: verification could not be completed.
+
 <br/>
 
 
 ## Documentation:
 
 Instructions on how to setup, configure and run Kraken can be found in the [documentation](https://krkn-chaos.dev/docs/krknctl/).
-

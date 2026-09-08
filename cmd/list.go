@@ -58,6 +58,13 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 				log.Fatalf("failed to fetch scenarios: %v", err)
 			}
 			s.Stop()
+			signatureSpinner := NewSpinnerWithSuffix("🔒 verifying image signatures...")
+			signatureSpinner.Start()
+			if err := PopulateScenarioSignatureStatuses(cmd.Context(), provider, registrySettings, scenarios); err != nil {
+				signatureSpinner.Stop()
+				return err
+			}
+			signatureSpinner.Stop()
 			scenarioTable := NewScenarioTable(scenarios, privateRegistry)
 			scenarioTable.Print()
 			fmt.Print("\n")

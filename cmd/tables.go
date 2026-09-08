@@ -12,26 +12,58 @@ import (
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 import "github.com/rodaine/table"
 
 var headerFmt = color.New(color.FgGreen, color.Underline).SprintfFunc()
 var columnFmt = color.New(color.FgYellow).SprintfFunc()
 
+func humanReadableBytes(size int64) string {
+	if size < 1024 {
+		return fmt.Sprintf("%d B", size)
+	}
+	units := []string{"KiB", "MiB", "GiB", "TiB"}
+	value := float64(size)
+	for _, unit := range units {
+		value /= 1024
+		if value < 1024 || unit == units[len(units)-1] {
+			return fmt.Sprintf("%.2f %s", value, unit)
+		}
+	}
+	return fmt.Sprintf("%d B", size)
+}
+
 func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table {
 	var tbl table.Table
 	if private {
-		tbl = table.New("Name")
+		tbl = table.New("Name", "Signature")
 	} else {
-		tbl = table.New("Name", "Size", "Digest", "Last Modified")
+		tbl = table.New("Name", "Size", "Digest", "Last Modified", "Signature")
 	}
 
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scenario := range *scenarios {
+		signatureStatus := scenario.SignatureStatus
+		if signatureStatus == "" {
+			signatureStatus = string(verify.SignatureUnknown)
+		}
 		if private {
-			tbl.AddRow(scenario.Name)
+			tbl.AddRow(scenario.Name, signatureStatus)
 		} else {
-			tbl.AddRow(scenario.Name, *scenario.Size, *scenario.Digest, *scenario.LastModified)
+			size := "unknown"
+			if scenario.Size != nil {
+				size = humanReadableBytes(*scenario.Size)
+			}
+			digest := "unknown"
+			if scenario.Digest != nil {
+				digest = *scenario.Digest
+			}
+			lastModified := "unknown"
+			if scenario.LastModified != nil {
+				lastModified = scenario.LastModified.Format(time.RFC3339)
+			}
+			tbl.AddRow(scenario.Name, size, digest, lastModified, signatureStatus)
 		}
 
 	}

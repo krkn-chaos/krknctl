@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io"
 	"testing"
+
+	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 )
 
 func TestNewEnvironmentTable(t *testing.T) {
@@ -94,4 +96,16 @@ func TestNewGraphTable(t *testing.T) {
 	assert.Contains(t, stringBuffer, "(3) af")
 	assert.Contains(t, stringBuffer, "(5) a")
 
+}
+
+func TestNewScenarioTable_AllowsMissingMetadata(t *testing.T) {
+	scenarios := []models.ScenarioTag{{Name: "scenario-without-metadata"}}
+
+	table := NewScenarioTable(&scenarios, false)
+	assert.NotNil(t, table)
+}
+
+func TestHumanReadableBytes(t *testing.T) {
+	assert.Equal(t, "6.03 KiB", humanReadableBytes(6179))
+	assert.Equal(t, "5.00 MiB", humanReadableBytes(5*1024*1024))
 }
