@@ -12,6 +12,7 @@ import (
 	orchestratormodels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/utils"
 	"github.com/krkn-chaos/krknctl/pkg/typing"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 import "github.com/rodaine/table"
 
@@ -21,17 +22,21 @@ var columnFmt = color.New(color.FgYellow).SprintfFunc()
 func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table {
 	var tbl table.Table
 	if private {
-		tbl = table.New("Name")
+		tbl = table.New("Name", "Signature")
 	} else {
-		tbl = table.New("Name", "Size", "Digest", "Last Modified")
+		tbl = table.New("Name", "Size", "Digest", "Last Modified", "Signature")
 	}
 
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
 	for _, scenario := range *scenarios {
+		signatureStatus := scenario.SignatureStatus
+		if signatureStatus == "" {
+			signatureStatus = string(verify.SignatureUnknown)
+		}
 		if private {
-			tbl.AddRow(scenario.Name)
+			tbl.AddRow(scenario.Name, signatureStatus)
 		} else {
-			tbl.AddRow(scenario.Name, *scenario.Size, *scenario.Digest, *scenario.LastModified)
+			tbl.AddRow(scenario.Name, *scenario.Size, *scenario.Digest, *scenario.LastModified, signatureStatus)
 		}
 
 	}
