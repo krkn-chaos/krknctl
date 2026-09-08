@@ -261,6 +261,13 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 		if err != nil {
 			return nil, err
 		}
+		req.Header.Set("Accept", strings.Join([]string{
+			"application/vnd.docker.distribution.manifest.v2+json",
+			"application/vnd.docker.distribution.manifest.list.v2+json",
+			"application/vnd.oci.image.manifest.v1+json",
+			"application/vnd.oci.image.index.v1+json",
+			"application/vnd.docker.distribution.manifest.v1+json",
+		}, ", "))
 
 		// Set authorization header
 		if currentToken != nil {
@@ -444,6 +451,20 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 			continue
 		}
 		manifestV2.Layers = append(manifestV2.Layers, layer)
+	}
+	if manifestV2.Config.Digest != "" {
+		configURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/blobs/" + manifestV2.Config.Digest
+		configBody, err := s.queryRegistry(configURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve image config %s: %w", manifestV2.Config.Digest, err)
+		}
+		var imageConfig ImageConfig
+		if err := json.Unmarshal(*configBody, &imageConfig); err != nil {
+			return nil, fmt.Errorf("failed to decode image config %s: %w", manifestV2.Config.Digest, err)
+		}
+		manifestV2.Layers = append(manifestV2.Layers, LayerV1Compat{
+			ContainerConfig: containerConfig{Cmd: imageConfigLabelsToCommands(imageConfig.Config.Labels)},
+		})
 	}
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,

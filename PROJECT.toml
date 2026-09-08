@@ -1,0 +1,50 @@
+# Repository-specific context for AGENTS.md.
+# Place this file in krknctl/.
+# All relative paths are resolved from that repository's root.
+
+[project]
+name = "krknctl"
+type = "go-cli"
+description = "Krkn CLI and shared Go library used across the Go ecosystem projects; discovers and orchestrates containerized Krkn chaos scenarios and workflows."
+
+[ecosystem_projects]
+krkn-operator = "../krkn-operator-ecosystem/krkn-operator"
+krkn-operator-console = "../krkn-operator-ecosystem/krkn-operator-console"
+krkn-operator-acm = "../krkn-operator-ecosystem/krkn-operator-acm"
+krknctl = "."
+krkn = "../krkn"
+
+[paths]
+entry_point = "main.go"
+cli = "cmd/"
+pkg_public_api = "pkg/"
+configuration = "pkg/config/"
+providers = "pkg/provider/"
+scenario_orchestrator = "pkg/scenarioorchestrator/"
+dependency_graph = "pkg/dependencygraph/"
+random_graph = "pkg/randomgraph/"
+assist = "pkg/assist/"
+gpu_detection = "pkg/gpudetect/"
+assist_containers = "containers/assist/"
+
+[beads]
+project_label = "project:krknctl"
+# Use the repository's existing .beads symlink to the shared central database.
+# Do not initialize a new database or replace the symlink.
+central_database = ".beads"
+export_path = "beads/"
+# Preserve the shared issue prefix already configured in Beads (tsebastiani).
+# Follow the repository's actual Git policy for exports; do not change it here.
+
+[commands]
+# Intentionally unset for now, not a blocker by itself.
+# These examples reflect the supplied project instructions; verify them against
+# the current checkout before enabling. RTK wrapping is governed by AGENTS.md.
+# build = 'go build -tags containers_image_openpgp -ldflags="-w -s" ./...'
+# test = "CGO_ENABLED=0 go test -tags containers_image_openpgp ./..."
+# lint = "staticcheck -tags containers_image_openpgp -checks all ./..."
+# security = "gosec -tags containers_image_openpgp -exclude G402 ./..."
+# coverage = "CGO_ENABLED=0 go test -tags containers_image_openpgp -coverprofile=coverage.out ./..."
+
+# Coverage requirements come from the existing project/CI policy.
+# No new minimum coverage threshold is imposed by this file.

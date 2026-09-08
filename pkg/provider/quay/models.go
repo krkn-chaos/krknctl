@@ -19,7 +19,7 @@ type Tag struct {
 	StartTimeStamp int64     `json:"start_ts"`
 	ManifestDigest string    `json:"manifest_digest"`
 	IsManifestList bool      `json:"is_manifest_list"`
-	Size           int64     `json:"size"`
+	Size           *int64    `json:"size"`
 	LastModified   time.Time `json:"last_modified"`
 }
 
@@ -64,9 +64,18 @@ type ManifestList struct {
 }
 
 func (q ManifestList) GetFirstAvailableHash() *string {
+	manifest := q.GetFirstAvailableManifest()
+	if manifest == nil {
+		return nil
+	}
+	return &manifest.Digest
+}
+
+func (q ManifestList) GetFirstAvailableManifest() *ManifestEntry {
 	for _, m := range q.Manifests {
 		if m.Digest != "" {
-			return &m.Digest
+			manifest := m
+			return &manifest
 		}
 	}
 	return nil

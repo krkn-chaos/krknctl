@@ -15,6 +15,7 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func getConfig(t *testing.T) krknctlconfig.Config {
@@ -196,6 +197,58 @@ func TestScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.True(t, res.IsAScenario)
 	assert.True(t, res.HasRollback)
 
+}
+
+func TestScenarioProvider_GetScenarioDetail_Schema2ConfigLabels(t *testing.T) {
+	config := getConfig(t)
+	p := ScenarioProvider{
+		provider.BaseScenarioProvider{
+			Config: config,
+			Cache:  cache.NewCache(),
+		},
+	}
+
+	configRequested := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v2/repo/manifests/dummy-scenario":
+			assert.Contains(t, r.Header.Get("Accept"), "application/vnd.oci.image.manifest.v1+json")
+			_, _ = w.Write([]byte(`{
+				"schemaVersion": 2,
+				"mediaType": "application/vnd.oci.image.manifest.v1+json",
+				"config": {"digest": "sha256:config"},
+				"layers": []
+			}`))
+		case "/v2/repo/blobs/sha256:config":
+			configRequested = true
+			_, _ = w.Write([]byte(`{
+				"config": {"Labels": {
+					"krknctl.title": "Modern Scenario",
+					"krknctl.description": "Schema 2 image",
+					"krknctl.input_fields": "[]",
+					"krknctl.is_a_scenario": "true",
+					"krknctl.has_rollback": "true"
+				}}
+			}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo"}
+	foundScenario := &models.ScenarioTag{Name: "dummy-scenario"}
+	result, err := p.getScenarioDetail(server.URL+"/v2/repo/manifests/dummy-scenario", foundScenario, false, &registry)
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, configRequested, "Schema 2 test must retrieve the config blob; legacy history is absent")
+	assert.Equal(t, "Modern Scenario", result.Title)
+	assert.Equal(t, "Schema 2 image", result.Description)
+	assert.Empty(t, result.Fields)
+	assert.True(t, result.IsAScenario)
+	assert.True(t, result.HasRollback)
 }
 
 func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {

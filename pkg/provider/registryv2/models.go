@@ -1,5 +1,10 @@
 package registryv2
 
+import (
+	"fmt"
+	"strings"
+)
+
 type TagsV2 struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
@@ -12,6 +17,34 @@ type ManifestV2 struct {
 	SchemaVersion int                 `json:"schemaVersion"`
 	RawLayers     []map[string]string `json:"history"`
 	Layers        []LayerV1Compat
+	Config        ManifestDescriptor `json:"config"`
+}
+
+// ManifestDescriptor is used by Docker Schema 2 and OCI manifests to point
+// at the image configuration blob.
+type ManifestDescriptor struct {
+	Digest string `json:"digest"`
+}
+
+type ImageConfig struct {
+	Config ImageConfigData `json:"config"`
+}
+
+type ImageConfigData struct {
+	Labels map[string]string `json:"Labels"`
+}
+
+func imageConfigLabelsToCommands(labels map[string]string) []string {
+	commands := make([]string, 0, len(labels))
+	for name, value := range labels {
+		label := strings.TrimSuffix(name, "=")
+		if strings.HasSuffix(name, "input_fields") || strings.HasSuffix(name, "input_fields.global") {
+			commands = append(commands, fmt.Sprintf("LABEL %s='%s'", label, value))
+			continue
+		}
+		commands = append(commands, fmt.Sprintf("LABEL %s=%s", label, value))
+	}
+	return commands
 }
 
 type LayerV1Compat struct {

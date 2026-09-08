@@ -160,7 +160,7 @@ func TestConfigStructFields(t *testing.T) {
 	// Test that other existing fields are still working
 	assert.Equal(t, "quay.io", config.QuayHost)
 	assert.Equal(t, "krkn-chaos", config.QuayOrg)
-	assert.Equal(t, "krkn-hub", config.QuayScenarioRegistry)
+	assert.Equal(t, "krkn-hub-multiarch", config.QuayScenarioRegistry)
 	assert.Equal(t, "krkn", config.QuayBaseImageRegistry)
 	assert.Equal(t, "latest", config.QuayBaseImageTag)
 }

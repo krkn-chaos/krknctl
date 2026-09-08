@@ -37,7 +37,10 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 		params.Add("page", "1")
 		tagBaseURL.RawQuery = params.Encode()
 
-		resp, _ := http.Get(tagBaseURL.String())
+		resp, err := http.Get(tagBaseURL.String())
+		if err != nil {
+			return nil, err
+		}
 
 		defer func() {
 			deferErr = resp.Body.Close()
@@ -65,7 +68,7 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 		scenarioTags = append(scenarioTags, models.ScenarioTag{
 			Name:         tag.Name,
 			LastModified: &tag.LastModified,
-			Size:         &tag.Size,
+			Size:         tag.Size,
 			Digest:       &tag.ManifestDigest,
 		})
 	}
@@ -166,12 +169,19 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		if err != nil {
 			return nil, err
 		}
-		imageHash := ml.GetFirstAvailableHash()
-		if imageHash == nil {
+		imageManifest := ml.GetFirstAvailableManifest()
+		if imageManifest == nil {
 			return nil, errors.New("scenario image not found for target architecture")
 		}
 
-		bodyBytes, err = p.getScenarioBytes(dataSource, *imageHash)
+		// The manifest-list tag has no aggregate size. Use the size associated
+		// with the selected platform-specific manifest descriptor instead.
+		if foundScenario.Size == nil || *foundScenario.Size == 0 {
+			imageSize := int64(imageManifest.Size)
+			foundScenario.Size = &imageSize
+		}
+
+		bodyBytes, err = p.getScenarioBytes(dataSource, imageManifest.Digest)
 		if err != nil {
 			return nil, err
 		}
