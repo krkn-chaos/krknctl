@@ -88,7 +88,7 @@ func (q ManifestList) GetKrknctlManifest() *ManifestEntry {
 	var first *ManifestEntry
 	for i := range q.Manifests {
 		manifest := &q.Manifests[i]
-		if manifest.Digest == "" {
+		if manifest.Digest == "" || (manifest.Platform.OS != "" && !strings.EqualFold(manifest.Platform.OS, "linux")) {
 			continue
 		}
 		if first == nil {

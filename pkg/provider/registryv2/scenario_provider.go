@@ -455,7 +455,7 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 				continue
 			}
 			platform := descriptor.Platform
-			if registry.HasPlatform(platform.OS + "/" + platform.Architecture) {
+			if registry.MatchesPlatform(platform.OS, platform.Architecture, platform.Variant) {
 				selected = descriptor
 				break
 			}

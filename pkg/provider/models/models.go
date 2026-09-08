@@ -33,7 +33,7 @@ type RegistryV2 struct {
 
 // GetPlatform returns the platform used when resolving a multi-platform image.
 func (r *RegistryV2) GetPlatform() string {
-	if r.Platform != "" {
+	if isSupportedLinuxPlatform(r.Platform) {
 		return r.Platform
 	}
 	return "linux/" + runtime.GOARCH
@@ -41,7 +41,42 @@ func (r *RegistryV2) GetPlatform() string {
 
 // HasPlatform reports whether platform is the configured target platform.
 func (r *RegistryV2) HasPlatform(platform string) bool {
-	return strings.EqualFold(r.GetPlatform(), platform)
+	parts := strings.Split(platform, "/")
+	if len(parts) < 2 || len(parts) > 3 {
+		return false
+	}
+	variant := ""
+	if len(parts) == 3 {
+		variant = parts[2]
+	}
+	return r.MatchesPlatform(parts[0], parts[1], variant)
+}
+
+// MatchesPlatform reports whether a manifest platform matches the configured
+// Linux target. An unqualified target architecture accepts any variant of the
+// architecture; a configured variant requires an exact match.
+func (r *RegistryV2) MatchesPlatform(osName, architecture, variant string) bool {
+	if !strings.EqualFold(osName, "linux") {
+		return false
+	}
+	target := strings.Split(r.GetPlatform(), "/")
+	if !strings.EqualFold(target[1], architecture) {
+		return false
+	}
+	return len(target) == 2 || strings.EqualFold(target[2], variant)
+}
+
+func isSupportedLinuxPlatform(platform string) bool {
+	parts := strings.Split(platform, "/")
+	if len(parts) < 2 || len(parts) > 3 || !strings.EqualFold(parts[0], "linux") || parts[1] == "" {
+		return false
+	}
+	switch strings.ToLower(parts[1]) {
+	case "386", "amd64", "arm", "arm64", "ppc64le", "riscv64", "s390x":
+	default:
+		return false
+	}
+	return len(parts) == 2 || parts[2] != ""
 }
 
 func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {

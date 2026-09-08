@@ -79,7 +79,7 @@ func TestScenarioProvider_GetRegistryImages_ResolvesMissingManifestListSize(t *t
 	provider.Cache.Set(manifestURL, []byte(`{"is_manifest_list":true,"manifest_data":"{\"manifests\":[{\"digest\":\"sha256:linux\",\"size\":12345}]}"}`))
 	provider.Cache.Set(selectedManifestURL, []byte(`{"layers":[{"compressed_size":5242880,"created_datetime":"Mon, 02 Jan 2023 12:00:00 +0000"}]}`))
 
-	tags, err := provider.getRegistryImages(dataSource)
+	tags, err := provider.getRegistryImages(dataSource, true)
 	assert.NoError(t, err)
 	if assert.Len(t, *tags, 1) {
 		require.NotNil(t, (*tags)[0].Size)

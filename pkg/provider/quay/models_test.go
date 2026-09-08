@@ -19,6 +19,17 @@ func TestManifestList_GetKrknctlManifest_MatchesArchitecture(t *testing.T) {
 	assert.Equal(t, "sha256:matching", selected.Digest)
 }
 
+func TestManifestList_GetKrknctlManifest_SkipsWindows(t *testing.T) {
+	list := ManifestList{Manifests: []ManifestEntry{
+		{Digest: "sha256:windows", Platform: Platform{OS: "windows", Architecture: runtime.GOARCH}},
+		{Digest: "sha256:linux", Platform: Platform{OS: "linux", Architecture: "other-arch"}},
+	}}
+
+	selected := list.GetKrknctlManifest()
+	require.NotNil(t, selected)
+	assert.Equal(t, "sha256:linux", selected.Digest)
+}
+
 func TestManifestList_GetKrknctlManifest_FallsBackToFirstUsable(t *testing.T) {
 	list := ManifestList{Manifests: []ManifestEntry{
 		{Digest: "", Platform: Platform{Architecture: runtime.GOARCH}},
@@ -57,4 +68,12 @@ func TestManifestImageSize_UnknownForIncompleteLayers(t *testing.T) {
 	}}))
 	assert.Nil(t, manifestImageSize(Manifest{LayerCompressedSize: "not-a-number"}))
 	assert.Nil(t, manifestImageSize(Manifest{}))
+}
+
+func TestPreserveKnownImageSizeWhenManifestMetadataIsIncomplete(t *testing.T) {
+	existing := int64(6179)
+	assert.Equal(t, int64(6179), *preserveKnownImageSize(&existing, Manifest{}))
+
+	replacement := preserveKnownImageSize(&existing, Manifest{LayerCompressedSize: "8192"})
+	assert.Equal(t, int64(8192), *replacement)
 }

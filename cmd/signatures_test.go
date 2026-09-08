@@ -51,3 +51,12 @@ func TestPopulateScenarioSignatureStatuses(t *testing.T) {
 	require.Equal(t, "unsigned", scenarios[1].SignatureStatus)
 	require.Equal(t, "unknown", scenarios[2].SignatureStatus)
 }
+
+func TestPopulateScenarioSignatureStatusesReturnsCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	scenarios := []models.ScenarioTag{{Name: "scenario"}}
+
+	err := PopulateScenarioSignatureStatuses(ctx, signatureStatusProvider{}, nil, &scenarios)
+	require.ErrorIs(t, err, context.Canceled)
+}

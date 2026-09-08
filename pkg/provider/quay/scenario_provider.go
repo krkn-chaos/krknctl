@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -22,7 +24,7 @@ type ScenarioProvider struct {
 	provider.BaseScenarioProvider
 }
 
-func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.ScenarioTag, error) {
+func (p *ScenarioProvider) getRegistryImages(dataSource string, resolveSizes bool) (*[]models.ScenarioTag, error) {
 	tagBaseURL, err := url.Parse(dataSource + "/tag")
 	if err != nil {
 		return nil, err
@@ -72,15 +74,44 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string) (*[]models.Scena
 			Size:         tag.Size,
 			Digest:       &tag.ManifestDigest,
 		}
-		if scenarioTag.Size == nil || *scenarioTag.Size == 0 {
-			if size := p.getTagSize(dataSource, &scenarioTag); size != nil {
-				scenarioTag.Size = size
-			}
-		}
 		scenarioTags = append(scenarioTags, scenarioTag)
+	}
+	if resolveSizes {
+		p.populateMissingTagSizes(dataSource, scenarioTags)
 	}
 
 	return &scenarioTags, deferErr
+}
+
+func (p *ScenarioProvider) populateMissingTagSizes(dataSource string, tags []models.ScenarioTag) {
+	const workerCount = 8
+	jobs := make(chan int)
+	var workers sync.WaitGroup
+	count := workerCount
+	if len(tags) < count {
+		count = len(tags)
+	}
+	for range count {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for index := range jobs {
+				if tags[index].Size != nil && *tags[index].Size > 0 {
+					continue
+				}
+				if size := p.getTagSize(dataSource, &tags[index]); size != nil {
+					tags[index].Size = size
+				}
+			}
+		}()
+	}
+	for index := range tags {
+		if tags[index].Size == nil || *tags[index].Size == 0 {
+			jobs <- index
+		}
+	}
+	close(jobs)
+	workers.Wait()
 }
 
 // getTagSize resolves a missing listing size from the image manifest. Quay's
@@ -152,13 +183,20 @@ func manifestImageSize(manifest Manifest) *int64 {
 	return nil
 }
 
+func preserveKnownImageSize(existing *int64, manifest Manifest) *int64 {
+	if imageSize := manifestImageSize(manifest); imageSize != nil {
+		return imageSize
+	}
+	return existing
+}
+
 func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
 	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
 	if err != nil {
 		return nil, err
 	}
 
-	scenarioTags, err := p.getRegistryImages(dataSource)
+	scenarioTags, err := p.getRegistryImages(dataSource, true)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +230,8 @@ func (p *ScenarioProvider) getScenarioBytes(dataSource string, scenarioDigest st
 	}
 	bodyBytes := p.Cache.Get(baseURL.String())
 	if len(bodyBytes) == 0 {
-		resp, err := http.Get(baseURL.String())
+		client := http.Client{Timeout: 30 * time.Second}
+		resp, err := client.Get(baseURL.String())
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +263,7 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err != nil {
 		return nil, err
 	}
-	foundScenario.Size = manifestImageSize(manifest)
+	foundScenario.Size = preserveKnownImageSize(foundScenario.Size, manifest)
 
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,
@@ -290,7 +329,7 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 	if err != nil {
 		return nil, err
 	}
-	scenarios, err := p.GetRegistryImages(registry)
+	scenarios, err := p.getRegistryImages(dataSource, false)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +356,7 @@ func (p *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, sce
 		return nil, err
 	}
 	var foundScenario *models.ScenarioTag = nil
-	scenarios, err := p.getRegistryImages(dataSource)
+	scenarios, err := p.getRegistryImages(dataSource, false)
 	if err != nil {
 		return nil, err
 	}
