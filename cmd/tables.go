@@ -36,7 +36,19 @@ func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table
 		if private {
 			tbl.AddRow(scenario.Name, signatureStatus)
 		} else {
-			tbl.AddRow(scenario.Name, *scenario.Size, *scenario.Digest, *scenario.LastModified, signatureStatus)
+			size := "unknown"
+			if scenario.Size != nil {
+				size = fmt.Sprintf("%d", *scenario.Size)
+			}
+			digest := "unknown"
+			if scenario.Digest != nil {
+				digest = *scenario.Digest
+			}
+			lastModified := "unknown"
+			if scenario.LastModified != nil {
+				lastModified = scenario.LastModified.Format(time.RFC3339)
+			}
+			tbl.AddRow(scenario.Name, size, digest, lastModified, signatureStatus)
 		}
 
 	}
