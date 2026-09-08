@@ -448,9 +448,20 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	// Resolve an OCI image index or Docker manifest list before extracting
 	// labels and sizes. The selected platform manifest is authoritative.
 	if len(manifestV2.Manifests) > 0 {
-		selected := manifestV2.Manifests[0]
-		if selected.Digest == "" {
-			return nil, fmt.Errorf("image index contains no usable manifest descriptor")
+		var selected *ManifestDescriptor
+		for i := range manifestV2.Manifests {
+			descriptor := &manifestV2.Manifests[i]
+			if descriptor.Digest == "" || descriptor.Platform == nil {
+				continue
+			}
+			platform := descriptor.Platform
+			if registry.HasPlatform(platform.OS + "/" + platform.Architecture) {
+				selected = descriptor
+				break
+			}
+		}
+		if selected == nil {
+			return nil, fmt.Errorf("image index contains no manifest for platform %s", registry.GetPlatform())
 		}
 		manifestURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/manifests/" + selected.Digest
 		body, err = s.queryRegistry(manifestURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
@@ -469,6 +480,7 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		}
 		manifestV2.Layers = append(manifestV2.Layers, layer)
 	}
+	imageSize := manifestV2.imageSize()
 	if manifestV2.Config.Digest != "" {
 		configURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/blobs/" + manifestV2.Config.Digest
 		configBody, err := s.queryRegistry(configURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
@@ -488,7 +500,7 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	}
 	// Generic registry tag listings contain names only; use the resolved
 	// manifest as the authoritative source for image size.
-	scenarioDetail.Size = manifestV2.imageSize()
+	scenarioDetail.Size = imageSize
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""

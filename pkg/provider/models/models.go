@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/registry"
@@ -23,6 +25,23 @@ type RegistryV2 struct {
 	ScenarioRepository string  `form:"scenario_repository"`
 	SkipTLS            bool    `form:"skip_tls"`
 	Insecure           bool    `form:"insecure"`
+	// Platform identifies the Linux container platform to resolve from a
+	// multi-platform image index. When empty, linux/<host architecture> is
+	// used because scenario images run in Linux containers.
+	Platform string `form:"platform" json:"platform,omitempty"`
+}
+
+// GetPlatform returns the platform used when resolving a multi-platform image.
+func (r *RegistryV2) GetPlatform() string {
+	if r.Platform != "" {
+		return r.Platform
+	}
+	return "linux/" + runtime.GOARCH
+}
+
+// HasPlatform reports whether platform is the configured target platform.
+func (r *RegistryV2) HasPlatform(platform string) bool {
+	return strings.EqualFold(r.GetPlatform(), platform)
 }
 
 func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {

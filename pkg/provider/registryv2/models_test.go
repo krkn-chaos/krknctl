@@ -72,8 +72,8 @@ func TestLayerV1Compat_EmptyCmd(t *testing.T) {
 
 func TestManifestV2_ImageSize(t *testing.T) {
 	manifest := ManifestV2{
-		Config:      ManifestDescriptor{Size: 17},
-		Descriptors: []ManifestDescriptor{{Size: 83}},
+		Config:      ManifestDescriptor{Digest: "config", Size: int64Ptr(17)},
+		Descriptors: []ManifestDescriptor{{Digest: "layer", Size: int64Ptr(83)}},
 	}
 
 	size := manifest.imageSize()
@@ -83,5 +83,23 @@ func TestManifestV2_ImageSize(t *testing.T) {
 
 func TestManifestV2_ImageSizeWithoutMetadata(t *testing.T) {
 	assert.Nil(t, (ManifestV2{}).imageSize())
-	assert.Nil(t, (ManifestV2{Config: ManifestDescriptor{Size: 0}}).imageSize())
+	assert.Nil(t, (ManifestV2{Config: ManifestDescriptor{Digest: "config"}}).imageSize())
 }
+
+func TestManifestV2_ImageSizeWithoutLayerMetadata(t *testing.T) {
+	manifest := ManifestV2{
+		Config:      ManifestDescriptor{Digest: "config", Size: int64Ptr(17)},
+		Descriptors: []ManifestDescriptor{{Digest: "layer"}},
+	}
+	assert.Nil(t, manifest.imageSize())
+}
+
+func TestManifestV2_ImageSizeWithoutConfigMetadata(t *testing.T) {
+	manifest := ManifestV2{
+		Config:      ManifestDescriptor{Digest: "config"},
+		Descriptors: []ManifestDescriptor{{Digest: "layer", Size: int64Ptr(83)}},
+	}
+	assert.Nil(t, manifest.imageSize())
+}
+
+func int64Ptr(value int64) *int64 { return &value }

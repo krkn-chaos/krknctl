@@ -23,11 +23,19 @@ type ManifestV2 struct {
 	Manifests   []ManifestDescriptor `json:"manifests"`
 }
 
-// ManifestDescriptor is used by Docker Schema 2 and OCI manifests to point
-// at the image configuration blob.
+// ManifestDescriptor is used by Docker Schema 2 and OCI manifests to point at
+// image config, layer, and platform descriptors.
 type ManifestDescriptor struct {
-	Digest string `json:"digest"`
-	Size   int64  `json:"size"`
+	Digest   string    `json:"digest"`
+	Size     *int64    `json:"size"`
+	Platform *Platform `json:"platform,omitempty"`
+}
+
+// Platform identifies the runnable OS and architecture of an image.
+type Platform struct {
+	OS           string `json:"os"`
+	Architecture string `json:"architecture"`
+	Variant      string `json:"variant,omitempty"`
 }
 
 // imageSize returns the size represented by the manifest descriptors. A nil
@@ -35,21 +43,26 @@ type ManifestDescriptor struct {
 func (m ManifestV2) imageSize() *int64 {
 	var size int64
 	known := false
-	if m.Config.Size > 0 {
-		size += m.Config.Size
+	if m.Config.Digest != "" {
+		if m.Config.Size == nil || *m.Config.Size < 0 {
+			return nil
+		}
+		size += *m.Config.Size
 		known = true
 	}
 	for _, descriptor := range m.Descriptors {
-		if descriptor.Size > 0 {
-			size += descriptor.Size
-			known = true
+		if descriptor.Size == nil || *descriptor.Size < 0 {
+			return nil
 		}
+		size += *descriptor.Size
+		known = true
 	}
 	for _, layer := range m.Layers {
-		if layer.Size > 0 {
-			size += layer.Size
-			known = true
+		if layer.Size <= 0 {
+			return nil
 		}
+		size += layer.Size
+		known = true
 	}
 	if !known {
 		return nil

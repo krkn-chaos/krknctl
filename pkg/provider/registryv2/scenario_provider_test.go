@@ -237,7 +237,7 @@ func TestScenarioProvider_GetScenarioDetail_Schema2ConfigLabels(t *testing.T) {
 	}))
 	defer server.Close()
 
-	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo"}
+	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo", Platform: "linux/amd64"}
 	foundScenario := &models.ScenarioTag{Name: "dummy-scenario"}
 	result, err := p.getScenarioDetail(server.URL+"/v2/repo/manifests/dummy-scenario", foundScenario, false, &registry)
 
@@ -266,7 +266,11 @@ func TestScenarioProvider_GetScenarioDetail_ManifestIndex(t *testing.T) {
 		case "/v2/repo/manifests/dummy-scenario":
 			_, _ = w.Write([]byte(`{
 				"schemaVersion": 2,
-				"manifests": [{"digest": "sha256:selected", "size": 999}]
+				"manifests": [
+					{"digest": "", "platform": {"os": "linux", "architecture": "amd64"}},
+					{"digest": "sha256:wrong", "platform": {"os": "linux", "architecture": "arm64"}},
+					{"digest": "sha256:selected", "platform": {"os": "linux", "architecture": "amd64"}}
+				]
 			}`))
 		case "/v2/repo/manifests/sha256:selected":
 			_, _ = w.Write([]byte(`{
@@ -286,7 +290,7 @@ func TestScenarioProvider_GetScenarioDetail_ManifestIndex(t *testing.T) {
 	}))
 	defer server.Close()
 
-	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo"}
+	registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo", Platform: "linux/amd64"}
 	result, err := p.getScenarioDetail(server.URL+"/v2/repo/manifests/dummy-scenario", &models.ScenarioTag{Name: "dummy-scenario"}, false, &registry)
 
 	require.NoError(t, err)
