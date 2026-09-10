@@ -1,6 +1,9 @@
 name: krknctl test
 on:
   pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     name: krknctl test
@@ -114,4 +117,3 @@ jobs:
           git commit -m "[KRKN] Coverage Badge ${GITHUB_REF##*/}" || echo "no changes to commit"
           git push
           
-
