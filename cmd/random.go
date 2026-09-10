@@ -158,6 +158,17 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			if err != nil {
 				return err
 			}
+
+			// Apply CLI weight overrides
+			weightFlags, err := cmd.Flags().GetStringArray("weight")
+			if err != nil {
+				return fmt.Errorf("failed to parse --weight flags: %w", err)
+			}
+
+			if err := ParseAndApplyWeightOverrides(nodes, weightFlags); err != nil {
+				return err
+			}
+
 			privateRegistry := false
 			if registrySettings != nil {
 				privateRegistry = true
@@ -336,6 +347,26 @@ func NewRandomScaffoldCommand(factory *providerfactory.ProviderFactory, config c
 			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, true, seed)
 			if err != nil {
 				return err
+			}
+
+			weightFlags, err := cmd.Flags().GetStringArray("weight")
+			if err != nil {
+				return fmt.Errorf("failed to parse --weight flags: %w", err)
+			}
+			if len(weightFlags) > 0 {
+				scenarios := make(models.ScenarioSet)
+				if err := json.Unmarshal([]byte(*output), &scenarios); err != nil {
+					return fmt.Errorf("failed to parse scaffolded scenarios: %w", err)
+				}
+				if err := ParseAndApplyWeightOverrides(scenarios, weightFlags); err != nil {
+					return err
+				}
+				updatedOutput, err := json.MarshalIndent(scenarios, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to marshal updated scenarios: %w", err)
+				}
+				updatedScenarioOutput := string(updatedOutput)
+				output = &updatedScenarioOutput
 			}
 			fmt.Println(*output)
 			return nil
