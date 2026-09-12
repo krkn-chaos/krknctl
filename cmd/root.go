@@ -24,6 +24,7 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	rootCmd.PersistentFlags().String("private-registry-token", "", "private registry identity token for token based authentication")
 	rootCmd.PersistentFlags().String("private-registry-scenarios", "", "private registry krkn scenarios image repository")
 	rootCmd.PersistentFlags().String("private-registry-assist", "", "private registry assist image repository")
+	rootCmd.PersistentFlags().Bool("run-unsigned-images", false, "SECURITY: skip cosign image signature verification and run images unverified (no digest pinning). Only use with images you fully trust")
 	var completionCmd = &cobra.Command{
 		Use:       "completion [bash|zsh]",
 		Short:     "Genera script di completamento per bash o zsh",

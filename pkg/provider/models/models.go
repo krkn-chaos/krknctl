@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/registry"
@@ -23,6 +25,58 @@ type RegistryV2 struct {
 	ScenarioRepository string  `form:"scenario_repository"`
 	SkipTLS            bool    `form:"skip_tls"`
 	Insecure           bool    `form:"insecure"`
+	// Platform identifies the Linux container platform to resolve from a
+	// multi-platform image index. When empty, linux/<host architecture> is
+	// used because scenario images run in Linux containers.
+	Platform string `form:"platform" json:"platform,omitempty"`
+}
+
+// GetPlatform returns the platform used when resolving a multi-platform image.
+func (r *RegistryV2) GetPlatform() string {
+	if isSupportedLinuxPlatform(r.Platform) {
+		return r.Platform
+	}
+	return "linux/" + runtime.GOARCH
+}
+
+// HasPlatform reports whether platform is the configured target platform.
+func (r *RegistryV2) HasPlatform(platform string) bool {
+	parts := strings.Split(platform, "/")
+	if len(parts) < 2 || len(parts) > 3 {
+		return false
+	}
+	variant := ""
+	if len(parts) == 3 {
+		variant = parts[2]
+	}
+	return r.MatchesPlatform(parts[0], parts[1], variant)
+}
+
+// MatchesPlatform reports whether a manifest platform matches the configured
+// Linux target. An unqualified target architecture accepts any variant of the
+// architecture; a configured variant requires an exact match.
+func (r *RegistryV2) MatchesPlatform(osName, architecture, variant string) bool {
+	if !strings.EqualFold(osName, "linux") {
+		return false
+	}
+	target := strings.Split(r.GetPlatform(), "/")
+	if !strings.EqualFold(target[1], architecture) {
+		return false
+	}
+	return len(target) == 2 || strings.EqualFold(target[2], variant)
+}
+
+func isSupportedLinuxPlatform(platform string) bool {
+	parts := strings.Split(platform, "/")
+	if len(parts) < 2 || len(parts) > 3 || !strings.EqualFold(parts[0], "linux") || parts[1] == "" {
+		return false
+	}
+	switch strings.ToLower(parts[1]) {
+	case "386", "amd64", "arm", "arm64", "ppc64le", "riscv64", "s390x":
+	default:
+		return false
+	}
+	return len(parts) == 2 || parts[2] != ""
 }
 
 func NewRegistryV2FromEnv(config config.Config) (*RegistryV2, error) {
@@ -130,6 +184,12 @@ type ScenarioTag struct {
 	Digest       *string    `json:"digest"`
 	Size         *int64     `json:"size"`
 	LastModified *time.Time `json:"last_modified"`
+	// SignatureStatus is the cosign signature state of the image
+	// ("signed"|"unsigned"|"untrusted"|"unknown"). It is populated on demand by
+	// ScenarioDataProvider.GetImageSignatureStatus and left empty by the plain
+	// listing calls (GetRegistryImages), which do not verify signatures, so the
+	// extra registry round-trips are only paid when a caller opts in.
+	SignatureStatus string `json:"signature_status,omitempty"`
 }
 
 type ScenarioDetail struct {
@@ -138,6 +198,7 @@ type ScenarioDetail struct {
 	Description string              `json:"description"`
 	IsAScenario bool                `json:"is_a_scenario"`
 	HasRollback bool                `json:"has_rollback"`
+	Privileged  bool                `json:"privileged"`
 	Fields      []typing.InputField `json:"fields"`
 }
 

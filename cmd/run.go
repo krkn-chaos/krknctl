@@ -154,6 +154,21 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			spinner := NewSpinnerWithSuffix("fetching scenario metadata...")
 			spinner.Start()
 
+			// Let the signature-verification step (which runs inside the
+			// orchestrator's Run/RunAttached) pause this spinner so its
+			// verified/rejected message prints on a clean line instead of being
+			// appended to the spinner frame. Only pause when the spinner is
+			// actually running, and resume it afterwards so the pull progress
+			// keeps animating.
+			scenarioorchestrator.ProgressPauser = func() func() {
+				if !spinner.Active() {
+					return func() {}
+				}
+				spinner.Stop()
+				return func() { spinner.Start() }
+			}
+			defer func() { scenarioorchestrator.ProgressPauser = nil }()
+
 			runDetached := false
 
 			provider := GetProvider(registrySettings != nil, factory)
@@ -233,6 +248,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			// Handle boolean flags
+			runUnsigned := false
 			for _, a := range args {
 				if a == "--detached" {
 					runDetached = true
@@ -240,6 +256,10 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 				if a == "--form" {
 					useForm = true
+				}
+
+				if a == "--run-unsigned-images" {
+					runUnsigned = true
 				}
 
 				if a == "--help" {
@@ -415,7 +435,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 					spinner.Stop()
 				}()
 
-				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings, nil, nil)
+				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings, nil, nil, runUnsigned)
 				
 				// Parse resiliency report from captured logs and generate report
 				fmt.Fprintf(os.Stderr, "DEBUG: Attempting to parse resiliency report from %d bytes of logs\n", len(logBuf.Bytes()))
@@ -444,7 +464,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				scenarioDuration := time.Since(startTime)
 				fmt.Printf("%s ran for %s\n", scenarioDetail.Name, scenarioDuration.String())
 			} else {
-				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings, nil, nil)
+				containerID, err := (*scenarioOrchestrator).Run(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, nil, conn, registrySettings, nil, nil, runUnsigned)
 				if err != nil {
 					return err
 				}

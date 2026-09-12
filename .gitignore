@@ -47,3 +47,11 @@ ENV/
 
 .DS_Store
 node_modules/
+
+# The vendor/ directory is committed and MUST be complete for -mod=vendor
+# builds (CI uses `go build -tags containers_image_openpgp`). Re-include every
+# vendored file that the broad patterns above would otherwise drop — notably
+# *.json schemas (go-openapi, rekor, gnostic-models), the cosign `env` package
+# (matched by the Python `env/` rule) and the sigstore-go tuf `repository`
+# fixtures embedded via //go:embed. Missing any of these breaks the build.
+!vendor/**

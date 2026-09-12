@@ -206,3 +206,21 @@ func TestNewRegistryV2FromEnv(t *testing.T) {
 	assert.Nil(t, registryv2)
 
 }
+
+func TestRegistryV2PlatformValidation(t *testing.T) {
+	registry := RegistryV2{Platform: "linux/arm64/v8"}
+	assert.Equal(t, "linux/arm64/v8", registry.GetPlatform())
+	assert.True(t, registry.MatchesPlatform("linux", "arm64", "v8"))
+	assert.False(t, registry.MatchesPlatform("windows", "arm64", "v8"))
+	assert.False(t, registry.MatchesPlatform("linux", "amd64", ""))
+
+	registry.Platform = "windows/amd64"
+	assert.NotEqual(t, "windows/amd64", registry.GetPlatform())
+	assert.True(t, registry.HasPlatform(registry.GetPlatform()))
+}
+
+func TestRegistryV2UnqualifiedPlatformAcceptsVariant(t *testing.T) {
+	registry := RegistryV2{Platform: "linux/arm64"}
+	assert.True(t, registry.MatchesPlatform("linux", "arm64", "v8"))
+	assert.True(t, registry.MatchesPlatform("linux", "arm64", ""))
+}

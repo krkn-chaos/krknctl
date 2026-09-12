@@ -39,12 +39,12 @@ func (m *MockScenarioOrchestrator) Connect(containerRuntimeURI string) (context.
 	return context.Background(), nil
 }
 
-func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
+func (m *MockScenarioOrchestrator) Run(image, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions, allowUnsigned bool) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
 
-func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions) (*string, error) {
+func (m *MockScenarioOrchestrator) RunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, commChan *chan *string, ctx context.Context, registry *models.RegistryV2, publishPorts []string, podmanCreate *scenarioorchestrator.PodmanCreateOptions, allowUnsigned bool) (*string, error) {
 	id := "mock-container-id"
 	return &id, nil
 }
@@ -75,7 +75,7 @@ func (m *MockScenarioOrchestrator) CleanContainers(ctx context.Context) (*int, e
 }
 
 // Implement other required interface methods as no-ops
-func (m *MockScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int) {
+func (m *MockScenarioOrchestrator) RunGraph(scenarios orchestratormodels.ScenarioSet, resolvedGraph orchestratormodels.ResolvedGraph, extraEnv map[string]string, extraVolumeMounts map[string]string, cache bool, commChannel chan *orchestratormodels.GraphCommChannel, registry *models.RegistryV2, userID *int, allowUnsigned bool) {
 }
 func (m *MockScenarioOrchestrator) AttachWait(containerID *string, stdout io.Writer, stderr io.Writer, ctx context.Context) (*bool, error) {
 	return nil, nil

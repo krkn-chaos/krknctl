@@ -9,6 +9,7 @@ import (
 	providerinterface "github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
 	"testing"
@@ -64,6 +65,28 @@ func TestScenarioProvider_GetRegistryImages(t *testing.T) {
 
 }
 
+func TestScenarioProvider_GetRegistryImages_ResolvesMissingManifestListSize(t *testing.T) {
+	config := getConfig(t)
+	provider := ScenarioProvider{providerinterface.BaseScenarioProvider{
+		Config: config,
+		Cache:  cache.NewCache(),
+	}}
+	dataSource := "https://quay.example/api/v1/repository/krkn-hub-multiarch"
+	tagURL := dataSource + "/tag"
+	manifestURL := dataSource + "/manifest/sha256:index"
+	selectedManifestURL := dataSource + "/manifest/sha256:linux"
+	provider.Cache.Set(tagURL, []byte(`{"tags":[{"name":"multiarch","manifest_digest":"sha256:index","last_modified":"Mon, 02 Jan 2023 12:00:00 +0000"}]}`))
+	provider.Cache.Set(manifestURL, []byte(`{"is_manifest_list":true,"manifest_data":"{\"manifests\":[{\"digest\":\"sha256:linux\",\"size\":12345}]}"}`))
+	provider.Cache.Set(selectedManifestURL, []byte(`{"layers":[{"compressed_size":5242880,"created_datetime":"Mon, 02 Jan 2023 12:00:00 +0000"}]}`))
+
+	tags, err := provider.getRegistryImages(dataSource, true)
+	assert.NoError(t, err)
+	if assert.Len(t, *tags, 1) {
+		require.NotNil(t, (*tags)[0].Size)
+		assert.Equal(t, int64(5242880), *(*tags)[0].Size)
+	}
+}
+
 func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	config := getTestConfig(t)
 	provider := ScenarioProvider{
@@ -77,6 +100,7 @@ func TestQuayScenarioProvider_GetScenarioDetail(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, scenario)
 	assert.Equal(t, len(scenario.Fields), 5)
+	assert.NotNil(t, scenario.Size, "scenario detail must preserve the authoritative Quay image size")
 
 	scenario, err = provider.GetScenarioDetail("cpu-memory-notitle", nil)
 	assert.NotNil(t, err)

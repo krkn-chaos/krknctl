@@ -103,6 +103,11 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				return err
 			}
 
+			runUnsigned, err := cmd.Flags().GetBool("run-unsigned-images")
+			if err != nil {
+				return err
+			}
+
 			kubeconfigPath, err := utils.PrepareKubeconfig(&kubeconfig, config)
 			if err != nil {
 				return err
@@ -195,7 +200,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			commChannel := make(chan *models.GraphCommChannel)
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil, runUnsigned)
 			}()
 
 			for {

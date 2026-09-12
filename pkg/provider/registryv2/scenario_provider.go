@@ -2,6 +2,7 @@
 package registryv2
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
+	"github.com/krkn-chaos/krknctl/pkg/verify"
 )
 
 // authChallenge represents a parsed WWW-Authenticate Bearer challenge from a Docker registry
@@ -259,6 +261,13 @@ func (s *ScenarioProvider) queryRegistry(uri string, username *string, password 
 		if err != nil {
 			return nil, err
 		}
+		req.Header.Set("Accept", strings.Join([]string{
+			"application/vnd.docker.distribution.manifest.v2+json",
+			"application/vnd.docker.distribution.manifest.list.v2+json",
+			"application/vnd.oci.image.manifest.v1+json",
+			"application/vnd.oci.image.index.v1+json",
+			"application/vnd.docker.distribution.manifest.v1+json",
+		}, ", "))
 
 		// Set authorization header
 		if currentToken != nil {
@@ -413,6 +422,20 @@ func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEn
 	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s, random, seed)
 }
 
+// GetImageSignatureStatus reports the cosign signature state of an image hosted
+// in a generic Docker Registry v2. Credentials and TLS behaviour are mirrored
+// from the registry configuration (via verify.OptionsForRegistry) so a signed
+// image in a private/insecure registry is verified with the same access the
+// pull path uses. It returns the unknown status with an error only when the
+// registry is nil (this provider always requires one).
+func (s *ScenarioProvider) GetImageSignatureStatus(ctx context.Context, registry *models.RegistryV2, tag models.ScenarioTag) (verify.SignatureStatus, error) {
+	if registry == nil {
+		return verify.SignatureUnknown, errors.New("registry cannot be nil in V2 scenario provider")
+	}
+	ref := provider.ImageReference(registry.GetPrivateRegistryURI(), tag)
+	return s.BaseScenarioProvider.ImageSignatureStatus(ctx, ref, verify.OptionsForRegistry(registry)), nil
+}
+
 func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *models.ScenarioTag, isGlobalEnvironment bool, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
 	body, err := s.queryRegistry(dataSource, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
 	if err != nil {
@@ -422,6 +445,34 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err = json.Unmarshal(*body, &manifestV2); err != nil {
 		return nil, err
 	}
+	// Resolve an OCI image index or Docker manifest list before extracting
+	// labels and sizes. The selected platform manifest is authoritative.
+	if len(manifestV2.Manifests) > 0 {
+		var selected *ManifestDescriptor
+		for i := range manifestV2.Manifests {
+			descriptor := &manifestV2.Manifests[i]
+			if descriptor.Digest == "" || descriptor.Platform == nil {
+				continue
+			}
+			platform := descriptor.Platform
+			if registry.MatchesPlatform(platform.OS, platform.Architecture, platform.Variant) {
+				selected = descriptor
+				break
+			}
+		}
+		if selected == nil {
+			return nil, fmt.Errorf("image index contains no manifest for platform %s", registry.GetPlatform())
+		}
+		manifestURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/manifests/" + selected.Digest
+		body, err = s.queryRegistry(manifestURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve selected image manifest %s: %w", selected.Digest, err)
+		}
+		manifestV2 = ManifestV2{}
+		if err = json.Unmarshal(*body, &manifestV2); err != nil {
+			return nil, err
+		}
+	}
 	for _, l := range manifestV2.RawLayers {
 		layer := LayerV1Compat{}
 		if err = json.Unmarshal([]byte(l["v1Compatibility"]), &layer); err != nil {
@@ -429,9 +480,27 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 		}
 		manifestV2.Layers = append(manifestV2.Layers, layer)
 	}
+	imageSize := manifestV2.imageSize()
+	if manifestV2.Config.Digest != "" {
+		configURI := strings.TrimSuffix(dataSource, "/manifests/"+foundScenario.Name) + "/blobs/" + manifestV2.Config.Digest
+		configBody, err := s.queryRegistry(configURI, registry.Username, registry.Password, registry.Token, "GET", registry.SkipTLS)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve image config %s: %w", manifestV2.Config.Digest, err)
+		}
+		var imageConfig ImageConfig
+		if err := json.Unmarshal(*configBody, &imageConfig); err != nil {
+			return nil, fmt.Errorf("failed to decode image config %s: %w", manifestV2.Config.Digest, err)
+		}
+		manifestV2.Layers = append(manifestV2.Layers, LayerV1Compat{
+			ContainerConfig: containerConfig{Cmd: imageConfigLabelsToCommands(imageConfig.Config.Labels)},
+		})
+	}
 	scenarioDetail := models.ScenarioDetail{
 		ScenarioTag: *foundScenario,
 	}
+	// Generic registry tag listings contain names only; use the resolved
+	// manifest as the authoritative source for image size.
+	scenarioDetail.Size = imageSize
 	var titleLabel = ""
 	var descriptionLabel = ""
 	var inputFieldsLabel = ""

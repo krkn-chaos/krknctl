@@ -40,6 +40,10 @@ type ScenarioOrchestrator interface {
 		registry *models.RegistryV2,
 		publishPorts []string,
 		podmanCreate *PodmanCreateOptions,
+		// allowUnsigned bypasses cosign signature verification (the
+		// --run-unsigned-images escape hatch). When true the image tag runs
+		// unverified with no digest pinning; the default false is fail-closed.
+		allowUnsigned bool,
 	) (*string, error)
 
 	RunAttached(
@@ -55,6 +59,7 @@ type ScenarioOrchestrator interface {
 		registry *models.RegistryV2,
 		publishPorts []string,
 		podmanCreate *PodmanCreateOptions,
+		allowUnsigned bool,
 	) (*string, error)
 
 	RunGraph(
@@ -66,6 +71,7 @@ type ScenarioOrchestrator interface {
 		commChannel chan *orchestrator_models.GraphCommChannel,
 		registry *models.RegistryV2,
 		userID *int,
+		allowUnsigned bool,
 	)
 
 	CleanContainers(ctx context.Context) (*int, error)

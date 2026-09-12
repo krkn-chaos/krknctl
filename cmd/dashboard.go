@@ -198,7 +198,7 @@ Optional --chaos-assets-dir and --database-dir default to the stock image paths.
 				return err
 			}
 			_, _ = color.New(color.FgYellow).Println("Starting krkn-dashboard - open http://localhost:3000 when the app is ready (Ctrl+C to stop).")
-			_, err = (*scenarioOrchestrator).RunAttached(dashboardImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, dashboardPublishPorts(), podmanCreate)
+			_, err = (*scenarioOrchestrator).RunAttached(dashboardImage, containerName, environment, false, volumes, os.Stdout, os.Stderr, &commChan, conn, nil, dashboardPublishPorts(), podmanCreate, false)
 			if err != nil {
 				return err
 			}

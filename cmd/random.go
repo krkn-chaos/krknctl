@@ -116,6 +116,11 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 				return err
 			}
 
+			runUnsigned, err := cmd.Flags().GetBool("run-unsigned-images")
+			if err != nil {
+				return err
+			}
+
 			randomGraphFile, err := cmd.Flags().GetString("graph-dump")
 			if err != nil {
 				return err
@@ -208,7 +213,7 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 			commChannel := make(chan *models.GraphCommChannel)
 
 			go func() {
-				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil)
+				(*scenarioOrchestrator).RunGraph(nodes, executionPlan, environment, volumes, false, commChannel, registrySettings, nil, runUnsigned)
 			}()
 
 			for {
