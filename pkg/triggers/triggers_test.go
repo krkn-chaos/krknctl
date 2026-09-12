@@ -12,39 +12,40 @@ func strPtr(s string) *string { return &s }
 func TestSupportsTriggers(t *testing.T) {
 	noTriggers := []typing.InputField{
 		{Name: strPtr("duration"), Variable: strPtr("END"), Type: typing.Number},
-		// prometheus-url alone is performance monitoring, not trigger support
-		{Name: strPtr(FlagPrometheusURL), Variable: strPtr(EnvPrometheusURL), Type: typing.String},
+		// prometheus-url alone in the prometheus group is performance monitoring, not trigger support
+		{Name: strPtr("prometheus-url"), Variable: strPtr("PROMETHEUS_URL"), Type: typing.String, Group: strPtr("prometheus")},
 	}
 	assert.False(t, SupportsTriggers(noTriggers))
 	assert.False(t, SupportsTriggers(nil))
 
+	// Prometheus trigger query
 	withProm := []typing.InputField{
 		{Name: strPtr("duration"), Variable: strPtr("END"), Type: typing.Number},
-		{Name: strPtr(FlagTriggerPromQuery), Variable: strPtr(EnvTriggerPromQuery), Type: typing.String},
+		{Name: strPtr("trigger-prom-query"), Variable: strPtr("TRIGGER_PROM_QUERY"), Type: typing.String, Group: strPtr(GroupTriggers)},
 	}
 	assert.True(t, SupportsTriggers(withProm))
 
+	// Command trigger
+	withCommand := []typing.InputField{
+		{
+			Name:        strPtr("trigger-command"),
+			Description: strPtr("Shell command to evaluate before chaos starts"),
+			Variable:    strPtr("TRIGGER_COMMAND"),
+			Type:        typing.String,
+			Group:       strPtr(GroupTriggers),
+		},
+	}
+	assert.True(t, SupportsTriggers(withCommand))
+
+	// Shared trigger timing field
 	withTimeoutOnly := []typing.InputField{
-		{Name: strPtr(FlagTriggersTimeout), Variable: strPtr(EnvTriggersTimeout), Type: typing.Number},
+		{Name: strPtr("triggers-timeout"), Variable: strPtr("TRIGGERS_TIMEOUT"), Type: typing.Number, Group: strPtr(GroupTriggers)},
 	}
 	assert.True(t, SupportsTriggers(withTimeoutOnly))
-}
 
-func TestFlagToEnvContract(t *testing.T) {
-	assert.Equal(t, EnvTriggerPromQuery, FlagToEnv[FlagTriggerPromQuery])
-	assert.Equal(t, EnvTriggersTimeout, FlagToEnv[FlagTriggersTimeout])
-	assert.Equal(t, EnvTriggersInterval, FlagToEnv[FlagTriggersInterval])
-	assert.Equal(t, EnvTriggersMode, FlagToEnv[FlagTriggersMode])
-	assert.Equal(t, EnvTriggersOnTimeout, FlagToEnv[FlagTriggersOnTimeout])
-	assert.Equal(t, EnvPrometheusURL, FlagToEnv[FlagPrometheusURL])
-	assert.Equal(t, EnvPrometheusBearerToken, FlagToEnv[FlagPrometheusBearerToken])
-}
-
-func TestKnownTriggerFlagNames(t *testing.T) {
-	names := KnownTriggerFlagNames()
-	assert.Contains(t, names, FlagTriggerPromQuery)
-	assert.Contains(t, names, FlagTriggersTimeout)
-	assert.Contains(t, names, FlagTriggersInterval)
-	assert.NotContains(t, names, FlagPrometheusURL,
-		"prometheus-url must not alone imply trigger support")
+	// Triggers group metadata field
+	withGroupField := []typing.InputField{
+		{Name: strPtr(GroupTriggers), Type: typing.Group},
+	}
+	assert.True(t, SupportsTriggers(withGroupField))
 }

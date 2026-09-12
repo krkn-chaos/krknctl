@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -15,9 +16,8 @@ import (
 
 func strPtr(s string) *string { return &s }
 
-// TestDummyScenarioHasNoTriggerFlags verifies Phase 3 backward compatibility:
-// fixture metadata does not declare trigger support, so trigger flags must
-// not be considered discoverable for it.
+// TestDummyScenarioHasNoTriggerFlags verifies that scenarios without trigger
+// metadata do not declare trigger support or expose trigger flags.
 func TestDummyScenarioHasNoTriggerFlags(t *testing.T) {
 	loadFields := func(t *testing.T, name string) []typing.InputField {
 		t.Helper()
@@ -36,71 +36,87 @@ func TestDummyScenarioHasNoTriggerFlags(t *testing.T) {
 	assert.False(t, triggers.SupportsTriggers(globalFields))
 
 	for _, field := range append(scenarioFields, globalFields...) {
-		if field.Name == nil {
-			continue
+		if field.Group != nil {
+			assert.NotEqual(t, triggers.GroupTriggers, *field.Group)
 		}
-		for _, triggerFlag := range triggers.KnownTriggerFlagNames() {
-			assert.NotEqual(t, triggerFlag, *field.Name)
+		if field.Name != nil {
+			assert.False(t, strings.HasPrefix(*field.Name, "trigger-"), "dummy scenario should not have trigger flag: %s", *field.Name)
+			assert.False(t, strings.HasPrefix(*field.Name, "triggers-"), "dummy scenario should not have trigger flag: %s", *field.Name)
 		}
 	}
 }
 
-// TestParseFlagsMapsTriggerEnvVars verifies Phase 3 mapping: when trigger
-// fields exist in scenario metadata, ParseFlags sets the matching env vars.
+// TestParseFlagsMapsTriggerEnvVars verifies that when trigger fields exist
+// in scenario metadata, ParseFlags sets the matching environment variables.
 func TestParseFlagsMapsTriggerEnvVars(t *testing.T) {
 	fields := []typing.InputField{
 		{
-			Name:             strPtr(triggers.FlagTriggerPromQuery),
-			ShortDescription: strPtr("Prometheus Trigger Query"),
-			Description:      strPtr("PromQL expression"),
-			Variable:         strPtr(triggers.EnvTriggerPromQuery),
+			Name:             strPtr("trigger-command"),
+			ShortDescription: strPtr("Trigger command"),
+			Description:      strPtr("Shell command to evaluate before chaos starts"),
+			Variable:         strPtr("TRIGGER_COMMAND"),
 			Type:             typing.String,
 			Default:          strPtr(""),
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 		{
-			Name:             strPtr(triggers.FlagTriggersTimeout),
+			Name:             strPtr("trigger-prom-query"),
+			ShortDescription: strPtr("Prometheus Trigger Query"),
+			Description:      strPtr("PromQL expression"),
+			Variable:         strPtr("TRIGGER_PROM_QUERY"),
+			Type:             typing.String,
+			Default:          strPtr(""),
+			Group:            strPtr(triggers.GroupTriggers),
+		},
+		{
+			Name:             strPtr("triggers-timeout"),
 			ShortDescription: strPtr("Trigger Timeout"),
 			Description:      strPtr("Max seconds to wait"),
-			Variable:         strPtr(triggers.EnvTriggersTimeout),
+			Variable:         strPtr("TRIGGERS_TIMEOUT"),
 			Type:             typing.Number,
 			Default:          strPtr("0"),
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 		{
-			Name:             strPtr(triggers.FlagTriggersInterval),
+			Name:             strPtr("triggers-interval"),
 			ShortDescription: strPtr("Trigger Poll Interval"),
 			Description:      strPtr("Seconds between checks"),
-			Variable:         strPtr(triggers.EnvTriggersInterval),
+			Variable:         strPtr("TRIGGERS_INTERVAL"),
 			Type:             typing.Number,
 			Default:          strPtr("5"),
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 		{
-			Name:             strPtr(triggers.FlagTriggersMode),
+			Name:             strPtr("triggers-mode"),
 			ShortDescription: strPtr("Trigger Mode"),
 			Description:      strPtr("all_of or any_of"),
-			Variable:         strPtr(triggers.EnvTriggersMode),
+			Variable:         strPtr("TRIGGERS_MODE"),
 			Type:             typing.Enum,
 			AllowedValues:    strPtr("all_of,any_of"),
 			Separator:        strPtr(","),
 			Default:          strPtr("all_of"),
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 		{
-			Name:             strPtr(triggers.FlagTriggersOnTimeout),
+			Name:             strPtr("triggers-on-timeout"),
 			ShortDescription: strPtr("Timeout Behavior"),
 			Description:      strPtr("skip, fail, or run_anyway"),
-			Variable:         strPtr(triggers.EnvTriggersOnTimeout),
+			Variable:         strPtr("TRIGGERS_ON_TIMEOUT"),
 			Type:             typing.Enum,
 			AllowedValues:    strPtr("skip,fail,run_anyway"),
 			Separator:        strPtr(","),
 			Default:          strPtr("skip"),
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 		{
-			Name:             strPtr(triggers.FlagPrometheusBearerToken),
+			Name:             strPtr("prometheus-bearer-token"),
 			ShortDescription: strPtr("Prometheus Bearer Token"),
 			Description:      strPtr("Bearer token"),
-			Variable:         strPtr(triggers.EnvPrometheusBearerToken),
+			Variable:         strPtr("PROMETHEUS_BEARER_TOKEN"),
 			Type:             typing.String,
 			Default:          strPtr(""),
 			Secret:           true,
+			Group:            strPtr(triggers.GroupTriggers),
 		},
 	}
 
@@ -118,14 +134,16 @@ func TestParseFlagsMapsTriggerEnvVars(t *testing.T) {
 	}
 
 	query := `avg(rate(container_cpu_usage_seconds_total[5m])) > 0.8`
+	command := `curl -s http://app:8080/health | grep UP`
 	args := []string{
 		"node-cpu-hog",
-		"--" + triggers.FlagTriggerPromQuery, query,
-		"--" + triggers.FlagTriggersTimeout, "600",
-		"--" + triggers.FlagTriggersInterval, "10",
-		"--" + triggers.FlagTriggersMode, "all_of",
-		"--" + triggers.FlagTriggersOnTimeout, "run_anyway",
-		"--" + triggers.FlagPrometheusBearerToken, "tok",
+		"--trigger-command", command,
+		"--trigger-prom-query", query,
+		"--triggers-timeout", "600",
+		"--triggers-interval", "10",
+		"--triggers-mode", "all_of",
+		"--triggers-on-timeout", "run_anyway",
+		"--prometheus-bearer-token", "tok",
 	}
 
 	environment, _, err := ParseFlags(scenario, args, collected, true)
@@ -133,17 +151,20 @@ func TestParseFlagsMapsTriggerEnvVars(t *testing.T) {
 	assert.NotNil(t, environment)
 
 	env := *environment
-	assert.Equal(t, query, env[triggers.EnvTriggerPromQuery].value)
-	assert.Equal(t, "600", env[triggers.EnvTriggersTimeout].value)
-	assert.Equal(t, "10", env[triggers.EnvTriggersInterval].value)
-	assert.Equal(t, "all_of", env[triggers.EnvTriggersMode].value)
-	assert.Equal(t, "run_anyway", env[triggers.EnvTriggersOnTimeout].value)
-	assert.Equal(t, "tok", env[triggers.EnvPrometheusBearerToken].value)
-	assert.True(t, env[triggers.EnvPrometheusBearerToken].secret)
+	assert.Equal(t, command, env["TRIGGER_COMMAND"].value)
+	assert.Equal(t, query, env["TRIGGER_PROM_QUERY"].value)
+	assert.Equal(t, "600", env["TRIGGERS_TIMEOUT"].value)
+	assert.Equal(t, "10", env["TRIGGERS_INTERVAL"].value)
+	assert.Equal(t, "all_of", env["TRIGGERS_MODE"].value)
+	assert.Equal(t, "run_anyway", env["TRIGGERS_ON_TIMEOUT"].value)
+	assert.Equal(t, "tok", env["PROMETHEUS_BEARER_TOKEN"].value)
+	assert.True(t, env["PROMETHEUS_BEARER_TOKEN"].secret)
 
 	// Without trigger args and skipDefault=true, no trigger env vars are set.
 	environment, _, err = ParseFlags(scenario, []string{"node-cpu-hog"}, collected, true)
 	assert.Nil(t, err)
-	_, hasQuery := (*environment)[triggers.EnvTriggerPromQuery]
+	_, hasQuery := (*environment)["TRIGGER_PROM_QUERY"]
 	assert.False(t, hasQuery)
+	_, hasCommand := (*environment)["TRIGGER_COMMAND"]
+	assert.False(t, hasCommand)
 }
