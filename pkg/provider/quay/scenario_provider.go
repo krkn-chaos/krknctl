@@ -29,17 +29,22 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string, resolveSizes boo
 	if err != nil {
 		return nil, err
 	}
+	legacyCacheKey := tagBaseURL.String()
+	params := url.Values{}
+	params.Add("onlyActiveTags", "true")
+	params.Add("limit", "100")
+	// currently paging support is not needed
+	params.Add("page", "1")
+	tagBaseURL.RawQuery = params.Encode()
+
 	var deferErr error = nil
 	cacheKey := tagBaseURL.String()
 	bodyBytes := p.Cache.Get(cacheKey)
 	if len(bodyBytes) == 0 {
-		params := url.Values{}
-		params.Add("onlyActiveTags", "true")
-		params.Add("limit", "100")
-		// currently paging support is not needed
-		params.Add("page", "1")
-		tagBaseURL.RawQuery = params.Encode()
-
+		// Keep reading entries written by older versions, which omitted the query.
+		bodyBytes = p.Cache.Get(legacyCacheKey)
+	}
+	if len(bodyBytes) == 0 {
 		resp, err := http.Get(tagBaseURL.String())
 		if err != nil {
 			return nil, err
@@ -66,7 +71,6 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string, resolveSizes boo
 		return nil, err
 	}
 
-	cacheKey = tagBaseURL.String()
 	var scenarioTags []models.ScenarioTag
 	for _, tag := range quayPage.Tags {
 		scenarioTag := models.ScenarioTag{
