@@ -136,6 +136,17 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
+
+			// Apply CLI weight overrides
+			weightFlags, err := cmd.Flags().GetStringArray("weight")
+			if err != nil {
+				return fmt.Errorf("failed to parse --weight flags: %w", err)
+			}
+
+			if err := ParseAndApplyWeightOverrides(nodes, weightFlags); err != nil {
+				return err
+			}
+
 			privateRegistry := false
 			if registrySettings != nil {
 				privateRegistry = true
@@ -295,11 +306,41 @@ func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config co
 				return err
 			}
 
+			weights, err := cmd.Flags().GetStringArray("weight")
+			if err != nil {
+				return err
+			}
+
 			output, err := dataProvider.ScaffoldScenarios(args, includeGlobalEnv, registrySettings, false, nil)
 			if err != nil {
 				return err
 			}
-			fmt.Println(*output)
+
+			// Parse and apply weight overrides to the scaffolded scenarios
+			if len(weights) > 0 {
+				var scaffoldedNodes models.ScenarioSet
+				err = json.Unmarshal([]byte(*output), &scaffoldedNodes)
+				if err != nil {
+					return fmt.Errorf("failed to parse scaffolded scenarios: %w", err)
+				}
+
+				weightsByName, err := ParseWeightOverridesByName(weights)
+				if err != nil {
+					return err
+				}
+
+				ApplyWeightOverridesByName(scaffoldedNodes, weightsByName)
+
+				// Re-marshal the updated scenarios to JSON
+				updatedOutput, err := json.MarshalIndent(scaffoldedNodes, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to marshal updated scenarios: %w", err)
+				}
+				fmt.Println(string(updatedOutput))
+			} else {
+				fmt.Println(*output)
+			}
+
 			return nil
 		},
 	}
