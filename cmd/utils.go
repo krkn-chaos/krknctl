@@ -81,11 +81,46 @@ func FetchScenarios(provider provider.ScenarioDataProvider, registrySettings *mo
 	if err != nil {
 		return nil, err
 	}
+	if scenarios == nil {
+		return nil, errors.New("scenario provider returned a nil scenario list")
+	}
 	var foundScenarios []string
 	for _, scenario := range *scenarios {
 		foundScenarios = append(foundScenarios, scenario.Name)
 	}
 	return &foundScenarios, nil
+}
+
+func FilterScenarioTags(dataProvider provider.ScenarioDataProvider, registrySettings *models.RegistryV2, scenarios *[]models.ScenarioTag) (*[]models.ScenarioTag, error) {
+	if scenarios == nil {
+		return nil, errors.New("scenario provider returned a nil scenario list")
+	}
+
+	filtered := make([]models.ScenarioTag, 0, len(*scenarios))
+	for _, tag := range *scenarios {
+		detail, err := dataProvider.GetScenarioDetail(tag.Name, registrySettings)
+		if err != nil {
+			if errors.Is(err, provider.ErrLabelNotFound) {
+				continue
+			}
+			return nil, fmt.Errorf("failed to inspect scenario %q: %w", tag.Name, err)
+		}
+		if detail != nil && detail.IsAScenario {
+			filtered = append(filtered, tag)
+		}
+	}
+
+	return &filtered, nil
+}
+
+func ValidateScenarioDetail(scenarioName string, scenarioDetail *models.ScenarioDetail) error {
+	if scenarioDetail == nil {
+		return fmt.Errorf("%s scenario not found", scenarioName)
+	}
+	if !scenarioDetail.IsAScenario {
+		return fmt.Errorf("selected scenario %q is not a valid scenario (is_a_scenario=false)", scenarioName)
+	}
+	return nil
 }
 
 func CheckFileExists(filePath string) bool {
@@ -277,10 +312,6 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 		if n.Name == "" {
 			continue
 		}
-		scenarioNameChannel <- &struct {
-			name *string
-			err  error
-		}{name: &n.Name, err: nil}
 		scenarioDetail, err := provider.GetScenarioDetail(n.Name, registrySettings)
 
 		if err != nil {
@@ -291,11 +322,11 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 			return
 		}
 
-		if scenarioDetail == nil {
+		if err := ValidateScenarioDetail(n.Name, scenarioDetail); err != nil {
 			scenarioNameChannel <- &struct {
 				name *string
 				err  error
-			}{name: &n.Name, err: fmt.Errorf("scenario %s not found", n.Name)}
+			}{name: &n.Name, err: err}
 			return
 		}
 
@@ -305,6 +336,13 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 				name *string
 				err  error
 			}{name: &n.Name, err: err}
+			return
+		}
+		if globalDetail == nil {
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &n.Name, err: fmt.Errorf("global environment not found for scenario %s", n.Name)}
 			return
 		}
 
@@ -351,6 +389,10 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 				return
 			}
 		}
+		scenarioNameChannel <- &struct {
+			name *string
+			err  error
+		}{name: &n.Name, err: nil}
 	}
 	scenarioNameChannel <- nil
 }

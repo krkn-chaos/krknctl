@@ -525,6 +525,9 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err := s.BaseScenarioProvider.PopulateBooleanLabels(&scenarioDetail, layers, isGlobalEnvironment); err != nil {
 		return nil, err
 	}
+	if !isGlobalEnvironment && !scenarioDetail.IsAScenario {
+		return &scenarioDetail, nil
+	}
 
 	if foundTitle == nil {
 		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)

@@ -13,6 +13,8 @@ import (
 
 type signatureStatusProvider struct {
 	statuses map[string]verify.SignatureStatus
+	details  map[string]*models.ScenarioDetail
+	errors   map[string]error
 }
 
 func (p signatureStatusProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
@@ -23,8 +25,8 @@ func (p signatureStatusProvider) GetGlobalEnvironment(*models.RegistryV2, string
 	return nil, nil
 }
 
-func (p signatureStatusProvider) GetScenarioDetail(string, *models.RegistryV2) (*models.ScenarioDetail, error) {
-	return nil, nil
+func (p signatureStatusProvider) GetScenarioDetail(name string, _ *models.RegistryV2) (*models.ScenarioDetail, error) {
+	return p.details[name], p.errors[name]
 }
 
 func (p signatureStatusProvider) GetImageSignatureStatus(_ context.Context, _ *models.RegistryV2, tag models.ScenarioTag) (verify.SignatureStatus, error) {
@@ -59,4 +61,27 @@ func TestPopulateScenarioSignatureStatusesReturnsCancellation(t *testing.T) {
 
 	err := PopulateScenarioSignatureStatuses(ctx, signatureStatusProvider{}, nil, &scenarios)
 	require.ErrorIs(t, err, context.Canceled)
+}
+
+func TestFilterScenarioTags(t *testing.T) {
+	dataProvider := signatureStatusProvider{details: map[string]*models.ScenarioDetail{
+		"scenario":     {IsAScenario: true},
+		"not-scenario": {IsAScenario: false},
+	}}
+	scenarios := []models.ScenarioTag{{Name: "scenario"}, {Name: "not-scenario"}, {Name: "missing"}}
+
+	filtered, err := FilterScenarioTags(dataProvider, nil, &scenarios)
+	require.NoError(t, err)
+	require.Equal(t, []models.ScenarioTag{{Name: "scenario"}}, *filtered)
+}
+
+func TestFilterScenarioTagsReturnsInspectionErrors(t *testing.T) {
+	dataProvider := signatureStatusProvider{
+		details: map[string]*models.ScenarioDetail{"scenario": {IsAScenario: true}},
+		errors:  map[string]error{"scenario": errors.New("registry unavailable")},
+	}
+	scenarios := []models.ScenarioTag{{Name: "scenario"}}
+
+	_, err := FilterScenarioTags(dataProvider, nil, &scenarios)
+	require.EqualError(t, err, `failed to inspect scenario "scenario": registry unavailable`)
 }

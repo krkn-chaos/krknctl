@@ -94,6 +94,23 @@ func TestFetchScenarios(t *testing.T) {
 
 }
 
+func TestValidateScenarioDetail(t *testing.T) {
+	t.Run("accepts a scenario", func(t *testing.T) {
+		err := ValidateScenarioDetail("valid", &providerModels.ScenarioDetail{IsAScenario: true})
+		assert.NoError(t, err)
+	})
+
+	t.Run("rejects a non-scenario", func(t *testing.T) {
+		err := ValidateScenarioDetail("global-env", &providerModels.ScenarioDetail{})
+		assert.EqualError(t, err, `selected scenario "global-env" is not a valid scenario (is_a_scenario=false)`)
+	})
+
+	t.Run("rejects a missing detail", func(t *testing.T) {
+		err := ValidateScenarioDetail("missing", nil)
+		assert.EqualError(t, err, "missing scenario not found")
+	})
+}
+
 func TestCheckFileExists(t *testing.T) {
 	_, err := os.Create("test.txt")
 	assert.Nil(t, err)

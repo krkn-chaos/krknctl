@@ -77,17 +77,19 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			if err != nil {
 				return err
 			}
+			if err := ValidateScenarioDetail(scenarioName, scenarioDetail); err != nil {
+				return err
+			}
 			globalEnvDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
 			if err != nil {
 				return err
 			}
+			if globalEnvDetail == nil {
+				return fmt.Errorf("global environment not found for scenario %s", scenarioName)
+			}
 
 			globalFlags := pflag.NewFlagSet("global", pflag.ExitOnError)
 			scenarioFlags := pflag.NewFlagSet("scenario", pflag.ExitOnError)
-
-			if scenarioDetail == nil {
-				return fmt.Errorf("%s scenario not found", scenarioName)
-			}
 
 			for _, field := range scenarioDetail.Fields {
 				var defaultValue = ""
@@ -177,10 +179,18 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				spinner.Stop()
 				return err
 			}
+			if err := ValidateScenarioDetail(scenarioName, scenarioDetail); err != nil {
+				spinner.Stop()
+				return err
+			}
 			globalDetail, err := provider.GetGlobalEnvironment(registrySettings, scenarioName)
 			if err != nil {
 				spinner.Stop()
 				return err
+			}
+			if globalDetail == nil {
+				spinner.Stop()
+				return fmt.Errorf("global environment not found for scenario %s", scenarioName)
 			}
 			if dryRun {
 				spinner.Stop()
@@ -420,7 +430,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			}
 
 			if !runDetached {
-				
+
 				// Here we are using an io.MultiWriter to multiplex the container's stdout and stderr to both
 				// the terminal stdout and a bytes.Buffer. This allows us to capture the logs for parsing later.
 				// The container stdout and stderr will be written to both the terminal stdout and the bytes.Buffer.
@@ -436,7 +446,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 				}()
 
 				_, err = (*scenarioOrchestrator).RunAttached(quayImageURI+":"+scenarioDetail.Name, containerName, environment, false, volumes, mw, mw, &commChan, conn, registrySettings, nil, nil, runUnsigned)
-				
+
 				// Parse resiliency report from captured logs and generate report
 				fmt.Fprintf(os.Stderr, "DEBUG: Attempting to parse resiliency report from %d bytes of logs\n", len(logBuf.Bytes()))
 				if rep, perr := resiliency.ParseResiliencyReport(logBuf.Bytes()); perr == nil {

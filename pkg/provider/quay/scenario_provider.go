@@ -289,6 +289,9 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err := p.BaseScenarioProvider.PopulateBooleanLabels(&scenarioDetail, layers, isGlobalEnvironment); err != nil {
 		return nil, err
 	}
+	if !isGlobalEnvironment && !scenarioDetail.IsAScenario {
+		return &scenarioDetail, nil
+	}
 
 	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
 	foundDescription := provider.GetKrknctlLabel(descriptionLabel, layers)
