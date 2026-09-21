@@ -64,7 +64,7 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], registrySettings)
 			if err != nil {
 				spinner.Stop()
-				return err
+				return ValidateScenarioError(args[0], err)
 			}
 			spinner.Stop()
 			if scenarioDetail == nil {

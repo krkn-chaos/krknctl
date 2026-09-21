@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/briandowns/spinner"
@@ -91,28 +92,78 @@ func FetchScenarios(provider provider.ScenarioDataProvider, registrySettings *mo
 	return &foundScenarios, nil
 }
 
+type scenarioTagDetailProvider interface {
+	GetScenarioDetailForTag(tag models.ScenarioTag, registry *models.RegistryV2) (*models.ScenarioDetail, error)
+}
+
+// FilterScenarioTags keeps only tags whose metadata explicitly identifies them as scenarios.
 func FilterScenarioTags(dataProvider provider.ScenarioDataProvider, registrySettings *models.RegistryV2, scenarios *[]models.ScenarioTag) (*[]models.ScenarioTag, error) {
 	if scenarios == nil {
 		return nil, errors.New("scenario provider returned a nil scenario list")
 	}
 
+	if len(*scenarios) == 0 {
+		return &[]models.ScenarioTag{}, nil
+	}
+
+	type inspectionResult struct {
+		index  int
+		detail *models.ScenarioDetail
+		err    error
+	}
+	inspect := func(tag models.ScenarioTag) (*models.ScenarioDetail, error) {
+		if tagProvider, ok := dataProvider.(scenarioTagDetailProvider); ok {
+			return tagProvider.GetScenarioDetailForTag(tag, registrySettings)
+		}
+		return dataProvider.GetScenarioDetail(tag.Name, registrySettings)
+	}
+	workerCount := 8
+	if len(*scenarios) < workerCount {
+		workerCount = len(*scenarios)
+	}
+	jobs := make(chan int)
+	results := make(chan inspectionResult, len(*scenarios))
+	var workers sync.WaitGroup
+	for range workerCount {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for index := range jobs {
+				detail, err := inspect((*scenarios)[index])
+				results <- inspectionResult{index: index, detail: detail, err: err}
+			}
+		}()
+	}
+	go func() {
+		for index := range *scenarios {
+			jobs <- index
+		}
+		close(jobs)
+		workers.Wait()
+		close(results)
+	}()
+
+	inspections := make([]inspectionResult, len(*scenarios))
+	for result := range results {
+		inspections[result.index] = result
+	}
 	filtered := make([]models.ScenarioTag, 0, len(*scenarios))
-	for _, tag := range *scenarios {
-		detail, err := dataProvider.GetScenarioDetail(tag.Name, registrySettings)
-		if err != nil {
-			if errors.Is(err, provider.ErrLabelNotFound) {
+	for index, result := range inspections {
+		if result.err != nil {
+			if errors.Is(result.err, provider.ErrNotScenario) || errors.Is(result.err, provider.ErrLabelNotFound) {
 				continue
 			}
-			return nil, fmt.Errorf("failed to inspect scenario %q: %w", tag.Name, err)
+			return nil, fmt.Errorf("failed to inspect scenario %q: %w", (*scenarios)[index].Name, result.err)
 		}
-		if detail != nil && detail.IsAScenario {
-			filtered = append(filtered, tag)
+		if result.detail != nil && result.detail.IsAScenario {
+			filtered = append(filtered, (*scenarios)[index])
 		}
 	}
 
 	return &filtered, nil
 }
 
+// ValidateScenarioDetail verifies that a detail exists and represents an executable scenario.
 func ValidateScenarioDetail(scenarioName string, scenarioDetail *models.ScenarioDetail) error {
 	if scenarioDetail == nil {
 		return fmt.Errorf("%s scenario not found", scenarioName)
@@ -121,6 +172,14 @@ func ValidateScenarioDetail(scenarioName string, scenarioDetail *models.Scenario
 		return fmt.Errorf("selected scenario %q is not a valid scenario (is_a_scenario=false)", scenarioName)
 	}
 	return nil
+}
+
+// ValidateScenarioError converts a provider classification error into the CLI validation error.
+func ValidateScenarioError(scenarioName string, err error) error {
+	if errors.Is(err, provider.ErrNotScenario) {
+		return fmt.Errorf("selected scenario %q is not a valid scenario (is_a_scenario=false)", scenarioName)
+	}
+	return err
 }
 
 func CheckFileExists(filePath string) bool {
@@ -318,7 +377,7 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 			scenarioNameChannel <- &struct {
 				name *string
 				err  error
-			}{name: &n.Name, err: err}
+			}{name: &n.Name, err: ValidateScenarioError(n.Name, err)}
 			return
 		}
 

@@ -109,6 +109,43 @@ func TestValidateScenarioDetail(t *testing.T) {
 		err := ValidateScenarioDetail("missing", nil)
 		assert.EqualError(t, err, "missing scenario not found")
 	})
+
+	t.Run("translates provider classification errors", func(t *testing.T) {
+		err := ValidateScenarioError("helper", fmt.Errorf("metadata rejected: %w", provider.ErrNotScenario))
+		assert.EqualError(t, err, `selected scenario "helper" is not a valid scenario (is_a_scenario=false)`)
+	})
+}
+
+type graphValidationProvider struct {
+	signatureStatusProvider
+	details map[string]*providerModels.ScenarioDetail
+	globals map[string]*providerModels.ScenarioDetail
+}
+
+func (p graphValidationProvider) GetScenarioDetail(name string, _ *providerModels.RegistryV2) (*providerModels.ScenarioDetail, error) {
+	return p.details[name], nil
+}
+
+func (p graphValidationProvider) GetGlobalEnvironment(_ *providerModels.RegistryV2, name string) (*providerModels.ScenarioDetail, error) {
+	return p.globals[name], nil
+}
+
+func TestValidateGraphScenarioInputRejectsNonScenario(t *testing.T) {
+	provider := graphValidationProvider{
+		details: map[string]*providerModels.ScenarioDetail{
+			"helper": {IsAScenario: false},
+		},
+		globals: map[string]*providerModels.ScenarioDetail{},
+	}
+	nodes := map[string]models.ScenarioNode{"helper": {Scenario: models.Scenario{Name: "helper"}}}
+	results := make(chan *struct {
+		name *string
+		err  error
+	}, 2)
+
+	go validateGraphScenarioInput(provider, nodes, results, nil)
+	result := <-results
+	assert.EqualError(t, result.err, `selected scenario "helper" is not a valid scenario (is_a_scenario=false)`)
 }
 
 func TestCheckFileExists(t *testing.T) {

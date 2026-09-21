@@ -66,6 +66,7 @@ func (p *ScenarioProvider) getRegistryImages(dataSource string, resolveSizes boo
 		return nil, err
 	}
 
+	cacheKey = tagBaseURL.String()
 	var scenarioTags []models.ScenarioTag
 	for _, tag := range quayPage.Tags {
 		scenarioTag := models.ScenarioTag{
@@ -190,6 +191,13 @@ func preserveKnownImageSize(existing *int64, manifest Manifest) *int64 {
 	return existing
 }
 
+func scenarioDigestValue(tag *models.ScenarioTag) string {
+	if tag != nil && tag.Digest != nil && *tag.Digest != "" {
+		return *tag.Digest
+	}
+	return "unknown"
+}
+
 func (p *ScenarioProvider) GetRegistryImages(*models.RegistryV2) (*[]models.ScenarioTag, error) {
 	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
 	if err != nil {
@@ -285,12 +293,13 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	for _, l := range manifest.Layers {
 		layers = append(layers, l)
 	}
+	foundIsAScenario := provider.GetKrknctlLabel(p.Config.LabelIsAScenario, layers)
 
 	if err := p.BaseScenarioProvider.PopulateBooleanLabels(&scenarioDetail, layers, isGlobalEnvironment); err != nil {
 		return nil, err
 	}
-	if !isGlobalEnvironment && !scenarioDetail.IsAScenario {
-		return &scenarioDetail, nil
+	if !isGlobalEnvironment && foundIsAScenario != nil && !scenarioDetail.IsAScenario {
+		return nil, fmt.Errorf("image %q is not a scenario: %w", foundScenario.Name, provider.ErrNotScenario)
 	}
 
 	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
@@ -298,13 +307,13 @@ func (p *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	foundInputFields := provider.GetKrknctlLabel(inputFieldsLabel, layers)
 
 	if foundTitle == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 	if foundDescription == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 	if foundInputFields == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 
 	parsedTitle, err := p.BaseScenarioProvider.ParseTitle(*foundTitle, isGlobalEnvironment)
@@ -351,6 +360,15 @@ func (p *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 		return nil, err
 	}
 	return scenarioDetail, nil
+}
+
+// GetScenarioDetailForTag returns scenario metadata using an already enumerated tag.
+func (p *ScenarioProvider) GetScenarioDetailForTag(tag models.ScenarioTag, _ *models.RegistryV2) (*models.ScenarioDetail, error) {
+	dataSource, err := p.Config.GetQuayScenarioRepositoryAPIURI()
+	if err != nil {
+		return nil, err
+	}
+	return p.getScenarioDetail(dataSource, &tag, false)
 }
 
 func (p *ScenarioProvider) GetGlobalEnvironment(registry *models.RegistryV2, scenario string) (*models.ScenarioDetail, error) {

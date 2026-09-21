@@ -38,6 +38,13 @@ type ScenarioProvider struct {
 	provider.BaseScenarioProvider
 }
 
+func scenarioDigestValue(tag *models.ScenarioTag) string {
+	if tag != nil && tag.Digest != nil && *tag.Digest != "" {
+		return *tag.Digest
+	}
+	return "unknown"
+}
+
 func (s *ScenarioProvider) GetRegistryImages(registry *models.RegistryV2) (*[]models.ScenarioTag, error) {
 	return s.getRegistryImages(registry)
 }
@@ -418,6 +425,18 @@ func (s *ScenarioProvider) GetScenarioDetail(scenario string, registry *models.R
 	return scenarioDetail, nil
 }
 
+// GetScenarioDetailForTag returns scenario metadata using an already enumerated tag.
+func (s *ScenarioProvider) GetScenarioDetailForTag(tag models.ScenarioTag, registry *models.RegistryV2) (*models.ScenarioDetail, error) {
+	if registry == nil {
+		return nil, errors.New("registry cannot be nil in V2 scenario provider")
+	}
+	dataSource, err := registry.GetV2ScenarioDetailAPIURI(tag.Name)
+	if err != nil {
+		return nil, err
+	}
+	return s.getScenarioDetail(dataSource, &tag, false, registry)
+}
+
 func (s *ScenarioProvider) ScaffoldScenarios(scenarios []string, includeGlobalEnv bool, registry *models.RegistryV2, random bool, seed *provider.ScaffoldSeed) (*string, error) {
 	return provider.ScaffoldScenarios(scenarios, includeGlobalEnv, registry, s.Config, s, random, seed)
 }
@@ -518,6 +537,7 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	for _, l := range manifestV2.Layers {
 		layers = append(layers, l)
 	}
+	foundIsAScenario := provider.GetKrknctlLabel(s.Config.LabelIsAScenario, layers)
 	foundTitle := provider.GetKrknctlLabel(titleLabel, layers)
 	foundDescription := provider.GetKrknctlLabel(descriptionLabel, layers)
 	foundInputFields := provider.GetKrknctlLabel(inputFieldsLabel, layers)
@@ -525,18 +545,18 @@ func (s *ScenarioProvider) getScenarioDetail(dataSource string, foundScenario *m
 	if err := s.BaseScenarioProvider.PopulateBooleanLabels(&scenarioDetail, layers, isGlobalEnvironment); err != nil {
 		return nil, err
 	}
-	if !isGlobalEnvironment && !scenarioDetail.IsAScenario {
-		return &scenarioDetail, nil
+	if !isGlobalEnvironment && foundIsAScenario != nil && !scenarioDetail.IsAScenario {
+		return nil, fmt.Errorf("image %q is not a scenario: %w", foundScenario.Name, provider.ErrNotScenario)
 	}
 
 	if foundTitle == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(titleLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 	if foundDescription == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(descriptionLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 	if foundInputFields == nil {
-		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, *foundScenario.Digest, provider.ErrLabelNotFound)
+		return nil, fmt.Errorf("%s LABEL not found in tag: %s digest: %s: %w", strings.Replace(inputFieldsLabel, "=", "", 1), foundScenario.Name, scenarioDigestValue(foundScenario), provider.ErrLabelNotFound)
 	}
 
 	parsedTitle, err := s.BaseScenarioProvider.ParseTitle(*foundTitle, isGlobalEnvironment)

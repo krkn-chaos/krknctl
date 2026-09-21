@@ -75,7 +75,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 
 			scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
 			if err != nil {
-				return err
+				return ValidateScenarioError(scenarioName, err)
 			}
 			if err := ValidateScenarioDetail(scenarioName, scenarioDetail); err != nil {
 				return err
@@ -177,7 +177,7 @@ func NewRunCommand(factory *factory.ProviderFactory, scenarioOrchestrator *scena
 			scenarioDetail, err := provider.GetScenarioDetail(scenarioName, registrySettings)
 			if err != nil {
 				spinner.Stop()
-				return err
+				return ValidateScenarioError(scenarioName, err)
 			}
 			if err := ValidateScenarioDetail(scenarioName, scenarioDetail); err != nil {
 				spinner.Stop()
