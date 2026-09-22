@@ -64,11 +64,14 @@ func NewDescribeCommand(factory *factory.ProviderFactory, config config.Config) 
 			scenarioDetail, err := provider.GetScenarioDetail(args[0], registrySettings)
 			if err != nil {
 				spinner.Stop()
-				return err
+				return ValidateScenarioError(args[0], err)
 			}
 			spinner.Stop()
 			if scenarioDetail == nil {
 				return fmt.Errorf("could not find %s scenario", args[0])
+			}
+			if err := ValidateScenarioDetail(args[0], scenarioDetail); err != nil {
+				return err
 			}
 			PrintScenarioDetail(scenarioDetail)
 			return nil
