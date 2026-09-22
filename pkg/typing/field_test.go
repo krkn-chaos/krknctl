@@ -668,7 +668,7 @@ func TestGroupField(t *testing.T) {
 	assert.False(t, groupPresent)
 
 	// all known group values round-trip correctly
-	knownGroups := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency"}
+	knownGroups := []string{"general", "prometheus", "elasticsearch", "cerberus", "telemetry", "health_check", "kubevirt", "resiliency", "triggers"}
 	baseJSON := `{"name":"field","variable":"VAR","type":"string","group":"%s"}`
 	for _, group := range knownGroups {
 		field = InputField{}
