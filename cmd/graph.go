@@ -7,6 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/dependencygraph"
+	"github.com/krkn-chaos/krknctl/pkg/provider"
 	providerfactory "github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	providermodels "github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
@@ -16,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -32,7 +34,11 @@ func NewGraphCommand() *cobra.Command {
 	return command
 }
 
-func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
+type scenarioProviderFactory interface {
+	NewInstance(mode provider.Mode) provider.ScenarioDataProvider
+}
+
+func NewGraphRunCommand(factory scenarioProviderFactory, scenarioOrchestrator *scenarioorchestrator.ScenarioOrchestrator, config config.Config) *cobra.Command {
 	var command = &cobra.Command{
 		Use:   "run",
 		Short: "runs a dependency graph based run",
@@ -191,6 +197,9 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			}
 
 			executionPlan := graph.TopoSortedLayers()
+			for _, layer := range executionPlan {
+				sort.Strings(layer)
+			}
 			if len(executionPlan) == 0 {
 				_, err = color.New(color.FgYellow).Println("No scenario to execute; the graph file appears to be empty (single-node graphs are not supported).")
 				if err != nil {

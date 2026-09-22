@@ -16,7 +16,6 @@ import (
 	"github.com/briandowns/spinner"
 	"github.com/krkn-chaos/krknctl/pkg/config"
 	"github.com/krkn-chaos/krknctl/pkg/provider"
-	"github.com/krkn-chaos/krknctl/pkg/provider/factory"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/resiliency"
 	orchestratorModels "github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator/models"
@@ -67,7 +66,7 @@ with krkn, please use krkn-operator instead:
 	return rootCmd
 }
 
-func GetProvider(private bool, providerFactory *factory.ProviderFactory) provider.ScenarioDataProvider {
+func GetProvider(private bool, providerFactory scenarioProviderFactory) provider.ScenarioDataProvider {
 	var dataProvider provider.ScenarioDataProvider
 	if private {
 		dataProvider = providerFactory.NewInstance(provider.Private)
