@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/briandowns/spinner v1.23.1
 	github.com/containerd/errdefs v1.0.0
-	github.com/containers/podman/v5 v5.8.2
+	github.com/containers/podman/v5 v5.8.6
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.7.0
 	github.com/ebitengine/purego v0.10.2
