@@ -156,6 +156,24 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	operatorUninstallCmd.Flags().Bool("delete-namespace", false, "also delete the namespace after helm uninstall (only used with --kubeconfig)")
 	operatorUninstallCmd.MarkFlagsMutuallyExclusive("kind", "kubeconfig")
 	operatorCmd.AddCommand(operatorUninstallCmd)
+
+	operatorBackupCmd := NewOperatorBackupCommand()
+	operatorBackupCmd.Flags().String("output", ".", "directory to write the backup archive")
+	operatorBackupCmd.Flags().String("kubeconfig", "", "path to kubeconfig (defaults to ~/.kube/config)")
+	operatorBackupCmd.Flags().Bool("kind", false, "use the kubeconfig created for a KinD cluster")
+	operatorBackupCmd.Flags().String("cluster-name", "krkn-operator", "KinD cluster name used with --kind")
+	operatorBackupCmd.Flags().String("passphrase", "", "encrypt the archive with AES-256-GCM (or set KRKNCTL_BACKUP_PASSPHRASE)")
+	operatorBackupCmd.MarkFlagsMutuallyExclusive("kind", "kubeconfig")
+	operatorCmd.AddCommand(operatorBackupCmd)
+
+	operatorRestoreCmd := NewOperatorRestoreCommand()
+	operatorRestoreCmd.Flags().String("kubeconfig", "", "path to kubeconfig (defaults to ~/.kube/config)")
+	operatorRestoreCmd.Flags().Bool("kind", false, "use the kubeconfig created for a KinD cluster")
+	operatorRestoreCmd.Flags().String("cluster-name", "krkn-operator", "KinD cluster name used with --kind")
+	operatorRestoreCmd.Flags().String("passphrase", "", "decrypt an encrypted archive (or set KRKNCTL_BACKUP_PASSPHRASE)")
+	operatorRestoreCmd.MarkFlagsMutuallyExclusive("kind", "kubeconfig")
+	operatorCmd.AddCommand(operatorRestoreCmd)
+
 	rootCmd.AddCommand(operatorCmd)
 
 	// update and deprecation check
