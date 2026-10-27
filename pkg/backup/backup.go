@@ -173,12 +173,36 @@ func CreateBackup(ctx context.Context, dynClient dynamic.Interface, config Backu
 	if !strings.HasSuffix(archiveName, ".tar.gz") {
 		archivePath += ".tar.gz"
 	}
+	if config.Passphrase != "" {
+		// When encrypting, write the plaintext archive inside the temporary
+		// directory so it is cleaned up automatically. The plaintext never
+		// appears in the user-visible output directory.
+		plaintextPath := filepath.Join(tempParent, "plaintext.tar.gz")
+		plaintextFile, err := os.OpenFile(plaintextPath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0600)
+		if err != nil {
+			return "", fmt.Errorf("failed to create temporary archive: %w", err)
+		}
+		if err := createTarGzFile(plaintextFile, tempParent, backupDirName); err != nil {
+			_ = plaintextFile.Close()
+			return "", fmt.Errorf("failed to create archive: %w", err)
+		}
+		if err := plaintextFile.Close(); err != nil {
+			return "", fmt.Errorf("failed to close archive: %w", err)
+		}
+
+		encPath := archivePath + encryptedSuffix
+		if err := EncryptFile(plaintextPath, encPath, config.Passphrase); err != nil {
+			return "", fmt.Errorf("encryption failed: %w", err)
+		}
+		return encPath, nil
+	}
+
 	tmpFile, err := os.CreateTemp(outputDir, ".krkn-backup-*.tmp")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temporary archive: %w", err)
 	}
 	tmpArchive := tmpFile.Name()
-	if err := createTarGzFile(tmpFile, filepath.Dir(tempParent), filepath.Base(tempParent)); err != nil {
+	if err := createTarGzFile(tmpFile, tempParent, backupDirName); err != nil {
 		_ = tmpFile.Close()
 		_ = os.Remove(tmpArchive)
 		return "", fmt.Errorf("failed to create archive: %w", err)
@@ -187,9 +211,6 @@ func CreateBackup(ctx context.Context, dynClient dynamic.Interface, config Backu
 		_ = os.Remove(tmpArchive)
 		return "", fmt.Errorf("failed to close archive: %w", err)
 	}
-	// Linking creates the final name without replacing an existing archive.
-	// The temporary file and final path are in the same directory, so this is
-	// atomic and cannot follow a pre-existing symlink at the final path.
 	if err := os.Link(tmpArchive, archivePath); err != nil {
 		_ = os.Remove(tmpArchive)
 		return "", fmt.Errorf("failed to finalize archive %q: %w", archivePath, err)
@@ -199,23 +220,6 @@ func CreateBackup(ctx context.Context, dynClient dynamic.Interface, config Backu
 			return "", fmt.Errorf("failed to remove temporary archive: %w; failed to remove finalized archive: %v", err, cleanupErr)
 		}
 		return "", fmt.Errorf("failed to remove temporary archive: %w", err)
-	}
-
-	if config.Passphrase != "" {
-		encPath := archivePath + encryptedSuffix
-		if err := EncryptFile(archivePath, encPath, config.Passphrase); err != nil {
-			// Do not return or retain a usable plaintext backup when encryption
-			// fails. The caller may otherwise print the returned path and expose
-			// an unencrypted archive containing credentials.
-			if removeErr := os.Remove(archivePath); removeErr != nil && !os.IsNotExist(removeErr) {
-				return "", fmt.Errorf("encryption failed: %w; failed to remove unencrypted archive: %v", err, removeErr)
-			}
-			return "", fmt.Errorf("encryption failed: %w", err)
-		}
-		if err := os.Remove(archivePath); err != nil {
-			return "", fmt.Errorf("encrypted backup created at %q, but failed to remove plaintext archive %q: %w", encPath, archivePath, err)
-		}
-		return encPath, nil
 	}
 
 	return archivePath, nil

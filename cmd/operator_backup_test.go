@@ -66,7 +66,7 @@ func TestOperatorBackupCommandSuccess(t *testing.T) {
 func TestOperatorRestoreCommand(t *testing.T) {
 	cmd := NewOperatorRestoreCommand()
 
-	assert.Equal(t, "restore <archive-path> <namespace>", cmd.Use)
+	assert.Equal(t, "restore <archive-path-or-url> <namespace>", cmd.Use)
 	assert.Contains(t, cmd.Long, "replaces existing operator-managed resources")
 
 	cmd.SetArgs([]string{"backup.tar.gz"})
@@ -104,6 +104,19 @@ func TestResolveOperatorKubeconfigRejectsConflictingFlags(t *testing.T) {
 	_, err := resolveOperatorKubeconfig("/tmp/config", true, "test")
 
 	assert.EqualError(t, err, "--kind and --kubeconfig cannot be used together")
+}
+
+func TestResolveOperatorKubeconfigRejectsPathTraversal(t *testing.T) {
+	for _, name := range []string{"../evil", "foo/bar", `foo\bar`, "..", "a.b/c"} {
+		_, err := resolveOperatorKubeconfig("", true, name)
+		assert.Error(t, err, "expected error for cluster name %q", name)
+		assert.Contains(t, err.Error(), "invalid characters", "cluster name %q", name)
+	}
+}
+
+func TestResolveOperatorKubeconfigRejectsEmpty(t *testing.T) {
+	_, err := resolveOperatorKubeconfig("", true, "")
+	assert.EqualError(t, err, "cluster name must not be empty")
 }
 
 func newCommandTestDynamicClient(objects ...runtime.Object) dynamic.Interface {

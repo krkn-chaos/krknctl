@@ -476,6 +476,27 @@ func TestBackup_EncryptionFailureRemovesPlaintextArchive(t *testing.T) {
 	assert.FileExists(t, encPath)
 }
 
+func TestBackup_EncryptedPlaintextNeverInOutputDir(t *testing.T) {
+	user := makeUnstructured("krkn.krkn-chaos.dev/v1alpha1", "KrknUser", "testuser", "test-ns", nil)
+	dynClient := newFakeDynamicClient(user)
+	outputDir := t.TempDir()
+
+	archivePath, err := CreateBackup(context.Background(), dynClient, BackupConfig{
+		Namespace:  "test-ns",
+		OutputDir:  outputDir,
+		Passphrase: "test-passphrase",
+	})
+	assert.NoError(t, err)
+	assert.True(t, strings.HasSuffix(archivePath, encryptedSuffix))
+
+	entries, err := os.ReadDir(outputDir)
+	assert.NoError(t, err)
+	for _, entry := range entries {
+		assert.True(t, strings.HasSuffix(entry.Name(), encryptedSuffix),
+			"output dir should only contain .enc file, found: %s", entry.Name())
+	}
+}
+
 func TestRestore_AppliesResources(t *testing.T) {
 	archivePath := createTestArchive(t, map[string]interface{}{
 		"apiVersion": "v1",
@@ -501,6 +522,39 @@ func TestRestore_AppliesResources(t *testing.T) {
 	secret, err := dynClient.Resource(gvr).Namespace("restore-ns").Get(context.Background(), "test-secret", metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.Equal(t, "test-secret", secret.GetName())
+}
+
+func TestRestore_StripsOwnerReferencesAndFinalizers(t *testing.T) {
+	archivePath := createTestArchive(t, map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "List",
+		"items": []interface{}{
+			map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Secret",
+				"metadata": map[string]interface{}{
+					"name":   "owned-secret",
+					"labels": map[string]interface{}{"app.kubernetes.io/component": "authentication"},
+					"ownerReferences": []interface{}{
+						map[string]interface{}{
+							"apiVersion": "v1", "kind": "Pod",
+							"name": "evil-owner", "uid": "fake-uid",
+						},
+					},
+					"finalizers": []interface{}{"evil.io/hold"},
+				},
+			},
+		},
+	}, "auth-secrets.json")
+
+	dynClient := newFakeDynamicClient()
+	assert.NoError(t, Restore(context.Background(), dynClient, archivePath, "restore-ns"))
+
+	gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "secrets"}
+	secret, err := dynClient.Resource(gvr).Namespace("restore-ns").Get(context.Background(), "owned-secret", metav1.GetOptions{})
+	assert.NoError(t, err)
+	assert.Empty(t, secret.GetOwnerReferences(), "ownerReferences should be stripped during restore")
+	assert.Empty(t, secret.GetFinalizers(), "finalizers should be stripped during restore")
 }
 
 func TestRestore_AppliesCloudCredentialsAndWorkflows(t *testing.T) {

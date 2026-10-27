@@ -55,6 +55,7 @@ var expectedArchiveGVKs = map[string]schema.GroupVersionKind{
 const (
 	maxExtractFileSize     = 256 << 20
 	maxCumulativeExtracted = 1 << 30
+	maxExtractEntries      = 10_000
 
 	workflowConfigMapsFilename = "workflow-configmaps.json"
 	reportConfigMapsFilename   = "report-configmaps.json"
@@ -147,18 +148,20 @@ func RestoreBackup(ctx context.Context, dynClient dynamic.Interface, config Rest
 		}
 	}()
 
-	if config.Passphrase != "" {
+	if IsEncryptedArchive(archivePath) {
+		if config.Passphrase == "" {
+			return fmt.Errorf("archive appears to be encrypted; use --passphrase to decrypt it")
+		}
 		decPath := filepath.Join(extractDir, "decrypted.tar.gz")
 		if err := DecryptFile(archivePath, decPath, config.Passphrase); err != nil {
 			return fmt.Errorf("failed to decrypt archive: %w", err)
 		}
 		archivePath = decPath
+	} else if config.Passphrase != "" {
+		warnRestore(config.WarningHandler, "passphrase provided but archive is not encrypted; ignoring passphrase")
 	}
 
 	if err := extractTarGz(archivePath, extractDir); err != nil {
-		if config.Passphrase == "" && IsEncryptedArchive(archivePath) {
-			return fmt.Errorf("archive appears to be encrypted; use --passphrase to decrypt it")
-		}
 		return fmt.Errorf("failed to extract archive: %w", err)
 	}
 	backupDir, err := findBackupDir(extractDir)
@@ -395,6 +398,9 @@ func applyResource(ctx context.Context, dynClient dynamic.Interface, namespace s
 	if preservedRunStatus == nil {
 		delete(obj.Object, "status")
 	}
+
+	obj.SetOwnerReferences(nil)
+	obj.SetFinalizers(nil)
 
 	existing, getErr := resource.Get(ctx, obj.GetName(), metav1.GetOptions{})
 	if getErr != nil && !apierrors.IsNotFound(getErr) {
@@ -724,6 +730,10 @@ func extractTarGz(archivePath, destDir string) error {
 		if err != nil {
 			return fmt.Errorf("error reading tar: %w", err)
 		}
+		files++
+		if files > maxExtractEntries {
+			return fmt.Errorf("archive exceeds maximum entry count (%d)", maxExtractEntries)
+		}
 		relPath := filepath.Clean(filepath.FromSlash(header.Name))
 		if header.Name == "" || filepath.IsAbs(relPath) || relPath == "." || relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) {
 			return fmt.Errorf("invalid path in archive (path traversal detected): %s", header.Name)
@@ -753,7 +763,6 @@ func extractTarGz(archivePath, destDir string) error {
 				return fmt.Errorf("file %s exceeds maximum allowed size", filepath.Base(relPath))
 			}
 			cumulative += written
-			files++
 			if cumulative > maxCumulativeExtracted {
 				return fmt.Errorf("archive exceeds maximum extracted size (1 GB), files=%d", files)
 			}

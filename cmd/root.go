@@ -158,6 +158,11 @@ func Execute(providerFactory *factory.ProviderFactory, scenarioOrchestrator *sce
 	operatorBackupCmd.Flags().Bool("kind", false, "use the kubeconfig created for a KinD cluster")
 	operatorBackupCmd.Flags().String("cluster-name", "krkn-operator", "KinD cluster name used with --kind")
 	operatorBackupCmd.Flags().String("passphrase", "", "encrypt the archive with AES-256-GCM (or set KRKNCTL_BACKUP_PASSPHRASE)")
+	operatorBackupCmd.Flags().String("s3-bucket", "", "upload backup to this S3 bucket (or set KRKN_BACKUP_S3_BUCKET)")
+	operatorBackupCmd.Flags().String("s3-prefix", "", "S3 object key prefix (default: krkn-operator/backups)")
+	operatorBackupCmd.Flags().String("s3-region", "", "AWS region for the S3 bucket (default: us-east-1)")
+	operatorBackupCmd.Flags().String("s3-endpoint", "", "custom S3 endpoint URL (for S3-compatible stores)")
+	operatorBackupCmd.Flags().String("s3-kms-key-id", "", "KMS key ID for server-side encryption")
 	operatorBackupCmd.MarkFlagsMutuallyExclusive("kind", "kubeconfig")
 	operatorCmd.AddCommand(operatorBackupCmd)
 
