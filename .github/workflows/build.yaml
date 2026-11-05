@@ -9,20 +9,26 @@ jobs:
   build-linux-amd64:
     name: Build linux/amd64
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     permissions:
-      contents: write
+      contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: set up go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
       with:
         go-version: '1.26.2'
         cache: false
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+        tmp_config=$(mktemp)
+        jq --arg version "$RELEASE_TAG" '.version = $version' pkg/config/config.json > "$tmp_config"
+        mv "$tmp_config" pkg/config/config.json
 
     - name: build linux amd64
       env:
@@ -32,10 +38,10 @@ jobs:
         BINARY: "linux-amd64"
       run: |
         go build -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
+        tar cfvz "krknctl-${RELEASE_TAG}-${BINARY}.tar.gz" -C "$BINARY" krknctl
 
     - name: upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: linux-amd64
         path: krknctl-${{github.event.release.tag_name}}-linux-amd64.tar.gz
@@ -43,20 +49,26 @@ jobs:
   build-linux-arm64:
     name: Build linux/arm64
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     permissions:
-      contents: write
+      contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: set up go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
       with:
         go-version: '1.26.2'
         cache: false
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+        tmp_config=$(mktemp)
+        jq --arg version "$RELEASE_TAG" '.version = $version' pkg/config/config.json > "$tmp_config"
+        mv "$tmp_config" pkg/config/config.json
 
     - name: build linux arm64
       env:
@@ -66,10 +78,10 @@ jobs:
         BINARY: "linux-arm64"
       run: |
         go build -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
+        tar cfvz "krknctl-${RELEASE_TAG}-${BINARY}.tar.gz" -C "$BINARY" krknctl
 
     - name: upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: linux-arm64
         path: krknctl-${{github.event.release.tag_name}}-linux-arm64.tar.gz
@@ -77,17 +89,23 @@ jobs:
   build-darwin:
     name: Build darwin (both architectures)
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     permissions:
-      contents: write
+      contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+        tmp_config=$(mktemp)
+        jq --arg version "$RELEASE_TAG" '.version = $version' pkg/config/config.json > "$tmp_config"
+        mv "$tmp_config" pkg/config/config.json
 
     - name: Build darwin binaries with xgo
-      uses: crazy-max/ghaction-xgo@v3
+      uses: crazy-max/ghaction-xgo@acf46aa99b919eb9ef6bba89dfd13bafa680667f # v3
       with:
         xgo_version: latest
         go_version: '1.26.2'
@@ -109,22 +127,22 @@ jobs:
       run: |
         mkdir -p darwin-apple-silicon
         mv build/krknctl-darwin-arm64 darwin-apple-silicon/krknctl
-        tar cfvz krknctl-${{github.event.release.tag_name}}-darwin-apple-silicon.tar.gz -C darwin-apple-silicon krknctl
+        tar cfvz "krknctl-${RELEASE_TAG}-darwin-apple-silicon.tar.gz" -C darwin-apple-silicon krknctl
 
     - name: Package darwin amd64
       run: |
         mkdir -p darwin-intel
         mv build/krknctl-darwin-amd64 darwin-intel/krknctl
-        tar cfvz krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz -C darwin-intel krknctl
+        tar cfvz "krknctl-${RELEASE_TAG}-darwin-intel.tar.gz" -C darwin-intel krknctl
 
     - name: upload darwin arm64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: darwin-apple-silicon
         path: krknctl-${{github.event.release.tag_name}}-darwin-apple-silicon.tar.gz
 
     - name: upload darwin amd64
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: darwin-intel
         path: krknctl-${{github.event.release.tag_name}}-darwin-intel.tar.gz
@@ -135,15 +153,19 @@ jobs:
   build-linux-amd64-centos9:
     name: Build linux/amd64 (CentOS Stream 9)
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     container:
       image: quay.io/centos/centos:stream9
     permissions:
-      contents: write
+      contents: read
     steps:
     - name: install build dependencies
       run: dnf install -y git tar jq
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
 
     - name: install go
       run: |
@@ -152,7 +174,9 @@ jobs:
 
     - name: advance version
       run: |
-        cat <<< $(jq '.version="${{github.event.release.tag_name}}"' pkg/config/config.json) > pkg/config/config.json
+        tmp_config=$(mktemp)
+        jq --arg version "$RELEASE_TAG" '.version = $version' pkg/config/config.json > "$tmp_config"
+        mv "$tmp_config" pkg/config/config.json
 
     - name: build linux amd64 centos9
       env:
@@ -162,10 +186,10 @@ jobs:
         BINARY: linux-amd64-centos9
       run: |
         go build -buildvcs=false -mod=vendor -tags "containers_image_openpgp exclude_graphdriver_btrfs" -ldflags="-w -s" -o $BINARY/ ./...
-        tar cfvz krknctl-${{github.event.release.tag_name}}-$BINARY.tar.gz -C $BINARY krknctl
+        tar cfvz "krknctl-${RELEASE_TAG}-${BINARY}.tar.gz" -C "$BINARY" krknctl
 
     - name: upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: linux-amd64-centos9
         path: krknctl-${{github.event.release.tag_name}}-linux-amd64-centos9.tar.gz
@@ -174,11 +198,13 @@ jobs:
     name: Upload release artifacts
     needs: [build-linux-amd64, build-linux-arm64, build-darwin, build-linux-amd64-centos9]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
     permissions:
       contents: write
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         path: artifacts
 
@@ -189,7 +215,7 @@ jobs:
         cd artifacts
         for dir in */; do
           for file in "$dir"*.tar.gz; do
-            gh release upload ${{github.event.release.tag_name}} "$file" --repo ${{github.repository}}
+            gh release upload "$RELEASE_TAG" "$file" --repo "$GITHUB_REPOSITORY"
           done
         done
 
@@ -199,4 +225,4 @@ jobs:
       run: |
         cd artifacts
         sha256sum */*.tar.gz > checksums.txt
-        gh release upload ${{github.event.release.tag_name}} checksums.txt --clobber --repo ${{github.repository}}
+        gh release upload "$RELEASE_TAG" checksums.txt --clobber --repo "$GITHUB_REPOSITORY"

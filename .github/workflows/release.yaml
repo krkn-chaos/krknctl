@@ -9,9 +9,10 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: test release note generation
         run: bash .github/scripts/generate-release-notes_test.sh
@@ -41,4 +42,4 @@ jobs:
         run: |
           syft . --scope all-layers --output cyclonedx-json > sbom.json
           echo "SBOM generated successfully!"
-          gh release upload ${{ github.ref_name }} sbom.json
+          gh release upload "$GITHUB_REF_NAME" sbom.json
