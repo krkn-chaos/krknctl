@@ -136,6 +136,25 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			if err != nil {
 				return err
 			}
+			for nodeID, node := range nodes {
+				// Studio exports may omit nodeType. Trigger nodes carry only trigger
+				// configuration, so recognize their dedicated environment variables
+				// and restore the discriminator before validation and execution.
+				if node.NodeType == "" && hasTriggerEnvironment(node.Env) {
+					node.NodeType = models.NodeTypeTrigger
+				}
+				switch node.NodeType {
+				case "", models.NodeTypeScenario:
+				case models.NodeTypeTrigger:
+					// Trigger is a built-in utility image, resolved from config at execution.
+					if node.Name == "" {
+						node.Name = models.NodeTypeTrigger
+					}
+				default:
+					return fmt.Errorf("node %q has unsupported nodeType %q", nodeID, node.NodeType)
+				}
+				nodes[nodeID] = node
+			}
 
 			// Apply CLI weight overrides
 			weightFlags, err := cmd.Flags().GetStringArray("weight")
@@ -152,6 +171,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 				privateRegistry = true
 			}
 			dataProvider := GetProvider(privateRegistry, factory)
+			triggerProvider := GetProvider(false, factory)
 
 			nameChannel := make(chan *struct {
 				name *string
@@ -159,7 +179,7 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 			})
 			spinner.Start()
 			go func() {
-				validateGraphScenarioInput(dataProvider, nodes, nameChannel, registrySettings)
+				validateGraphScenarioInput(dataProvider, nodes, nameChannel, registrySettings, triggerProvider)
 			}()
 
 			for {
@@ -241,6 +261,15 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 								os.Exit(staterr.ExitStatus)
 							}
 							spinner.Start()
+						} else {
+							_, err = color.New(color.FgYellow).Println(c.Err)
+							if err != nil {
+								return err
+							}
+							if executionErr := graphExecutionError(c.Err, exitOnerror); executionErr != nil {
+								return executionErr
+							}
+							spinner.Start()
 						}
 					}
 					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
@@ -254,6 +283,22 @@ func NewGraphRunCommand(factory *providerfactory.ProviderFactory, scenarioOrches
 		},
 	}
 	return command
+}
+
+func graphExecutionError(err error, exitOnError bool) error {
+	if err == nil || !exitOnError {
+		return nil
+	}
+	return fmt.Errorf("graph execution failed: %w", err)
+}
+
+func hasTriggerEnvironment(env map[string]string) bool {
+	for name := range env {
+		if strings.HasPrefix(name, "TRIGGER_") || strings.HasPrefix(name, "TRIGGERS_") {
+			return true
+		}
+	}
+	return false
 }
 
 func NewGraphScaffoldCommand(factory *providerfactory.ProviderFactory, config config.Config) *cobra.Command {

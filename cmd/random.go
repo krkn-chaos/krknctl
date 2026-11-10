@@ -254,10 +254,25 @@ func NewRandomRunCommand(factory *providerfactory.ProviderFactory, scenarioOrche
 								os.Exit(statErr.ExitStatus)
 							}
 							spinner.Start()
+						} else {
+							message := c.Err.Error()
+							if c.ScenarioID != nil {
+								message = fmt.Sprintf("scenario %s failed: %v", *c.ScenarioID, c.Err)
+							}
+							_, err = color.New(color.FgYellow).Println(message)
+							if err != nil {
+								return err
+							}
+							if exitOnerror {
+								return fmt.Errorf("random graph execution failed: %w", c.Err)
+							}
+							spinner.Start()
 						}
 
 					}
-					spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
+					if c.Layer != nil {
+						spinner.Suffix = fmt.Sprintf("Running step %d scenario(s): %s", *c.Layer, strings.Join(executionPlan[*c.Layer], ", "))
+					}
 
 				}
 
