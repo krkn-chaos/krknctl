@@ -271,8 +271,69 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 		name *string
 		err  error
 	},
-	registrySettings *models.RegistryV2) {
+	registrySettings *models.RegistryV2,
+	triggerProviders ...provider.ScenarioDataProvider,
+) {
 	for _, n := range nodes {
+		nodeName := n.Name
+		if nodeName == "" && n.NodeType == orchestratorModels.NodeTypeTrigger {
+			nodeName = orchestratorModels.NodeTypeTrigger
+		}
+		if n.NodeType == orchestratorModels.NodeTypeTrigger {
+			name := nodeName
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &name, err: nil}
+			if len(n.Volumes) > 0 {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &name, err: fmt.Errorf("trigger node %q does not support volume mounts", nodeName)}
+				return
+			}
+			if len(triggerProviders) == 0 || triggerProviders[0] == nil {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &name, err: fmt.Errorf("public provider is required to validate trigger node inputs")}
+				return
+			}
+			globalDetail, err := getTriggerGlobalEnvironment(triggerProviders[0])
+			if err != nil {
+				scenarioNameChannel <- &struct {
+					name *string
+					err  error
+				}{name: &name, err: err}
+				return
+			}
+			for key, value := range n.Env {
+				field := globalDetail.GetFieldByEnvVar(key)
+				if field == nil {
+					scenarioNameChannel <- &struct {
+						name *string
+						err  error
+					}{name: &name, err: fmt.Errorf("environment variable %s is not a global trigger parameter", key)}
+					return
+				}
+				if _, err := field.Validate(&value); err != nil {
+					scenarioNameChannel <- &struct {
+						name *string
+						err  error
+					}{name: &name, err: err}
+					return
+				}
+			}
+			continue
+		}
+		if n.NodeType != "" && n.NodeType != orchestratorModels.NodeTypeScenario {
+			name := nodeName
+			scenarioNameChannel <- &struct {
+				name *string
+				err  error
+			}{name: &name, err: fmt.Errorf("unsupported nodeType %q", n.NodeType)}
+			return
+		}
 		// skip _comment
 		if n.Name == "" {
 			continue
@@ -353,6 +414,17 @@ func validateGraphScenarioInput(provider provider.ScenarioDataProvider,
 		}
 	}
 	scenarioNameChannel <- nil
+}
+
+func getTriggerGlobalEnvironment(publicProvider provider.ScenarioDataProvider) (*models.ScenarioDetail, error) {
+	globalDetail, err := publicProvider.GetGlobalEnvironment(nil, config.TriggerNodeTag)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load trigger global environment from tag %q: %w", config.TriggerNodeTag, err)
+	}
+	if globalDetail == nil {
+		return nil, fmt.Errorf("trigger global environment was not found on public tag %q", config.TriggerNodeTag)
+	}
+	return globalDetail, nil
 }
 
 func RebuildDependencyGraph(nodes map[string]orchestratorModels.ScenarioNode, graph [][]string, rootNodeLabel string) map[string]orchestratorModels.ScenarioNode {
@@ -470,11 +542,15 @@ func GetLatest(config config.Config) (*string, error) {
 }
 
 func IsDeprecated(config config.Config) (*bool, error) {
-	githubAPIURL, err := url.JoinPath(config.GithubReleaseAPI, config.Version)
-	if err != nil {
-		return nil, err
+	return isDeprecatedWithQuery(config, queryGithubRelease)
+}
+
+func isDeprecatedWithQuery(config config.Config, query func(string) ([]byte, error)) (*bool, error) {
+	if config.Version == "" || config.Version == "." || config.Version == ".." || strings.ContainsAny(config.Version, "/\\") {
+		return nil, fmt.Errorf("invalid release version %q", config.Version)
 	}
-	body, err := queryGithubRelease(githubAPIURL)
+	githubAPIURL := strings.TrimRight(config.GithubReleaseAPI, "/") + "/" + url.PathEscape(config.Version)
+	body, err := query(githubAPIURL)
 	if err != nil {
 		return nil, err
 	}

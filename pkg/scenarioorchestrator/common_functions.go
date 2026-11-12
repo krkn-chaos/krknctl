@@ -35,14 +35,44 @@ func CommonRunGraph(
 ) {
 	// collectors initialization
 	var (
-		allReports []resiliency.DetailedScenarioReport
-		reportsMu  sync.Mutex
+		allReports    []resiliency.DetailedScenarioReport
+		reportsMu     sync.Mutex
+		failedNodes   = make(map[string]error)
+		failedNodesMu sync.Mutex
 	)
 
 	for step, s := range resolvedGraph {
 		var wg sync.WaitGroup
 		for _, scID := range s {
 			scCopy := scenarios[scID]
+			if failedDependency, dependencyErr := failedGraphDependency(scenarios, scID, failedNodes, &failedNodesMu); failedDependency != "" {
+				stepCopy := step
+				scIDCopy := scID
+				containerName := utils.GenerateContainerName(config, scCopy.Name, &scIDCopy)
+				filename := fmt.Sprintf("%s.log", containerName)
+				logFile, err := os.Create(path.Clean(filename))
+				if err != nil {
+					commChannel <- &models.GraphCommChannel{Layer: &stepCopy, ScenarioID: &scIDCopy, Err: err}
+					return
+				}
+				skipErr := fmt.Errorf(
+					"skipping node %q because dependency %q did not complete successfully: %v",
+					scID, failedDependency, dependencyErr,
+				)
+				_, _ = fmt.Fprintln(logFile, skipErr)
+				_ = logFile.Close()
+				filenameCopy := filename
+				failedNodesMu.Lock()
+				failedNodes[scID] = skipErr
+				failedNodesMu.Unlock()
+				commChannel <- &models.GraphCommChannel{
+					Layer:           &stepCopy,
+					ScenarioID:      &scIDCopy,
+					ScenarioLogFile: &filenameCopy,
+					Err:             skipErr,
+				}
+				continue
+			}
 
 			socket, err := orchestrator.GetContainerRuntimeSocket(userID)
 			if err != nil {
@@ -109,32 +139,48 @@ func CommonRunGraph(
 			go func(scenario models.Scenario, stepVal int, scIDVal string, filenameVal string) {
 				defer wg.Done()
 				mw := io.MultiWriter(os.Stdout, file)
-				_, runErr := orchestrator.RunAttached(scenario.Image, containerName, env, cache, volumes, mw, mw, nil, ctx, registry, nil, nil, allowUnsigned)
+				image := scenario.Image
+				runtimeRegistry := registry
+				if scenario.NodeType == models.NodeTypeTrigger {
+					var imageErr error
+					image, imageErr = config.GetTriggerNodeImageURI()
+					if imageErr != nil {
+						commChannel <- &models.GraphCommChannel{Layer: &stepCopy, ScenarioID: &scIDCopy, ScenarioLogFile: &filenameCopy, Err: imageErr}
+						return
+					}
+					runtimeRegistry = nil
+				}
+				_, runErr := orchestrator.RunAttached(image, containerName, env, cache, volumes, mw, mw, nil, ctx, runtimeRegistry, nil, nil, allowUnsigned)
 				_ = file.Sync()
 				_ = file.Close()
 
-				if data, readErr := os.ReadFile(path.Clean(filenameVal)); readErr == nil {
-					if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
-						// Attach weight information for this scenario.
-						weight := scenario.ResiliencyWeight
-						if weight <= 0 {
-							weight = 1
-						}
-						if rep.ScenarioWeights == nil {
-							rep.ScenarioWeights = make(map[string]float64)
-						}
-						rep.ScenarioWeights[scenario.Name] = weight
+				if scenario.NodeType != models.NodeTypeTrigger {
+					if data, readErr := os.ReadFile(path.Clean(filenameVal)); readErr == nil {
+						if rep, parseErr := resiliency.ParseResiliencyReport(data); parseErr == nil {
+							// Attach weight information for this scenario.
+							weight := scenario.ResiliencyWeight
+							if weight <= 0 {
+								weight = 1
+							}
+							if rep.ScenarioWeights == nil {
+								rep.ScenarioWeights = make(map[string]float64)
+							}
+							rep.ScenarioWeights[scenario.Name] = weight
 
-						fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filenameVal)
-						reportsMu.Lock()
-						allReports = append(allReports, *rep)
-						reportsMu.Unlock()
-					} else {
-						fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filenameVal, parseErr)
+							fmt.Fprintf(os.Stderr, "Parsed resiliency report from %s\n", filenameVal)
+							reportsMu.Lock()
+							allReports = append(allReports, *rep)
+							reportsMu.Unlock()
+						} else {
+							fmt.Fprintf(os.Stderr, "Failed to parse resiliency report from %s: %v\n", filenameVal, parseErr)
+						}
 					}
 				}
 
 				if runErr != nil {
+					failedNodesMu.Lock()
+					failedNodes[scIDVal] = runErr
+					failedNodesMu.Unlock()
 					commChannel <- &models.GraphCommChannel{Layer: &stepVal, ScenarioID: &scIDVal, ScenarioLogFile: &filenameVal, Err: runErr}
 					return
 				}
@@ -152,6 +198,19 @@ func CommonRunGraph(
 	}
 
 	commChannel <- nil
+}
+
+func failedGraphDependency(scenarios models.ScenarioSet, nodeID string, failedNodes map[string]error, failedNodesMu *sync.Mutex) (string, error) {
+	failedNodesMu.Lock()
+	defer failedNodesMu.Unlock()
+	parent := scenarios[nodeID].Parent
+	for parent != nil {
+		if failure, failed := failedNodes[*parent]; failed {
+			return *parent, failure
+		}
+		parent = scenarios[*parent].Parent
+	}
+	return "", nil
 }
 
 func CommonRunAttached(image string, containerName string, env map[string]string, cache bool, volumeMounts map[string]string, stdout io.Writer, stderr io.Writer, c ScenarioOrchestrator, commChan *chan *string, ctx context.Context, registry *providermodels.RegistryV2, publishPorts []string, podmanCreate *PodmanCreateOptions, allowUnsigned bool) (*string, error) {

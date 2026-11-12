@@ -34,6 +34,8 @@ func (s ScenarioNode) GetParent() *string {
 }
 
 type Scenario struct {
+	// NodeType selects a built-in graph node execution mode. Empty means scenario.
+	NodeType string `json:"nodeType,omitempty"`
 	// the only purpose of this attribute is to put a comment in the json
 	Comment              string            `json:"_comment,omitempty"`
 	Image                string            `json:"image,omitempty"`
@@ -43,6 +45,11 @@ type Scenario struct {
 	ResiliencyConfigPath string            `json:"resiliencyConfigPath,omitempty"`
 	ResiliencyWeight     float64           `json:"resiliencyWeight,omitempty"`
 }
+
+const (
+	NodeTypeScenario = "scenario"
+	NodeTypeTrigger  = "trigger"
+)
 
 type ScenarioContainer struct {
 	Scenario       *Scenario
