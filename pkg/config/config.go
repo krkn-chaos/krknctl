@@ -5,11 +5,14 @@ package config
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"log"
-	"net/url"
+	"strings"
 
 	"github.com/krkn-chaos/krknctl/pkg/gpudetect"
 )
+
+const TriggerNodeTag = "trigger"
 
 type Config struct {
 	Version                          string `json:"version"`
@@ -98,6 +101,25 @@ type Config struct {
 //go:embed config.json
 var File []byte
 
+// joinRegistryPath joins registry path components without cleaning away user
+// supplied dot segments. It preserves nested repository/API paths while
+// rejecting traversal segments instead of resolving them.
+func joinRegistryPath(base string, elements ...string) (string, error) {
+	cleanElements := make([]string, 0, len(elements))
+	for _, element := range elements {
+		if strings.Contains(element, "\\") {
+			return "", fmt.Errorf("invalid registry path component %q", element)
+		}
+		for _, segment := range strings.Split(strings.Trim(element, "/"), "/") {
+			if segment == "" || segment == "." || segment == ".." {
+				return "", fmt.Errorf("invalid registry path component %q", element)
+			}
+		}
+		cleanElements = append(cleanElements, strings.Trim(element, "/"))
+	}
+	return strings.TrimRight(base, "/") + "/" + strings.Join(cleanElements, "/"), nil
+}
+
 func LoadConfig() (Config, error) {
 	var config Config
 	err := json.Unmarshal(File, &config)
@@ -108,7 +130,7 @@ func LoadConfig() (Config, error) {
 }
 
 func (c *Config) GetQuayImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
+	imageURI, err := joinRegistryPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +138,7 @@ func (c *Config) GetQuayImageURI() (string, error) {
 }
 
 func (c *Config) GetCustomDomainImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.CustomDomainHost, c.QuayOrg, c.QuayScenarioRegistry)
+	imageURI, err := joinRegistryPath(c.CustomDomainHost, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +147,7 @@ func (c *Config) GetCustomDomainImageURI() (string, error) {
 
 func (c *Config) GetQuayScenarioRepositoryAPIURI() (string, error) {
 	baseHost := "https://" + c.QuayHost
-	repositoryURI, err := url.JoinPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayScenarioRegistry)
+	repositoryURI, err := joinRegistryPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayScenarioRegistry)
 	if err != nil {
 		return "", err
 	}
@@ -133,7 +155,7 @@ func (c *Config) GetQuayScenarioRepositoryAPIURI() (string, error) {
 }
 
 func (c *Config) GetVisualizeImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.VisualizeImageName)
+	imageURI, err := joinRegistryPath(c.QuayHost, c.QuayOrg, c.VisualizeImageName)
 	if err != nil {
 		return "", err
 	}
@@ -141,16 +163,26 @@ func (c *Config) GetVisualizeImageURI() (string, error) {
 }
 
 func (c *Config) GetDashboardImageURI() (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.DashboardImageName)
+	imageURI, err := joinRegistryPath(c.QuayHost, c.QuayOrg, c.DashboardImageName)
 	if err != nil {
 		return "", err
 	}
 	return imageURI + ":" + c.DashboardImageTag, nil
 }
 
+// GetTriggerNodeImageURI returns the built-in trigger image from the configured
+// scenario registry.
+func (c *Config) GetTriggerNodeImageURI() (string, error) {
+	imageURI, err := joinRegistryPath(c.QuayHost, c.QuayOrg, c.QuayScenarioRegistry)
+	if err != nil {
+		return "", err
+	}
+	return imageURI + ":" + TriggerNodeTag, nil
+}
+
 func (c *Config) GetQuayBaseImageRepositoryAPIURI() (string, error) {
 	baseHost := "https://" + c.QuayHost
-	repositoryURI, err := url.JoinPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayBaseImageRegistry)
+	repositoryURI, err := joinRegistryPath(baseHost, c.QuayRepositoryAPI, c.QuayOrg, c.QuayBaseImageRegistry)
 	if err != nil {
 		return "", err
 	}
@@ -171,7 +203,7 @@ func (c *Config) GetAssistImageURI() (string, gpudetect.GPUType, error) {
 
 // GetAssistImageURIForGPU returns the assist container image URI for a specific GPU type
 func (c *Config) GetAssistImageURIForGPU(gpuType gpudetect.GPUType) (string, error) {
-	imageURI, err := url.JoinPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
+	imageURI, err := joinRegistryPath(c.QuayHost, c.QuayOrg, c.AssistRegistry)
 	if err != nil {
 		return "", err
 	}
@@ -220,7 +252,7 @@ func (c *Config) GetAssistImageURIWithRegistryForGPU(registryURL string, assistR
 	}
 
 	// Build image URI with custom registry
-	imageURI, err := url.JoinPath(registryURL, repo)
+	imageURI, err := joinRegistryPath(registryURL, repo)
 	if err != nil {
 		return "", err
 	}

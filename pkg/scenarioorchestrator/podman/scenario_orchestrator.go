@@ -25,7 +25,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	"os/exec"
 
@@ -256,33 +255,19 @@ func (c *ScenarioOrchestrator) Attach(containerID *string,
 
 	options := new(containers.AttachOptions).WithLogs(true).WithStream(true).WithDetachKeys("ctrl-c")
 
-	errorChannel := make(chan error, 1)
-	finishChannel := make(chan bool, 1)
-	attachDoneChan := make(chan struct{})
-	var mu sync.Mutex
+	type attachResult struct {
+		err error
+	}
+	resultChannel := make(chan attachResult, 1)
 	go func() {
-		mu.Lock()
-		defer mu.Unlock()
-		err := containers.Attach(ctx, *containerID, nil, stdout, stderr, nil, options)
-		if err != nil {
-			errorChannel <- err
-		}
-		close(attachDoneChan)
-	}()
-
-	go func() {
-		// Wait for attach to complete before signaling finish
-		<-attachDoneChan
-		finishChannel <- true
+		resultChannel <- attachResult{err: containers.Attach(ctx, *containerID, nil, stdout, stderr, nil, options)}
 	}()
 
 	select {
-	case <-finishChannel:
-		return false, nil
+	case result := <-resultChannel:
+		return false, result.err
 	case <-signalChannel:
 		return true, nil
-	case err := <-errorChannel:
-		return false, err
 	}
 }
 

@@ -362,19 +362,40 @@ func TestGetLatest(t *testing.T) {
 
 func TestIsDeprecated(t *testing.T) {
 	config := getConfig(t)
+	query := func(rawURL string) ([]byte, error) {
+		switch rawURL {
+		case config.GithubReleaseAPI + "/v0.9.1-beta":
+			return []byte(`{"body":"supported release"}`), nil
+		case config.GithubReleaseAPI + "/v0.1.2-alpha":
+			return []byte(fmt.Sprintf(`{"body":%q}`, config.GithubReleaseAPIDeprecated)), nil
+		default:
+			return nil, nil
+		}
+	}
+
 	config.Version = "v0.9.1-beta"
-	deprecated, err := IsDeprecated(config)
-	assert.Nil(t, err)
+	deprecated, err := isDeprecatedWithQuery(config, query)
+	assert.NoError(t, err)
 	assert.NotNil(t, deprecated)
 	assert.False(t, *deprecated)
 	config.Version = "donotexist"
-	deprecated, err = IsDeprecated(config)
-	assert.NotNil(t, err)
+	deprecated, err = isDeprecatedWithQuery(config, query)
+	assert.Error(t, err)
 	assert.Nil(t, deprecated)
 	config.Version = "v0.1.2-alpha"
-	deprecated, err = IsDeprecated(config)
-	assert.Nil(t, err)
+	deprecated, err = isDeprecatedWithQuery(config, query)
+	assert.NoError(t, err)
 	assert.True(t, *deprecated)
+}
+
+func TestIsDeprecatedRejectsInvalidVersionPath(t *testing.T) {
+	cfg := getConfig(t)
+	for _, version := range []string{"..", "../other", `..\\other`, ""} {
+		cfg.Version = version
+		deprecated, err := IsDeprecated(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, deprecated)
+	}
 }
 
 func TestParseArgValue(t *testing.T) {

@@ -54,6 +54,15 @@ func TestGetQuayImageURI(t *testing.T) {
 	assert.Equal(t, expected, uri)
 }
 
+func TestJoinRegistryPathRejectsTraversal(t *testing.T) {
+	for _, component := range []string{"..", "../outside", `..\\outside`, "repo/../outside"} {
+		t.Run(component, func(t *testing.T) {
+			_, err := joinRegistryPath("quay.io", "org", component)
+			assert.Error(t, err)
+		})
+	}
+}
+
 func TestGetCustomDomainImageURI(t *testing.T) {
 	config, err := LoadConfig()
 	assert.NoError(t, err)
