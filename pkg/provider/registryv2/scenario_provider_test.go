@@ -300,6 +300,82 @@ func TestScenarioProvider_GetScenarioDetail_ManifestIndex(t *testing.T) {
 	assert.Equal(t, int64(42), *result.Size)
 }
 
+func TestScenarioProvider_GetScenarioDetail_MissingLabels(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		isAScenario   string
+		global        bool
+		missingLabels []string
+	}{
+		{"runtime image", "", false, []string{"title", "description", "input_fields"}},
+		{"helper image", "false", false, []string{"input_fields"}},
+		{"scenario title", "true", false, []string{"title"}},
+		{"scenario description", "true", false, []string{"description"}},
+		{"scenario inputs", "true", false, []string{"input_fields"}},
+		{"global title", "", true, []string{"title"}},
+		{"global description", "", true, []string{"description"}},
+		{"global inputs", "", true, []string{"input_fields"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			suffix := ""
+			if test.global {
+				suffix = ".global"
+			}
+			labels := map[string]string{
+				"krknctl.title" + suffix:        "Test image",
+				"krknctl.description" + suffix:  "Test description",
+				"krknctl.input_fields" + suffix: "[]",
+			}
+			if test.isAScenario != "" {
+				labels["krknctl.is_a_scenario"] = test.isAScenario
+			}
+			for _, label := range test.missingLabels {
+				delete(labels, "krknctl."+label+suffix)
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/v2/repo/manifests/image":
+					_, _ = w.Write([]byte(`{"schemaVersion":2,"config":{"digest":"sha256:config"}}`))
+				case "/v2/repo/blobs/sha256:config":
+					assert.NoError(t, json_parser.NewEncoder(w).Encode(map[string]any{
+						"config": map[string]any{"Labels": labels},
+					}))
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+
+			digest := "sha256:" + strings.Repeat("a", 64)
+			for _, image := range []struct {
+				name   string
+				digest *string
+			}{
+				{"without digest", nil},
+				{"with digest", &digest},
+			} {
+				t.Run(image.name, func(t *testing.T) {
+					p := ScenarioProvider{provider.BaseScenarioProvider{
+						Config: getConfig(t),
+						Cache:  cache.NewCache(),
+					}}
+					registry := models.RegistryV2{RegistryURL: server.URL, ScenarioRepository: "repo"}
+					tag := &models.ScenarioTag{Name: "image", Digest: image.digest}
+					result, err := p.getScenarioDetail(server.URL+"/v2/repo/manifests/image", tag, test.global, &registry)
+
+					require.ErrorIs(t, err, provider.ErrLabelNotFound)
+					assert.Nil(t, result)
+					assert.Contains(t, err.Error(), "krknctl."+test.missingLabels[0]+suffix+" LABEL not found in tag: image")
+					if image.digest != nil {
+						assert.Contains(t, err.Error(), digest)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestScenarioProvider_GetGlobalEnvironment(t *testing.T) {
 	utils.SkipTestIfForkPR(t)
 	config := getConfig(t)
