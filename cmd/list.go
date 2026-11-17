@@ -8,7 +8,6 @@ import (
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
 	"github.com/krkn-chaos/krknctl/pkg/scenarioorchestrator"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 func NewListCommand() *cobra.Command {
@@ -55,7 +54,16 @@ func NewListScenariosCommand(factory *providerfactory.ProviderFactory, config co
 			scenarios, err := provider.GetRegistryImages(registrySettings)
 			if err != nil {
 				s.Stop()
-				log.Fatalf("failed to fetch scenarios: %v", err)
+				return fmt.Errorf("failed to fetch scenarios: %w", err)
+			}
+			if scenarios == nil {
+				s.Stop()
+				return fmt.Errorf("failed to fetch scenarios: scenario provider returned a nil scenario list")
+			}
+			scenarios, err = FilterScenarioTags(provider, registrySettings, scenarios)
+			if err != nil {
+				s.Stop()
+				return err
 			}
 			s.Stop()
 			signatureSpinner := NewSpinnerWithSuffix("🔒 verifying image signatures...")

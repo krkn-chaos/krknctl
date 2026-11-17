@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/krkn-chaos/krknctl/pkg/provider"
 	"github.com/krkn-chaos/krknctl/pkg/provider/models"
@@ -11,6 +12,9 @@ import (
 // listed scenario. Verification failures are represented as unknown so one
 // unavailable registry entry does not hide the rest of the listing.
 func PopulateScenarioSignatureStatuses(ctx context.Context, dataProvider provider.ScenarioDataProvider, registry *models.RegistryV2, scenarios *[]models.ScenarioTag) error {
+	if scenarios == nil {
+		return fmt.Errorf("cannot verify signatures for a nil scenario list")
+	}
 	statuses, err := provider.VerifyImageSignatures(ctx, dataProvider, registry, *scenarios)
 	if err != nil {
 		return err

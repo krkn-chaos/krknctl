@@ -43,6 +43,9 @@ func NewScenarioTable(scenarios *[]models.ScenarioTag, private bool) table.Table
 	}
 
 	tbl.WithHeaderFormatter(headerFmt).WithFirstColumnFormatter(columnFmt)
+	if scenarios == nil {
+		return tbl
+	}
 	for _, scenario := range *scenarios {
 		signatureStatus := scenario.SignatureStatus
 		if signatureStatus == "" {

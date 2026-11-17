@@ -105,6 +105,12 @@ func TestNewScenarioTable_AllowsMissingMetadata(t *testing.T) {
 	assert.NotNil(t, table)
 }
 
+func TestNewScenarioTable_AllowsNilScenarios(t *testing.T) {
+	assert.NotPanics(t, func() {
+		NewScenarioTable(nil, false)
+	})
+}
+
 func TestHumanReadableBytes(t *testing.T) {
 	assert.Equal(t, "6.03 KiB", humanReadableBytes(6179))
 	assert.Equal(t, "5.00 MiB", humanReadableBytes(5*1024*1024))
